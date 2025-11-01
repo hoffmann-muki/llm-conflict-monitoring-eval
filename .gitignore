@@ -6,6 +6,3 @@ __pycache__/
 *.egg-info/
 .env
 .DS_Store
-# datasets (raw/large files)
-datasets/
-dataset/
