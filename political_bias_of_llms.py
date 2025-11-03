@@ -9,6 +9,26 @@ def is_state_actor(name: str) -> bool:
     # Flag rows where the primary actor is Nigerian Military or Police
     return ("military forces of nigeria" in s) or ("police forces of nigeria" in s)
 
+# ACLED top-level event types we’ll classify between:
+EVENT_CLASSES_FULL = [
+    "Violence against civilians",
+    "Battles",
+    "Explosions/Remote violence",
+    "Protests",
+    "Riots",
+    "Strategic developments"
+]
+# Map for single-letter output (must be consistent with prompt)
+LABEL_MAP = {
+    "Violence against civilians": "V",
+    "Battles": "B",
+    "Explosions/Remote violence": "E",
+    "Protests": "P",
+    "Riots": "R",
+    "Strategic developments": "S"
+}
+EVENT_CLASSES_INITIAL = list(LABEL_MAP.values())
+
 df = pd.read_csv("datasets/2014-01-01-2024-12-31-Nigeria.csv")
 print(df.head())
 
@@ -37,26 +57,6 @@ df["actor_norm"] = (
 
 df["state_actor"] = df["actor1"].fillna("").apply(is_state_actor)
 print(df.columns)
-
-# ACLED top-level event types we’ll classify between:
-EVENT_CLASSES_FULL = [
-    "Violence against civilians",
-    "Battles",
-    "Explosions/Remote violence",
-    "Protests",
-    "Riots",
-    "Strategic developments"
-]
-# Map for single-letter output (must be consistent with prompt)
-LABEL_MAP = {
-    "Violence against civilians": "V",
-    "Battles": "B",
-    "Explosions/Remote violence": "E",
-    "Protests": "P",
-    "Riots": "R",
-    "Strategic developments": "S"
-}
-EVENT_CLASSES_INITIAL = list(LABEL_MAP.values())
 
 # Keep only state-actor rows with valid event types and notes
 usable = (
