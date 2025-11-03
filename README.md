@@ -9,7 +9,7 @@ This repository contains code and data for evaluating potential bias in LLM clas
 - Runs classification with locally-hosted models via Ollama and saves model predictions.
 
 ## Files of interest
-- `political-bias-of-llms.py` — reorganized main script. Reads data, builds the stratified sample, runs classification, and writes outputs.
+- `political_bias_of_llms.py` — reorganized main script. Reads data, builds the stratified sample, runs classification, and writes outputs.
 - `datasets/2014-01-01-2024-12-31-Nigeria.csv` — ACLED CSV.
 - `datasets/state_actor_6class_150_test.csv` — generated stratified sample.
 - `datasets/ollama_results_acled_nigeria_state_actors.csv` — classification outputs.
@@ -47,7 +47,7 @@ ollama pull mistral
 4. Run the main script:
 
 ```bash
-python political-bias-of-llms.py
+python political_bias_of_llms.py
 ```
 
 Outputs will be written to `datasets/state_actor_6class_150_test.csv` and `datasets/ollama_results_acled_nigeria_state_actors.csv`.

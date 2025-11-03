@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import pandas as pd
 
-
 def extract_country_rows(csv_path: str, country: str, country_col: str = "country") -> pd.DataFrame:
     """Load a CSV and return rows where `country_col` equals `country` (case-insensitive).
     Args:
@@ -32,7 +31,6 @@ def extract_country_rows(csv_path: str, country: str, country_col: str = "countr
     # Normalize and filter (case-insensitive, strip whitespace)
     mask = df[country_col].fillna("").astype(str).str.strip().str.lower() == country.strip().lower()
     return df.loc[mask].reset_index(drop=True)
-
 
 if __name__ == "__main__":
     SRC = "datasets/Africa_lagged_data_up_to-2024-10-24.csv"
