@@ -1,59 +1,62 @@
+````markdown
 # Evaluating State Actor Bias
 
-This repository contains code and data for evaluating potential bias in LLM classification of ACLED event types when the primary actor is a state actor (Nigeria-focused dataset for now). The main script samples a stratified dataset and runs classification using local Ollama models.
+This repository contains code and data for evaluating potential bias in LLM classification of ACLED event types when the primary actor is a state actor.
+
+Two country flows are available; the current active pipeline includes Cameroon.
 
 ## What this project does
-- Loads an ACLED Nigeria CSV and filters rows where the primary actor is a Nigerian state actor (military/police).
-- Normalizes actor names and selects usable rows (has notes and known event types).
-- Builds a 150-row stratified sample focusing 60% on "Violence against civilians" and 40% distributed across other event types.
-- Runs classification with locally-hosted models via Ollama and saves model predictions.
+- Extracts country-specific rows from ACLED-like datasets, normalizes actor text and selects usable rows (has notes and known event types).
+- Builds stratified samples (configurable size) with a primary-group oversample for Violence against civilians.
+- Runs classification with locally-hosted models (via Ollama) and saves structured predictions.
+- Calibrates model confidences (isotonic + temperature scaling), evaluates thresholding strategies, and produces reliability and accuracy-vs-coverage plots.
 
 ## Files of interest
-- `political_bias_of_llms.py` — reorganized main script. Reads data, builds the stratified sample, runs classification, and writes outputs.
-- `datasets/2014-01-01-2024-12-31-Nigeria.csv` — ACLED CSV.
-- `datasets/state_actor_6class_150_test.csv` — generated stratified sample.
-- `datasets/ollama_results_acled_nigeria_state_actors.csv` — classification outputs.
-- `requirements.txt` — pinned Python dependencies to install in a virtual environment.
+- `political_bias_of_llms_cmr.py` — Cameroon pipeline: builds stratified sample (env `SAMPLE_SIZE`), runs classifiers, and writes predictions to `results/`.
+- `tools/calibrate_confidences.py` — fits per-model calibration on labeled predictions and writes calibration params JSON.
+- `tools/apply_calibration_and_evaluate.py` — applies calibrators to predictions, writes calibrated CSV, threshold metrics CSV and plots (reliability, accuracy-vs-coverage).
+- `tools/compute_metrics_cmr.py` — computes per-model confusion matrices and summary metrics.
+- `scripts/run_calibrate_then_apply.sh` — driver script: runs small-sample calibration, selects per-model thresholds, runs large-sample classification and applies thresholds.
 
-## Dependencies
-- Python 3.11+ (3.13 used in development environment)
-- pip
-- virtualenv/venv (recommended)
-- git and git-lfs (for large data files)
-- Ollama application + `ollama` CLI if you want to run model pulls and classification locally.
-
-Python packages (install inside venv):
+## Environment
+1. Create and activate your venv (example):
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
 ```
 
-If you do not plan to run the Ollama classification steps, the Python dependencies alone are sufficient to build the sample.
-
-## Running the script
-1. Ensure `datasets/2014-01-01-2024-12-31-Nigeria.csv` is present (this repo tracks it via Git LFS).
-2. Activate the virtual environment and install dependencies (see above).
-3. Start the Ollama desktop app/daemon and pull models (if you want to run classification):
+2. Install dependencies (we use the project's venv python):
 
 ```bash
-# Ollama app must be running
-ollama pull llama3.2
-ollama pull qwen2.5
-ollama pull mistral
+.venv/bin/python -m pip install -r requirements.txt
+# or at minimum
+.venv/bin/python -m pip install pandas scikit-learn matplotlib
 ```
 
-4. Run the main script:
+## Running the pipeline
+
+- Classify a sample (default SAMPLE_SIZE=100):
 
 ```bash
-python political_bias_of_llms.py
+.venv/bin/python political_bias_of_llms_cmr.py
 ```
 
-Outputs will be written to `datasets/state_actor_6class_150_test.csv` and `datasets/ollama_results_acled_nigeria_state_actors.csv`.
+- Run the calibrate-then-apply driver (small sample -> large sample):
+
+```bash
+./scripts/run_calibrate_then_apply.sh
+
+# override sizes
+SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.sh
+```
+
+## Outputs
+- Predictions, calibrated CSV, calibration params, threshold metrics and plots are written under `results/`.
+- Key files: `results/ollama_results_acled_cameroon_state_actors.csv`, `results/ollama_results_calibrated.csv`, `results/calibration_params_acled_cameroon_state_actors.json`, `results/metrics_thresholds_calibrated.csv`, `results/reliability_diagrams.png`, `results/accuracy_vs_coverage.png`.
 
 ## Notes
-- Large dataset files are tracked with Git LFS; collaborators need git-lfs installed to clone and fetch data.
-- The sampling uses deterministic random_state=42 for reproducibility.
-- The script currently caps the output sample at 150 rows or the number of usable rows, whichever is smaller.
+- Ollama daemon must be running locally and the required models pulled to run classification.
+- Small-sample thresholds are noisy; use larger calibration sets or bootstrapping for robust thresholds.
 
+````

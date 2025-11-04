@@ -1,0 +1,4 @@
+model,threshold,accepted,coverage,accuracy,total_valid
+llama3.2,0.0,50,1.0,0.72,50
+qwen2.5,0.0,50,1.0,0.76,50
+mistral,0.0,50,1.0,0.76,50

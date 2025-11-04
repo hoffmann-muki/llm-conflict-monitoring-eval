@@ -1,0 +1,38 @@
+{
+  "llama3.2": {
+    "isotonic_trained": true,
+    "T": 47.26640952921236,
+    "val_logloss_before": 12.029627466526714,
+    "val_logloss_isotonic": 0.6508755103630192,
+    "val_logloss_temp": 0.6895011658122964,
+    "val_brier_before": 0.33600019999999997,
+    "val_brier_isotonic": 0.2280272108843537,
+    "val_brier_temp": 0.24782490935566626,
+    "n_train": 35,
+    "n_val": 15
+  },
+  "qwen2.5": {
+    "isotonic_trained": true,
+    "T": 16.487079258449548,
+    "val_logloss_before": 7.415285268645369,
+    "val_logloss_isotonic": 0.6003244569969379,
+    "val_logloss_temp": 0.6058917024596195,
+    "val_brier_before": 0.2605,
+    "val_brier_isotonic": 0.2018133333333333,
+    "val_brier_temp": 0.20425278354912196,
+    "n_train": 35,
+    "n_val": 15
+  },
+  "mistral": {
+    "isotonic_trained": true,
+    "T": 2.186326798727434,
+    "val_logloss_before": 0.763236202920727,
+    "val_logloss_isotonic": 0.48810812845326246,
+    "val_logloss_temp": 0.5628860812020142,
+    "val_brier_before": 0.23049999999999998,
+    "val_brier_isotonic": 0.1581267217630854,
+    "val_brier_temp": 0.18880833309029135,
+    "n_train": 35,
+    "n_val": 15
+  }
+}
