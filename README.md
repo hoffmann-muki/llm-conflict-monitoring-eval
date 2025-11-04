@@ -4,12 +4,6 @@ This repository contains code and data for evaluating potential bias in LLM clas
 
 Two country flows are available; the current active pipeline includes Cameroon.
 
-# Evaluating State Actor Bias
-
-This repository contains code and data for evaluating potential bias in LLM classification of ACLED event types when the primary actor is a state actor.
-
-Two country flows are available; the current active pipeline includes Cameroon.
-
 ## What this project does
 - Extracts country-specific rows from ACLED-like datasets, normalizes actor text and selects usable rows (has notes and known event types).
 - Builds stratified samples (configurable size) with a primary-group oversample for Violence against civilians.
