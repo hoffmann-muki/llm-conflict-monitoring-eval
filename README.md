@@ -54,6 +54,26 @@ SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.sh
 - Predictions, calibrated CSV, calibration params, threshold metrics and plots are written under `results/`.
 - Key files: `results/ollama_results_acled_cameroon_state_actors.csv`, `results/ollama_results_calibrated.csv`, `results/calibration_params_acled_cameroon_state_actors.json`, `results/metrics_thresholds_calibrated.csv`, `results/reliability_diagrams.png`, `results/accuracy_vs_coverage.png`.
 
+## Reporting and visualization
+
+- `tools/per_class_and_disagreements.py` — generate two audit CSVs from calibrated predictions (`results/ollama_results_calibrated.csv`):
+	- `results/per_class_report.csv` — per-model, per-class precision/recall/f1/support
+	- `results/top_disagreements.csv` — top-N event rows where model predictions disagree (sorted by max calibrated probability)
+
+- `tools/visualize_reports.py` — create visual artifacts from the above CSVs:
+	- `results/per_class_metrics.png` — bar chart of per-class F1 by model
+	- `results/top_disagreements_table.png` — rendered table of the top disagreement rows
+
+Usage examples:
+
+```bash
+.venv/bin/python tools/per_class_and_disagreements.py   # creates the CSV reports
+.venv/bin/python tools/visualize_reports.py            # creates PNG visualizations
+```
+
+Notes:
+- The scripts expect `results/ollama_results_calibrated.csv` to exist and to include the calibrated probability column `pred_conf_temp`.
+
 ## Notes
 - Ollama daemon must be running locally and the required models pulled to run classification.
 - Small-sample thresholds are noisy; use larger calibration sets or bootstrapping for robust thresholds.
