@@ -1,4 +1,9 @@
-````markdown
+# Evaluating State Actor Bias
+
+This repository contains code and data for evaluating potential bias in LLM classification of ACLED event types when the primary actor is a state actor.
+
+Two country flows are available; the current active pipeline includes Cameroon.
+
 # Evaluating State Actor Bias
 
 This repository contains code and data for evaluating potential bias in LLM classification of ACLED event types when the primary actor is a state actor.
@@ -58,5 +63,3 @@ SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.sh
 ## Notes
 - Ollama daemon must be running locally and the required models pulled to run classification.
 - Small-sample thresholds are noisy; use larger calibration sets or bootstrapping for robust thresholds.
-
-````
