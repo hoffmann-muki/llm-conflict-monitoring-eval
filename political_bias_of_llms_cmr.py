@@ -88,7 +88,9 @@ SCHEMA = {
     "type": "object",
     "properties": {
         "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
-        "confidence": {"type": "number"}
+    "confidence": {"type": "number"},
+    # optional per-class numeric scores in the order [V,B,E,P,R,S]
+    "logits": {"type": "array", "items": {"type": "number"}}
     },
     "required": ["label", "confidence"]
 }
@@ -100,7 +102,8 @@ def make_prompt(note: str) -> str:
         V = Violence against civilians, B = Battles, E = Explosions/Remote violence,
         P = Protests, R = Riots, S = Strategic developments.
         Note: {note}
-        Return strict JSON only. The 'label' must be one of "V", "B", "E", "P", "R", "S".
+    Return strict JSON only. The 'label' must be one of "V", "B", "E", "P", "R", "S".
+    Additionally return a numeric array field named "logits" with six scores in the exact order [V,B,E,P,R,S] representing unnormalized model scores (higher means more likely). This allows downstream per-class probability calibration.
     """
 
 def run_ollama_structured(model: str, note: str, timeout: int = 120):
@@ -145,9 +148,17 @@ def run_model_on_rows(model_name, rows):
             resp = run_ollama_structured(model_name, r.notes)
             label = str(resp.get("label", "FAIL")).strip()
             conf = float(resp.get("confidence", 0))
+            # Capture any per-class scores/logits if the model provides them.
+            # Common keys: 'logits', 'log_probs', 'scores', 'label_scores'
+            logits = None
+            for k in ("logits", "log_probs", "scores", "label_scores"):
+                if k in resp:
+                    logits = resp.get(k)
+                    break
         except Exception:
             label = "ERROR"
             conf = 0.0
+            logits = None
         elapsed = round(time.time() - t0, 2)
         out.append({
             "model": model_name,
@@ -155,6 +166,7 @@ def run_model_on_rows(model_name, rows):
             "true_label": r.gold_label,
             "pred_label": label,
             "pred_conf": conf,
+            "logits": json.dumps(logits) if logits is not None else None,
             "latency_sec": elapsed,
             "actor_norm": r.actor_norm
         })

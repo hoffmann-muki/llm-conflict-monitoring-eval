@@ -3,7 +3,6 @@ import json
 import numpy as np
 import pandas as pd
 from sklearn.isotonic import IsotonicRegression
-from sklearn.metrics import log_loss, brier_score_loss
 from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
 
@@ -103,6 +102,9 @@ def main():
     # apply calibrations
     df['pred_conf_iso'] = df['pred_conf']
     df['pred_conf_temp'] = df['pred_conf']
+    # initialize per-class prob columns (if logits absent these will remain NaN)
+    for lab in labels:
+        df[f'prob_{lab}'] = float('nan')
     for m, mapv in iso_mappings.items():
         mask = df['model']==m
         if mapv is not None:
@@ -115,6 +117,29 @@ def main():
         T = cal_params.get(m, {}).get('T', 1.0)
         numeric_vals_temp = pd.to_numeric(df.loc[mask, 'pred_conf'], errors='coerce').fillna(0.0).to_numpy(dtype=float) # type: ignore
         df.loc[mask, 'pred_conf_temp'] = temp_scaled(numeric_vals_temp, T)
+        # If multiclass temperature available and logits column exists, compute per-class probs
+        T_multi = cal_params.get(m, {}).get('T_multiclass', 1.0)
+        if 'logits' in df.columns:
+            # parse JSON lists and compute softmax(logits / T_multi)
+            def compute_probs_json(x):
+                try:
+                    arr = json.loads(x)
+                    arr = np.asarray(arr, dtype=float)
+                    # ensure shape matches labels
+                    if arr.size != len(labels):
+                        return [np.nan]*len(labels)
+                    scaled = arr / float(T_multi)
+                    z = scaled - np.max(scaled)
+                    expz = np.exp(z)
+                    probs = expz / (expz.sum() + 1e-12)
+                    return probs.tolist()
+                except Exception:
+                    return [np.nan]*len(labels)
+            probs_mat = df.loc[mask, 'logits'].apply(compute_probs_json).tolist() # type: ignore
+            if len(probs_mat) > 0:
+                probs_arr = np.vstack(probs_mat)
+                for i, lab in enumerate(labels):
+                    df.loc[mask, f'prob_{lab}'] = probs_arr[:, i]
     # Save calibrated CSV
     os.makedirs('results', exist_ok=True)
     df.to_csv(OUT_CAL_CSV, index=False)

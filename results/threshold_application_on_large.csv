@@ -1,4 +1,4 @@
 model,threshold,accepted,coverage,accuracy,total_valid
 llama3.2,0.0,50,1.0,0.72,50
-qwen2.5,0.0,50,1.0,0.76,50
-mistral,0.0,50,1.0,0.76,50
+qwen2.5,0.7,37,0.74,0.8108108108108109,50
+mistral,0.1,47,0.94,0.8085106382978723,50

@@ -12,7 +12,7 @@ if [ ! -x "$VENV_PY" ]; then
 fi
 
 # Config
-SMALL_SAMPLE=${SMALL_SAMPLE:-10}
+SMALL_SAMPLE=${SMALL_SAMPLE:-20}
 LARGE_SAMPLE=${LARGE_SAMPLE:-50}
 # minimum coverage required when choosing a threshold from the small sample (0..1)
 MIN_COVERAGE=${MIN_COVERAGE:-0.5}
@@ -83,17 +83,39 @@ th = json.load(open('$THRESH_JSON'))
 labels = ['V','B','E','P','R','S']
 rows = []
 for m, info in th.items():
-    prob_col = info['prob_col']
-    t = float(info['threshold'])
     sub = df[df['model']==m].copy()
-    sub['prob'] = pd.to_numeric(sub[prob_col], errors='coerce').fillna(0.0)
     valid = sub[sub['true_label'].isin(labels) & sub['pred_label'].isin(labels)]
     total = len(valid)
-    accepted = valid[valid['prob'] >= t]
+    accepted = pd.DataFrame()
+    # detect per-class thresholds: mapping of label->threshold
+    if isinstance(info, dict) and all(lab in info for lab in labels):
+        parts = []
+        for lab in labels:
+            t = float(info.get(lab, 0.0))
+            col = f'prob_{lab}'
+            if col not in sub.columns:
+                continue
+            sel = sub[(sub['pred_label']==lab) & sub['true_label'].isin(labels)].copy()
+            sel['prob_for_pred'] = pd.to_numeric(sel[col], errors='coerce').fillna(0.0)
+            sel_acc = sel[sel['prob_for_pred'] >= t]
+            parts.append(sel_acc)
+        if len(parts) > 0:
+            accepted = pd.concat(parts, ignore_index=True)
+        else:
+            accepted = sub.iloc[0:0]
+        thr_repr = 'per-class'
+    else:
+        # legacy single threshold format
+        prob_col = info.get('prob_col', 'pred_conf') if isinstance(info, dict) else 'pred_conf'
+        t = float(info.get('threshold', 0.0)) if isinstance(info, dict) else float(info)
+        sub['prob'] = pd.to_numeric(sub.get(prob_col, sub.get('pred_conf')), errors='coerce').fillna(0.0)
+        accepted = sub[sub['prob'] >= t]
+        thr_repr = t
+
     acc = None
-    if len(accepted)>0:
+    if len(accepted) > 0:
         acc = (accepted['pred_label']==accepted['true_label']).mean()
-    rows.append({'model':m, 'threshold':t, 'accepted': len(accepted), 'coverage': (len(accepted)/total if total>0 else 0), 'accuracy': (None if acc is None else float(acc)), 'total_valid': total})
+    rows.append({'model':m, 'threshold':thr_repr, 'accepted': len(accepted), 'coverage': (len(accepted)/total if total>0 else 0), 'accuracy': (None if acc is None else float(acc)), 'total_valid': total})
 
 out = pd.DataFrame(rows)
 out.to_csv('$APPLY_OUT_CSV', index=False)
