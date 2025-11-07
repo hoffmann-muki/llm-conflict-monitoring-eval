@@ -89,7 +89,7 @@ print(df_test.head())
 
 # Minimal multi-model classification with Ollama
 
-models = ["llama3.2", "qwen2.5", "mistral"]
+models = ["llama3.2", "qwen2.5", "mistral", "gpt-oss-20b"]
 
 SCHEMA = {
     "type": "object",
