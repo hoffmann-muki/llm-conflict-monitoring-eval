@@ -10,9 +10,17 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-OUT_DIR = "results"
+COUNTRY = os.environ.get('COUNTRY', 'cmr')
+OUT_DIR = os.path.join('results', COUNTRY)
+os.makedirs(OUT_DIR, exist_ok=True)
 PER_CLASS_CSV = os.path.join(OUT_DIR, "per_class_report.csv")
 TOP_CSV = os.path.join(OUT_DIR, "top_disagreements.csv")
+
+# Backwards-compat
+if not os.path.exists(PER_CLASS_CSV) and os.path.exists(os.path.join('results','per_class_report.csv')):
+    PER_CLASS_CSV = os.path.join('results','per_class_report.csv')
+if not os.path.exists(TOP_CSV) and os.path.exists(os.path.join('results','top_disagreements.csv')):
+    TOP_CSV = os.path.join('results','top_disagreements.csv')
 
 def plot_per_class():
     df = pd.read_csv(PER_CLASS_CSV)

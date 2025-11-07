@@ -1,0 +1,4 @@
+event_id,true_label,actor_norm,pred_label_llama3.2,pred_label_mistral,pred_label_qwen2.5,pred_prob_llama3.2,pred_prob_mistral,pred_prob_qwen2.5,disagreement_count,max_confidence
+CAO12605,V,State forces (Cameroon),B,V,V,0.5314788656646232,0.7961854749422936,0.7648750958102666,2,0.7961854749422936
+CAO7409,S,State forces (Cameroon),B,V,V,0.5314788656646232,0.6905592889333636,0.7648750958102666,2,0.7648750958102666
+CAO11454,S,State forces (Cameroon),V,V,P,0.5314788656646232,0.6905592889333636,0.5313839159853907,2,0.6905592889333636

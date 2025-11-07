@@ -25,13 +25,18 @@ EVENT_CLASSES_FULL = [
 ]
 
 CSV_SRC = "datasets/Africa_lagged_data_up_to-2024-10-24.csv"
-OUT_CAM = "datasets/Cameroon_lagged_data_up_to-2024-10-24.csv"
 
 if not os.path.exists(CSV_SRC):
     raise SystemExit(f"Source CSV not found: {CSV_SRC}")
 
 df_all = pd.read_csv(CSV_SRC)
 df_cam = extract_country_rows(CSV_SRC, "Cameroon")
+# Persist extracted country-specific CSV for auditing and reuse under datasets/cmr/
+dataset_dir = os.path.join('datasets', 'cmr')
+os.makedirs(dataset_dir, exist_ok=True)
+out_country = os.path.join(dataset_dir, "Cameroon_lagged_data_up_to-2024-10-24.csv")
+df_cam.to_csv(out_country, index=False)
+print(f"Wrote extracted Cameroon data to {out_country}")
 
 # Resolve column names case-insensitively to match ACLED casing differences
 cols_lower = {c.lower(): c for c in df_cam.columns}
@@ -75,7 +80,9 @@ df_test = build_stratified_sample(
     replace=False
 )
 
-SAMPLE_PATH = "datasets/state_actor_100_sample_cmr.csv"
+SAMPLE_DIR = os.path.join('datasets', 'cmr')
+os.makedirs(SAMPLE_DIR, exist_ok=True)
+SAMPLE_PATH = os.path.join(SAMPLE_DIR, "state_actor_sample_cmr.csv")
 df_test.to_csv(SAMPLE_PATH, index=False)
 print(f"Wrote stratified sample to {SAMPLE_PATH}")
 print(df_test.head())
@@ -179,8 +186,10 @@ for m in models:
     print(f"Model {m} completed.")
 
 res_df = pd.DataFrame(results)
-out_path = "results/ollama_results_acled_cameroon_state_actors.csv"
-os.makedirs(os.path.dirname(out_path), exist_ok=True)
+COUNTRY = os.environ.get('COUNTRY', 'cmr')
+RESULTS_DIR = f'results/{COUNTRY}'
+os.makedirs(RESULTS_DIR, exist_ok=True)
+out_path = os.path.join(RESULTS_DIR, f"ollama_results_acled_{COUNTRY}_state_actors.csv")
 res_df.to_csv(out_path, index=False)
 print(f"\nSaved final predictions to: {out_path}")
 print(res_df.head(5))

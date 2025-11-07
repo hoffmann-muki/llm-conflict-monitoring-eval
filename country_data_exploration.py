@@ -31,15 +31,3 @@ def extract_country_rows(csv_path: str, country: str, country_col: str = "countr
     # Normalize and filter (case-insensitive, strip whitespace)
     mask = df[country_col].fillna("").astype(str).str.strip().str.lower() == country.strip().lower()
     return df.loc[mask].reset_index(drop=True)
-
-if __name__ == "__main__":
-    SRC = "datasets/Africa_lagged_data_up_to-2024-10-24.csv"
-    OUT_DIR = "datasets"
-    OUT_PATH = os.path.join(OUT_DIR, "Cameroon_lagged_data_up_to-2024-10-24.csv")
-    if not os.path.exists(SRC):
-        print(f"Source CSV not found: {SRC}. Please place the Africa lagged CSV at that path.")
-    else:
-        df_cam = extract_country_rows(SRC, "Cameroon")
-        os.makedirs(OUT_DIR, exist_ok=True)
-        df_cam.to_csv(OUT_PATH, index=False)
-        print(f"Wrote {len(df_cam):,} rows to {OUT_PATH}")

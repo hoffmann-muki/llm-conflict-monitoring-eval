@@ -1,4 +1,0 @@
-model,N,accuracy,precision_macro,recall_macro
-llama3.2,50,0.72,0.253,0.258
-qwen2.5,50,0.76,0.272,0.284
-mistral,50,0.76,0.252,0.306

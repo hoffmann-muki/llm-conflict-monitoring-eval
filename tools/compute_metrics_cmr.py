@@ -3,9 +3,17 @@ import numpy as np
 import json
 import os
 
-RESULTS_CSV = 'results/ollama_results_acled_cameroon_state_actors.csv'
-OUT_METRICS = 'results/metrics_acled_cameroon_state_actors.csv'
-OUT_CMS = 'results/confusion_matrices_acled_cameroon_state_actors.json'
+COUNTRY = os.environ.get('COUNTRY', 'cmr')
+RESULTS_DIR = os.path.join('results', COUNTRY)
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
+OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_state_actors.csv')
+OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_state_actors.json')
+
+# Backwards-compat
+if not os.path.exists(RESULTS_CSV) and os.path.exists('results/ollama_results_acled_cameroon_state_actors.csv'):
+    RESULTS_CSV = 'results/ollama_results_acled_cameroon_state_actors.csv'
 
 labels = ['V','B','E','P','R','S']
 

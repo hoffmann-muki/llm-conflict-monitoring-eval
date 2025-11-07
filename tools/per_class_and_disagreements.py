@@ -9,9 +9,17 @@ import os
 import pandas as pd
 from sklearn.metrics import precision_recall_fscore_support
 
-INPUT_CSV = os.path.join("results", "ollama_results_calibrated.csv")
-OUT_PER_CLASS = os.path.join("results", "per_class_report.csv")
-OUT_TOP = os.path.join("results", "top_disagreements.csv")
+COUNTRY = os.environ.get('COUNTRY', 'cmr')
+RESULTS_DIR = os.path.join('results', COUNTRY)
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+INPUT_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+OUT_PER_CLASS = os.path.join(RESULTS_DIR, 'per_class_report.csv')
+OUT_TOP = os.path.join(RESULTS_DIR, 'top_disagreements.csv')
+
+# Backwards-compat
+if not os.path.exists(INPUT_CSV) and os.path.exists(os.path.join('results','ollama_results_calibrated.csv')):
+    INPUT_CSV = os.path.join('results','ollama_results_calibrated.csv')
 TOP_N = 20
 
 def main():
