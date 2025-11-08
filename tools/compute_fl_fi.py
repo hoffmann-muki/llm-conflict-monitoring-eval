@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compute False Legitimacy (FL) and False Illegitimacy (FI) per model.
 
-Definitions (configurable):
+Definitions:
 - legitimate_labels: labels that represent legitimate state action (default B, S)
 - illegitimate_labels: labels that represent illegitimate action (default V)
 
@@ -44,14 +44,7 @@ def main():
         # FI: true in LEGIT but predicted in ILLEG
         fi_mask = sub['true_label'].isin(LEGIT) & sub['pred_label'].isin(ILLEG)
         fi = int(fi_mask.sum())
-        # Rates (relative to relevant support)
-        illeg_support = int(sub['true_label'].isin(ILLEG).sum())
-        legit_support = int(sub['true_label'].isin(LEGIT).sum())
-        fl_rate = fl / illeg_support if illeg_support>0 else np.nan
-        fi_rate = fi / legit_support if legit_support>0 else np.nan
-        ratio = (fl / fi) if fi>0 else (float('inf') if fl>0 else np.nan)
-        rows.append({'model':m, 'total':total, 'illeg_support':illeg_support, 'legit_support':legit_support, 'FL':fl, 'FI':fi, 'FL_rate':fl_rate, 'FI_rate':fi_rate, 'FL_FI_ratio':ratio})
-
+        rows.append({'model': m, 'total': total, 'fl': fl, 'fi': fi}) # type: ignore
     out = pd.DataFrame(rows)
     out.to_csv(OUT_CSV, index=False)
     print('Wrote', OUT_CSV)
