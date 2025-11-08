@@ -1,4 +1,4 @@
-model,total,illeg_support,legit_support,FL,FI,FL_rate,FI_rate,FL_FI_ratio
-llama3.2,20,12,7,1,1,0.08333333333333333,0.14285714285714285,1.0
-qwen2.5,20,12,7,0,0,0.0,0.0,
-mistral,20,12,7,1,0,0.08333333333333333,0.0,inf
+model,total,fl,fi
+llama3.2,20,1,1
+qwen2.5,20,0,0
+mistral,20,1,0
