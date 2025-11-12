@@ -12,12 +12,17 @@ Two country flows are available (Cameroon, Nigeria). The repository namespaces d
 
 ## Files of interest
 - `political_bias_of_llms_generic.py` — Generic country pipeline: builds stratified sample (env `SAMPLE_SIZE`), runs classifiers, and writes predictions to `results/{country}/`. Supports both Cameroon (`cmr`) and Nigeria (`nga`).
-- `tools/calibrate_confidences.py` — fits per-model calibration on labeled predictions and writes calibration params JSON under `results/<COUNTRY>/`.
-- `tools/apply_calibration_and_evaluate.py` — applies calibrators to predictions and writes calibrated CSV, threshold metrics and plots under `results/<COUNTRY>/`.
-- `tools/compute_metrics_cmr.py` — computes per-model confusion matrices and summary metrics (country-scoped).
+- `tools/apply_calibration_and_evaluate.py` — fits calibration models AND applies them to predictions; writes calibrated CSV, threshold metrics and plots under `results/<COUNTRY>/`.
+- `tools/compute_metrics.py` — computes per-model confusion matrices and summary metrics (country-generic).
+- `tools/compute_thresholds_per_class.py` — computes per-class thresholds for improved classification decisions based on calibrated probabilities.
 - `tools/compare_model_sizes.py` — compares FL/FI across different model sizes within a family (e.g., gemma:2b vs gemma:7b) with McNemar statistical tests and optional inference for missing models.
+- `tools/counterfactual_analysis.py` — counterfactual analysis framework for understanding model disagreements through hypothesis-driven perturbations.
+- `tools/visualize_counterfactual.py` — visualization suite for counterfactual analysis results with statistical plots and summary tables.
+- `tools/per_class_and_disagreements.py` — generates per-class metrics and extracts top disagreement examples between models.
+- `tools/visualize_reports.py` — creates visualization plots from analysis reports (per-class metrics, disagreements).
+- `tools/compute_fl_fi.py` — computes False Legitimacy and False Illegitimacy metrics per model.
 - `tools/ollama_helpers.py` — centralized utilities for Ollama model inference with structured JSON output parsing, simplified prompts optimized for reliable JSON output, and robust response parsing handling different model output patterns.
-- `tools/data_helpers.py` — shared data loading and path management utilities with country-specific configuration handling.
+- `tools/data_helpers.py` — shared data loading and path management utilities with country-specific configuration handling and setup_country_environment() function.
 - `tools/metrics_helpers.py` — shared FL/FI computation and aggregation functions for improved code reuse across analysis scripts.
 - `tools/constants.py` — shared constants and mappings (ACLED event type labels, etc.).
 - `scripts/run_calibrate_then_apply.sh` — unified driver script that accepts a country parameter (cmr or nga).
@@ -37,6 +42,9 @@ source .venv/bin/activate
 # or at minimum
 .venv/bin/python -m pip install pandas scikit-learn matplotlib
 ```
+
+### Development Environment
+The repository includes VS Code configuration (`.vscode/settings.json`) that adds the `tools/` directory to the Python analysis path for improved import resolution and IntelliSense support.
 
 ## Running the pipeline
 
@@ -70,11 +78,11 @@ COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
 
 #### Calibration and Evaluation
 ```bash
-# Fit calibration models on predictions
-COUNTRY=cmr .venv/bin/python -m tools.calibrate_confidences
-
-# Apply calibration and generate evaluation metrics/plots
+# Apply calibration and generate evaluation metrics/plots (combines calibration fitting + application)
 COUNTRY=cmr .venv/bin/python -m tools.apply_calibration_and_evaluate
+
+# Compute per-class thresholds for improved classification
+COUNTRY=cmr .venv/bin/python -m tools.compute_thresholds_per_class
 
 # Combined calibrate-then-apply workflow
 COUNTRY=cmr ./scripts/run_calibrate_then_apply.sh
@@ -103,10 +111,16 @@ COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.
 #### Per-Class Analysis and Reporting
 ```bash
 # Generate per-class metrics and disagreement analysis
-COUNTRY=cmr .venv/bin/python tools/per_class_and_disagreements.py
+COUNTRY=cmr .venv/bin/python -m tools.per_class_and_disagreements
 
 # Generate visualizations from analysis reports  
-COUNTRY=cmr .venv/bin/python tools/visualize_reports.py
+COUNTRY=cmr .venv/bin/python -m tools.visualize_reports
+
+# Compute FL/FI metrics by model
+COUNTRY=cmr .venv/bin/python -m tools.compute_fl_fi
+
+# Generate confusion matrices and summary metrics
+COUNTRY=cmr .venv/bin/python -m tools.compute_metrics
 ```
 
 ### Utility Tools
@@ -131,13 +145,13 @@ print(json.dumps(result, indent=2))
 - Optional: `results/<COUNTRY>/ollama_results_calibrated.csv` (existing results; will run inference if missing models)
 - Outputs: `results/<COUNTRY>/compare_<family>_sizes.csv`, `results/<COUNTRY>/compare_<family>_sizes_pairwise.csv`, `results/<COUNTRY>/ollama_inference_<family>-<sizes>.csv`
 
-**calibrate_confidences.py:**
-- Required: `results/<COUNTRY>/ollama_results_<dataset>.csv` (raw predictions)
-- Outputs: `results/<COUNTRY>/calibration_params_<dataset>.json`
-
 **apply_calibration_and_evaluate.py:**
-- Required: `results/<COUNTRY>/ollama_results_<dataset>.csv`, `results/<COUNTRY>/calibration_params_<dataset>.json`
-- Outputs: `results/<COUNTRY>/ollama_results_calibrated.csv`, plots, metrics
+- Required: `results/<COUNTRY>/ollama_results_acled_<COUNTRY>_state_actors.csv` (raw predictions)
+- Outputs: `results/<COUNTRY>/ollama_results_calibrated.csv`, `results/<COUNTRY>/calibration_params_acled_<COUNTRY>_state_actors.json`, plots, metrics
+
+**compute_thresholds_per_class.py:**
+- Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
+- Outputs: `results/<COUNTRY>/selected_thresholds_per_class.csv`, `results/<COUNTRY>/selected_thresholds.json`
 
 **per_class_and_disagreements.py:**
 - Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
@@ -147,11 +161,56 @@ print(json.dumps(result, indent=2))
 - Required: `results/<COUNTRY>/per_class_report.csv`, `results/<COUNTRY>/top_disagreements.csv`
 - Outputs: `results/<COUNTRY>/per_class_metrics.png`, `results/<COUNTRY>/top_disagreements_table.png`
 
+**counterfactual_analysis.py:**
+- Required: `datasets/<COUNTRY>/state_actor_sample_<COUNTRY>.csv`, `results/<COUNTRY>/ollama_results_calibrated.csv`
+- Outputs: `results/<COUNTRY>/counterfactual_analysis_<models>.json`, `results/<COUNTRY>/counterfactual_analysis_<models>_summary.csv`
+
+**visualize_counterfactual.py:**
+- Required: `results/<COUNTRY>/counterfactual_analysis_<models>.json`
+- Outputs: Multiple visualization plots and `counterfactual_report.txt`
+
 ## Outputs and File Structure
 - All outputs are organized under `results/<COUNTRY>/` (e.g., `results/cmr/` or `results/nga/`)
 - **Core pipeline outputs**: `ollama_results_acled_<country>_state_actors.csv`, `ollama_results_calibrated.csv`, `calibration_params_acled_<country>_state_actors.json`, `metrics_thresholds_calibrated.csv`, `reliability_diagrams.png`, `accuracy_vs_coverage.png`
 - **Model size comparisons**: `compare_<family>_sizes.csv` (FL/FI summary), `compare_<family>_sizes_pairwise.csv` (McNemar test results), `ollama_inference_<family>-<sizes>.csv` (inference-only results)
 - **Analysis reports**: `per_class_report.csv`, `top_disagreements.csv`, `per_class_metrics.png`, `top_disagreements_table.png`
+- **Metrics and thresholds**: `metrics_acled_<country>_state_actors.csv`, `confusion_matrices_acled_<country>_state_actors.json`, `selected_thresholds_per_class.csv`, `selected_thresholds.json`
+- **FL/FI analysis**: `fl_fi_by_model.csv`
+- **Counterfactual analysis**: `counterfactual_analysis_<models>.json`, `counterfactual_analysis_<models>_summary.csv`, various visualization plots
+
+## Counterfactual Analysis
+
+The repository includes a counterfactual analysis framework for understanding why models make different classifications:
+
+- **Hypothesis-driven perturbations**: Tests specific hypotheses about model sensitivity (actor substitution, intensity modifiers, action synonyms, negation, sufficiency)
+- **Statistical analysis**: Includes McNemar tests for paired model comparisons and clustering of sensitivity patterns
+- **Comprehensive reporting**: Generates detailed JSON reports, summary CSV files, and multiple visualization plots
+- **Model disagreement analysis**: Focuses on events where models disagree to understand decision boundaries
+
+### Usage
+```bash
+# Run counterfactual analysis to understand model disagreements
+COUNTRY=nga .venv/bin/python -m tools.counterfactual_analysis --models llama3.2,mistral:7b --events 10
+
+# Generate visualizations for counterfactual results
+COUNTRY=nga .venv/bin/python -m tools.visualize_counterfactual --input results/nga/counterfactual_analysis.json
+```
+
+## Testing
+
+The repository includes a test suite under `tests/` to validate components:
+
+```bash
+# Test the generic pipeline components
+.venv/bin/python tests/test_generic_pipeline.py
+
+# Test the counterfactual analysis framework  
+.venv/bin/python tests/test_counterfactual.py
+```
+
+**Available Tests:**
+- `tests/test_generic_pipeline.py` — Validates the generic pipeline imports, country setup, and basic functionality
+- `tests/test_counterfactual.py` — Tests the counterfactual analysis framework with sample data
 
 ## Model size comparisons
 
