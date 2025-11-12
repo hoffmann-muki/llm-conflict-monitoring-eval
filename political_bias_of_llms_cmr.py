@@ -4,7 +4,7 @@ from tools.ollama_helpers import run_model_on_rows
 from country_data_exploration import extract_country_rows
 from column_data_extraction import get_actor_norm_series, extract_state_actor
 from input_data_extraction import build_stratified_sample
-from tools.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC
+from tools.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_MODELS
 from tools.data_helpers import paths_for_country, resolve_columns, write_sample
 
 if not os.path.exists(CSV_SRC):
@@ -67,7 +67,7 @@ print(f"Wrote stratified sample to {SAMPLE_PATH}")
 print(df_test.head())
 
 # Minimal multi-model classification with Ollama
-models = ["llama3.2", "qwen2.5", "mistral:7b", "gemma:7b"]
+models = WORKING_MODELS
 
 results = []
 subset = df_test.copy()
