@@ -5,10 +5,9 @@ import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
+from data_helpers import setup_country_environment
 
-COUNTRY = os.environ.get('COUNTRY', 'cmr')
-RESULTS_DIR = os.path.join('results', COUNTRY)
-os.makedirs(RESULTS_DIR, exist_ok=True)
+COUNTRY, RESULTS_DIR = setup_country_environment()
 
 # Input/raw predictions CSV (pipeline written)
 RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
@@ -20,12 +19,6 @@ OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')
 OUT_PLOT_REL = os.path.join(RESULTS_DIR, 'reliability_diagrams.png')
 OUT_PLOT_ACC = os.path.join(RESULTS_DIR, 'accuracy_vs_coverage.png')
 OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
-
-# Backwards-compat: if old files exist in top-level results/, prefer them only when country-specific not present
-if not os.path.exists(RESULTS_CSV) and os.path.exists('results/ollama_results_acled_cameroon_state_actors.csv'):
-    RESULTS_CSV = 'results/ollama_results_acled_cameroon_state_actors.csv'
-if not os.path.exists(CAL_PARAMS) and os.path.exists('results/calibration_params_acled_cameroon_state_actors.json'):
-    CAL_PARAMS = 'results/calibration_params_acled_cameroon_state_actors.json'
 
 labels = ['V','B','E','P','R','S']
 thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]

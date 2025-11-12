@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run a small-sample calibration, pick per-model thresholds, then run on a larger sample
-# and apply those thresholds to the larger sample's calibrated probabilities.
+# Generic calibration script that works for any country
+# Usage: ./run_calibrate_then_apply.sh [COUNTRY]
+# COUNTRY defaults to cmr if not specified
+
+COUNTRY=${1:-${COUNTRY:-cmr}}
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV_PY="$REPO_ROOT/.venv/bin/python"
@@ -18,17 +21,22 @@ LARGE_SAMPLE=${LARGE_SAMPLE:-50}
 MIN_COVERAGE=${MIN_COVERAGE:-0.5}
 
 echo "Using python: $VENV_PY"
+echo "Country: $COUNTRY"
 echo "Small sample=$SMALL_SAMPLE Large sample=$LARGE_SAMPLE MIN_COVERAGE=$MIN_COVERAGE"
 
 cd "$REPO_ROOT"
 
 echo "--- Running small sample (SAMPLE_SIZE=$SMALL_SAMPLE) ---"
-SAMPLE_SIZE=$SMALL_SAMPLE CMR_POSTPROCESS=1 "$VENV_PY" political_bias_of_llms_cmr.py
+# Run the generic pipeline
+SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" political_bias_of_llms_generic.py
 
-BASE_METRICS="results/metrics_thresholds_calibrated.csv"
-# country-specific metrics filename to avoid clashes
-METRICS_FILE="results/metrics_thresholds_calibrated_cmr.csv"
-THRESH_JSON="results/selected_thresholds_cmr.json"
+# Run calibration and evaluation
+COUNTRY=$COUNTRY "$VENV_PY" -m tools.apply_calibration_and_evaluate
+COUNTRY=$COUNTRY "$VENV_PY" -m tools.compute_thresholds_per_class
+
+# Country-specific file paths
+METRICS_FILE="results/${COUNTRY}/metrics_thresholds_calibrated.csv"
+THRESH_JSON="results/selected_thresholds_${COUNTRY}.json"
 
 if [ ! -f "$METRICS_FILE" ]; then
   echo "Expected metrics file not found: $METRICS_FILE"
@@ -39,48 +47,36 @@ echo "--- Selecting thresholds from small-sample metrics ---"
 "$VENV_PY" - <<PY > /dev/null
 import pandas as pd, json
 df = pd.read_csv('$METRICS_FILE')
-# prefer isotonic calibrated column if present
-for pref in ['pred_conf_iso','pred_conf_temp','pred_conf']:
-    if pref in df['prob_col'].unique():
-        pref_col = pref
-        break
-    pref_col = 'pred_conf'
-
-out = {}
+# Choose the threshold with best accuracy>=MIN_COVERAGE per model
+selected = {}
 for m in df['model'].unique():
-    sub = df[(df['model']==m) & (df['prob_col']==pref_col)].copy()
-    if sub.empty:
-        continue
-    # choose threshold with coverage >= MIN_COVERAGE and max accuracy
-    cand = sub[sub['coverage'] >= float($MIN_COVERAGE)]
-    if cand.empty:
-        best = sub.sort_values(['accuracy','coverage'], ascending=[False,False]).iloc[0]
-    else:
-        best = cand.sort_values(['accuracy','coverage'], ascending=[False,False]).iloc[0]
-    out[m] = {'prob_col': pref_col, 'threshold': float(best['threshold']), 'coverage': float(best['coverage']), 'accuracy': None if pd.isna(best['accuracy']) else float(best['accuracy'])}
+    sub = df[df['model']==m]
+    # filter to those with coverage >= MIN_COVERAGE
+    candidates = sub[sub['coverage'] >= $MIN_COVERAGE]
+    if len(candidates) == 0:
+        print(f"Warning: no thresholds for {m} meet MIN_COVERAGE={$MIN_COVERAGE}; using most permissive")
+        candidates = sub
+    # pick the one with highest accuracy
+    best_row = candidates.loc[candidates['accuracy'].idxmax()]
+    selected[m] = float(best_row['threshold'])
+    print(f"{m}: threshold={best_row['threshold']:.3f} acc={best_row['accuracy']:.3f} cov={best_row['coverage']:.3f}")
 
-with open('$THRESH_JSON','w') as f:
-    json.dump(out, f, indent=2)
-print('wrote', '$THRESH_JSON')
+with open('$THRESH_JSON', 'w') as f:
+    json.dump(selected, f, indent=2)
+print("Wrote thresholds to $THRESH_JSON")
 PY
 
-echo "Selected thresholds written to $THRESH_JSON"
-
 echo "--- Running large sample (SAMPLE_SIZE=$LARGE_SAMPLE) ---"
-SAMPLE_SIZE=$LARGE_SAMPLE CMR_POSTPROCESS=1 "$VENV_PY" political_bias_of_llms_cmr.py
+# Run the large sample with the generic pipeline
+SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" political_bias_of_llms_generic.py
 
-# calibrated CSV that the apply step reads; prefer country-specific filename
-BASE_CAL="results/ollama_results_calibrated.csv"
-CALIBRATED_CSV="results/ollama_results_calibrated_cmr.csv"
-APPLY_OUT_CSV="results/threshold_application_on_large_cmr.csv"
+# Run calibration and evaluation
+COUNTRY=$COUNTRY "$VENV_PY" -m tools.apply_calibration_and_evaluate
 
-if [ -f "$BASE_CAL" ] && [ ! -f "$CALIBRATED_CSV" ]; then
-    mv "$BASE_CAL" "$CALIBRATED_CSV"
-    echo "Moved $BASE_CAL -> $CALIBRATED_CSV"
-fi
+CALIBRATED_CSV="results/${COUNTRY}/ollama_results_calibrated.csv"
 
 if [ ! -f "$CALIBRATED_CSV" ]; then
-    echo "Calibrated results not found: $CALIBRATED_CSV"
+    echo "Expected calibrated CSV not found: $CALIBRATED_CSV"
     exit 1
 fi
 
@@ -126,10 +122,15 @@ for m, info in th.items():
         acc = (accepted['pred_label']==accepted['true_label']).mean()
     rows.append({'model':m, 'threshold':thr_repr, 'accepted': len(accepted), 'coverage': (len(accepted)/total if total>0 else 0), 'accuracy': (None if acc is None else float(acc)), 'total_valid': total})
 
-out = pd.DataFrame(rows)
-out.to_csv('$APPLY_OUT_CSV', index=False)
-print('Wrote', '$APPLY_OUT_CSV')
-print(out.to_string(index=False))
+final_df = pd.DataFrame(rows)
+out_path = 'results/${COUNTRY}/final_threshold_performance.csv'
+final_df.to_csv(out_path, index=False)
+print(f"Final threshold performance (saved to {out_path}):")
+print(final_df.to_string(index=False))
 PY
 
-echo "Done."
+echo "--- Generating reports ---"
+COUNTRY=$COUNTRY "$VENV_PY" -m tools.per_class_and_disagreements
+COUNTRY=$COUNTRY "$VENV_PY" -m tools.visualize_reports
+
+echo "Done! Check results/$COUNTRY/ for outputs."

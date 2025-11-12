@@ -9,18 +9,13 @@ import os
 import json
 import numpy as np
 import pandas as pd
+from data_helpers import setup_country_environment
 
-COUNTRY = os.environ.get('COUNTRY', 'cmr')
-RESULTS_DIR = os.path.join('results', COUNTRY)
-os.makedirs(RESULTS_DIR, exist_ok=True)
+COUNTRY, RESULTS_DIR = setup_country_environment()
 
 CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
 OUT_CSV = os.path.join(RESULTS_DIR, 'selected_thresholds_per_class.csv')
 OUT_JSON = os.path.join(RESULTS_DIR, 'selected_thresholds.json')
-
-# Backwards-compat
-if not os.path.exists(CAL_CSV) and os.path.exists('results/ollama_results_calibrated.csv'):
-    CAL_CSV = 'results/ollama_results_calibrated.csv'
 
 labels = ['V','B','E','P','R','S']
 candidates = np.concatenate((np.linspace(0,0.9,10), [0.95,0.97,0.99]))

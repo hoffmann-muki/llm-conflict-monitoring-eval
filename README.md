@@ -11,8 +11,7 @@ Two country flows are available (Cameroon, Nigeria). The repository namespaces d
 - Calibrates model confidences (isotonic regression + temperature scaling), evaluates thresholding strategies, and produces reliability and accuracy-vs-coverage plots.
 
 ## Files of interest
-- `political_bias_of_llms_cmr.py` — Cameroon pipeline: builds stratified sample (env `SAMPLE_SIZE`), runs classifiers, and writes predictions to `results/cmr/`.
-- `political_bias_of_llms_nga.py` — Nigeria pipeline: same as above but writes to `results/nga/`.
+- `political_bias_of_llms_generic.py` — Generic country pipeline: builds stratified sample (env `SAMPLE_SIZE`), runs classifiers, and writes predictions to `results/{country}/`. Supports both Cameroon (`cmr`) and Nigeria (`nga`).
 - `tools/calibrate_confidences.py` — fits per-model calibration on labeled predictions and writes calibration params JSON under `results/<COUNTRY>/`.
 - `tools/apply_calibration_and_evaluate.py` — applies calibrators to predictions and writes calibrated CSV, threshold metrics and plots under `results/<COUNTRY>/`.
 - `tools/compute_metrics_cmr.py` — computes per-model confusion matrices and summary metrics (country-scoped).
@@ -21,7 +20,7 @@ Two country flows are available (Cameroon, Nigeria). The repository namespaces d
 - `tools/data_helpers.py` — shared data loading and path management utilities with country-specific configuration handling.
 - `tools/metrics_helpers.py` — shared FL/FI computation and aggregation functions for improved code reuse across analysis scripts.
 - `tools/constants.py` — shared constants and mappings (ACLED event type labels, etc.).
-- `scripts/run_calibrate_then_apply_cmr.sh` and `scripts/run_calibrate_then_apply_nga.sh` — driver scripts for Cameroon and Nigeria respectively.
+- `scripts/run_calibrate_then_apply.sh` — unified driver script that accepts a country parameter (cmr or nga).
 
 ## Environment
 1. Create and activate your venv (example):
@@ -44,12 +43,12 @@ source .venv/bin/activate
 ### Quick Start Examples
 ```bash
 # Main classification pipelines
-COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_cmr.py
-COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_nga.py
+COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
+COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
 
 # Calibrate-then-apply workflow
-COUNTRY=cmr ./scripts/run_calibrate_then_apply_cmr.sh
-COUNTRY=nga ./scripts/run_calibrate_then_apply_nga.sh
+COUNTRY=cmr ./scripts/run_calibrate_then_apply.sh
+COUNTRY=nga ./scripts/run_calibrate_then_apply.sh
 
 # Model size comparisons
 COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes 2b,7b --run-missing true
@@ -63,10 +62,10 @@ COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family qwen3 --sizes
 #### Main Classification Pipelines
 ```bash
 # Cameroon pipeline - builds sample and runs classification
-COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_cmr.py
+COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
 
 # Nigeria pipeline - builds sample and runs classification  
-COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_nga.py
+COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
 ```
 
 #### Calibration and Evaluation
@@ -78,8 +77,8 @@ COUNTRY=cmr .venv/bin/python -m tools.calibrate_confidences
 COUNTRY=cmr .venv/bin/python -m tools.apply_calibration_and_evaluate
 
 # Combined calibrate-then-apply workflow
-COUNTRY=cmr ./scripts/run_calibrate_then_apply_cmr.sh
-COUNTRY=nga ./scripts/run_calibrate_then_apply_nga.sh
+COUNTRY=cmr ./scripts/run_calibrate_then_apply.sh
+COUNTRY=nga ./scripts/run_calibrate_then_apply.sh
 ```
 
 ### Analysis Tools
@@ -98,7 +97,7 @@ COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes
 #   --out OUTPUT_PATH          Custom output CSV path
 
 # Advanced usage:
-COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply_cmr.sh  # override sizes
+COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.sh  # override sizes
 ```
 
 #### Per-Class Analysis and Reporting

@@ -1,5 +1,16 @@
 import os
-from typing import Dict
+from typing import Dict, Tuple
+
+def setup_country_environment(country: str | None = None) -> Tuple[str, str]:
+    """Standard country environment setup used across tools.
+    
+    Returns:
+        Tuple of (country_code, results_dir_path)
+    """
+    country = country or os.environ.get('COUNTRY', 'cmr')
+    results_dir = os.path.join('results', country)
+    os.makedirs(results_dir, exist_ok=True)
+    return country, results_dir
 
 def paths_for_country(country: str) -> Dict[str, str]:
     results_dir = os.path.join('results', country)

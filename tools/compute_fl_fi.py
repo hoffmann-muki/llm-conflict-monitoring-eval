@@ -13,17 +13,12 @@ Outputs: results/fl_fi_by_model.csv
 import os
 import pandas as pd
 import numpy as np
+from data_helpers import setup_country_environment
 
-COUNTRY = os.environ.get('COUNTRY', 'cmr')
-RESULTS_DIR = os.path.join('results', COUNTRY)
-os.makedirs(RESULTS_DIR, exist_ok=True)
+COUNTRY, RESULTS_DIR = setup_country_environment()
 
 CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
 OUT_CSV = os.path.join(RESULTS_DIR, 'fl_fi_by_model.csv')
-
-# Backwards compatibility
-if not os.path.exists(CAL_CSV) and os.path.exists('results/ollama_results_calibrated.csv'):
-    CAL_CSV = 'results/ollama_results_calibrated.csv'
 
 import os
 import pandas as pd
