@@ -28,7 +28,7 @@ if not os.path.exists(CAL_PARAMS) and os.path.exists('results/calibration_params
     CAL_PARAMS = 'results/calibration_params_acled_cameroon_state_actors.json'
 
 labels = ['V','B','E','P','R','S']
-thresholds = [0.0, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95,0.99]
+thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
 
 def temp_scaled(p, T):
     p = np.clip(p, 1e-12, 1-1e-12)

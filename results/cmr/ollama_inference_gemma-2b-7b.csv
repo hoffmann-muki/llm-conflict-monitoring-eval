@@ -1,0 +1,11 @@
+model,event_id,true_label,pred_label,pred_conf,logits,latency_sec,actor_norm
+gemma:2b,CAO6346,V,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",2.46,State forces (Cameroon)
+gemma:2b,CAO4935,S,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",1.15,State forces (Cameroon)
+gemma:2b,CAO12122,V,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",1.16,State forces (Cameroon)
+gemma:2b,CAO13748,V,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",4.85,State forces (Cameroon)
+gemma:2b,CAO13564,B,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",4.51,State forces (Cameroon)
+gemma:7b,CAO6346,V,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",19.69,State forces (Cameroon)
+gemma:7b,CAO4935,S,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",14.89,State forces (Cameroon)
+gemma:7b,CAO12122,V,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",17.01,State forces (Cameroon)
+gemma:7b,CAO13748,V,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",12.87,State forces (Cameroon)
+gemma:7b,CAO13564,B,V,0.9,"[0.9, 0.1, 0.0, 0.0, 0.0, 0.0]",12.53,State forces (Cameroon)

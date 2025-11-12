@@ -1,49 +1,31 @@
 import pandas as pd
-import json, time, re, os, subprocess, shlex
+import os
+from tools.ollama_helpers import run_model_on_rows
 from country_data_exploration import extract_country_rows
 from column_data_extraction import get_actor_norm_series, extract_state_actor
 from input_data_extraction import build_stratified_sample
-
-# Map for single-letter output (must be consistent with prompt)
-LABEL_MAP = {
-    "Violence against civilians": "V",
-    "Battles": "B",
-    "Explosions/Remote violence": "E",
-    "Protests": "P",
-    "Riots": "R",
-    "Strategic developments": "S"
-}
-
-# ACLED top-level event types we’ll classify between:
-EVENT_CLASSES_FULL = [
-    "Violence against civilians",
-    "Battles",
-    "Explosions/Remote violence",
-    "Protests",
-    "Riots",
-    "Strategic developments"
-]
-
-CSV_SRC = "datasets/Africa_lagged_data_up_to-2024-10-24.csv"
+from tools.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC
+from tools.data_helpers import paths_for_country, resolve_columns, write_sample
 
 if not os.path.exists(CSV_SRC):
     raise SystemExit(f"Source CSV not found: {CSV_SRC}")
 
 df_all = pd.read_csv(CSV_SRC)
 df_cam = extract_country_rows(CSV_SRC, "Cameroon")
+
 # Persist extracted country-specific CSV for auditing and reuse under datasets/cmr/
-dataset_dir = os.path.join('datasets', 'cmr')
-os.makedirs(dataset_dir, exist_ok=True)
-out_country = os.path.join(dataset_dir, "Cameroon_lagged_data_up_to-2024-10-24.csv")
+paths = paths_for_country('cmr')
+os.makedirs(paths['datasets_dir'], exist_ok=True)
+out_country = os.path.join(paths['datasets_dir'], "Cameroon_lagged_data_up_to-2024-10-24.csv")
 df_cam.to_csv(out_country, index=False)
 print(f"Wrote extracted Cameroon data to {out_country}")
 
 # Resolve column names case-insensitively to match ACLED casing differences
-cols_lower = {c.lower(): c for c in df_cam.columns}
-col_actor = cols_lower.get('actor1', 'actor1')
-col_notes = cols_lower.get('notes', 'notes')
-col_event_type = cols_lower.get('event_type', 'event_type')
-col_event_id = cols_lower.get('event_id_cnty', 'event_id_cnty')
+cols = resolve_columns(df_cam, ['actor1', 'notes', 'event_type', 'event_id_cnty'])
+col_actor = cols.get('actor1') or 'actor1'
+col_notes = cols.get('notes') or 'notes'
+col_event_type = cols.get('event_type') or 'event_type'
+col_event_id = cols.get('event_id_cnty') or 'event_id_cnty'
 
 # Create normalized actor column using the configurable helper
 df_cam["actor_norm"] = get_actor_norm_series(df_cam, actor_col=col_actor)
@@ -66,7 +48,7 @@ usable = (
 
 print(f"Usable state-actor rows found (Cameroon): {len(usable):,}")
 
-# --- Build stratified sample using the generic sampler (default. 100 samples) --- #
+# Build stratified sample using the generic sampler (default: 100 samples) #
 SAMPLE_SIZE = int(os.environ.get('SAMPLE_SIZE', '100'))
 N_TOTAL = min(SAMPLE_SIZE, len(usable))
 df_test = build_stratified_sample(
@@ -80,104 +62,16 @@ df_test = build_stratified_sample(
     replace=False
 )
 
-SAMPLE_DIR = os.path.join('datasets', 'cmr')
-os.makedirs(SAMPLE_DIR, exist_ok=True)
-SAMPLE_PATH = os.path.join(SAMPLE_DIR, "state_actor_sample_cmr.csv")
-df_test.to_csv(SAMPLE_PATH, index=False)
+SAMPLE_PATH = write_sample('cmr', df_test)
 print(f"Wrote stratified sample to {SAMPLE_PATH}")
 print(df_test.head())
 
 # Minimal multi-model classification with Ollama
-
 models = ["llama3.2", "qwen2.5", "mistral:7b", "gemma:7b"]
-
-SCHEMA = {
-    "type": "object",
-    "properties": {
-        "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
-    "confidence": {"type": "number"},
-    # optional per-class numeric scores in the order [V,B,E,P,R,S]
-    "logits": {"type": "array", "items": {"type": "number"}}
-    },
-    "required": ["label", "confidence"]
-}
-
-def make_prompt(note: str) -> str:
-    return f"""
-        You are a conflict classifier of Cameroonian events.
-        Classify the following short descriptions into exactly one ACLED event type initial:
-        V = Violence against civilians, B = Battles, E = Explosions/Remote violence,
-        P = Protests, R = Riots, S = Strategic developments.
-        Note: {note}
-    Return strict JSON only. The 'label' must be one of "V", "B", "E", "P", "R", "S".
-    Additionally return a numeric array field named "logits" with six scores in the exact order [V,B,E,P,R,S] representing unnormalized model scores (higher means more likely). This allows downstream per-class probability calibration.
-    """
-
-def run_ollama_structured(model: str, note: str, timeout: int = 120):
-    payload = {
-        "model": model,
-        "stream": False,
-        "options": {"temperature": 0.0, "num_predict": 128},
-        "messages": [
-            {"role": "system", "content": "Classify Cameroonian conflict events as 'V','B','E','P','R','S' and return structured JSON."},
-            {"role": "user", "content": make_prompt(note)}
-        ],
-        "format": SCHEMA
-    }
-    cmd = (
-        'curl -sS -X POST http://localhost:11434/api/chat '
-        '-H "Content-Type: application/json" '
-        f"-d {shlex.quote(json.dumps(payload))}"
-    )
-    out = subprocess.check_output(cmd, shell=True, text=True, timeout=timeout)
-    env = json.loads(out)
-    content = None
-    if "message" in env and "content" in env["message"]:
-        content = env["message"]["content"]
-    elif "response" in env:
-        content = env["response"]
-    if content:
-        json_match = re.search(r'\{.*\}', content, re.DOTALL)
-        if json_match:
-            content = json_match.group(0)
-        return json.loads(content)
-    return {}
 
 results = []
 subset = df_test.copy()
 print(f"Starting classification on {len(subset)} rows with {len(models)} models (serial execution).")
-
-def run_model_on_rows(model_name, rows):
-    out = []
-    for r in rows.itertuples(index=False):
-        t0 = time.time()
-        try:
-            resp = run_ollama_structured(model_name, r.notes)
-            label = str(resp.get("label", "FAIL")).strip()
-            conf = float(resp.get("confidence", 0))
-            # Capture any per-class scores/logits if the model provides them.
-            # Common keys: 'logits', 'log_probs', 'scores', 'label_scores'
-            logits = None
-            for k in ("logits", "log_probs", "scores", "label_scores"):
-                if k in resp:
-                    logits = resp.get(k)
-                    break
-        except Exception:
-            label = "ERROR"
-            conf = 0.0
-            logits = None
-        elapsed = round(time.time() - t0, 2)
-        out.append({
-            "model": model_name,
-            "event_id": r.event_id_cnty,
-            "true_label": r.gold_label,
-            "pred_label": label,
-            "pred_conf": conf,
-            "logits": json.dumps(logits) if logits is not None else None,
-            "latency_sec": elapsed,
-            "actor_norm": r.actor_norm
-        })
-    return out
 
 for m in models:
     print(f"Starting model: {m}")

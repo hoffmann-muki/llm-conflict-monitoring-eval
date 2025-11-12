@@ -16,6 +16,11 @@ Two country flows are available (Cameroon, Nigeria). The repository namespaces d
 - `tools/calibrate_confidences.py` — fits per-model calibration on labeled predictions and writes calibration params JSON under `results/<COUNTRY>/`.
 - `tools/apply_calibration_and_evaluate.py` — applies calibrators to predictions and writes calibrated CSV, threshold metrics and plots under `results/<COUNTRY>/`.
 - `tools/compute_metrics_cmr.py` — computes per-model confusion matrices and summary metrics (country-scoped).
+- `tools/compare_model_sizes.py` — compares FL/FI across different model sizes within a family (e.g., gemma:2b vs gemma:7b) with McNemar statistical tests and optional inference for missing models.
+- `tools/ollama_helpers.py` — centralized utilities for Ollama model inference with structured JSON output parsing, simplified prompts optimized for reliable JSON output, and robust response parsing handling different model output patterns.
+- `tools/data_helpers.py` — shared data loading and path management utilities with country-specific configuration handling.
+- `tools/metrics_helpers.py` — shared FL/FI computation and aggregation functions for improved code reuse across analysis scripts.
+- `tools/constants.py` — shared constants and mappings (ACLED event type labels, etc.).
 - `scripts/run_calibrate_then_apply_cmr.sh` and `scripts/run_calibrate_then_apply_nga.sh` — driver scripts for Cameroon and Nigeria respectively.
 
 ## Environment
@@ -36,51 +41,131 @@ source .venv/bin/activate
 
 ## Running the pipeline
 
-- Classify a sample (default SAMPLE_SIZE=100):
-
+### Quick Start Examples
 ```bash
-# Run Cameroon sample
+# Main classification pipelines
 COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_cmr.py
-# Run Nigeria sample
 COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_nga.py
-```
 
-- Run the calibrate-then-apply driver (small sample -> large sample):
-
-```bash
-# Run country-specific driver (examples)
+# Calibrate-then-apply workflow
 COUNTRY=cmr ./scripts/run_calibrate_then_apply_cmr.sh
 COUNTRY=nga ./scripts/run_calibrate_then_apply_nga.sh
 
-# override sizes
-COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply_cmr.sh
+# Model size comparisons
+COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes 2b,7b --run-missing true
+COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family qwen3 --sizes 1.7b,4b,8b --run-missing true
 ```
 
-## Outputs
-- Predictions, calibrated CSV, calibration params, threshold metrics and plots are written under `results/<COUNTRY>/` (e.g. `results/cmr/` or `results/nga/`).
-- Key files (example for Cameroon): `results/cmr/ollama_results_acled_cmr_state_actors.csv`, `results/cmr/ollama_results_calibrated.csv`, `results/cmr/calibration_params_acled_cmr_state_actors.json`, `results/cmr/metrics_thresholds_calibrated.csv`, `results/cmr/reliability_diagrams.png`, `results/cmr/accuracy_vs_coverage.png`.
+## Command Line Usage
 
-## Reporting and visualization
+### Core Pipeline Scripts
 
-- `tools/per_class_and_disagreements.py` — generate two audit CSVs from calibrated predictions (`results/ollama_results_calibrated.csv`):
-	- `results/per_class_report.csv` — per-model, per-class precision/recall/f1/support
-	- `results/top_disagreements.csv` — top-N event rows where model predictions disagree (sorted by max calibrated probability)
-
-- `tools/visualize_reports.py` — create visual artifacts from the above CSVs:
-	- `results/per_class_metrics.png` — bar chart of per-class F1 by model
-	- `results/top_disagreements_table.png` — rendered table of the top disagreement rows
-
-Usage examples:
-
+#### Main Classification Pipelines
 ```bash
-# run for a specific country folder (set COUNTRY=cmr or COUNTRY=nga)
-COUNTRY=cmr .venv/bin/python tools/per_class_and_disagreements.py   # creates CSV reports under results/cmr/
-COUNTRY=cmr .venv/bin/python tools/visualize_reports.py            # creates PNG visualizations under results/cmr/
+# Cameroon pipeline - builds sample and runs classification
+COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_cmr.py
+
+# Nigeria pipeline - builds sample and runs classification  
+COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_nga.py
 ```
 
-Notes:
-- The scripts expect a country-scoped calibrated CSV, e.g. `results/cmr/ollama_results_calibrated.csv`, to exist and to include the calibrated probability column `pred_conf_temp`.
+#### Calibration and Evaluation
+```bash
+# Fit calibration models on predictions
+COUNTRY=cmr .venv/bin/python -m tools.calibrate_confidences
 
-## Notes
-- Ollama daemon must be running locally and the required models pulled to run classification.
-- Small-sample thresholds are noisy; use larger calibration sets or bootstrapping for robust thresholds.
+# Apply calibration and generate evaluation metrics/plots
+COUNTRY=cmr .venv/bin/python -m tools.apply_calibration_and_evaluate
+
+# Combined calibrate-then-apply workflow
+COUNTRY=cmr ./scripts/run_calibrate_then_apply_cmr.sh
+COUNTRY=nga ./scripts/run_calibrate_then_apply_nga.sh
+```
+
+### Analysis Tools
+
+#### Model Size Comparisons
+```bash
+# Compare FL/FI across model sizes within a family
+COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes 2b,7b [OPTIONS]
+
+# Required arguments:
+#   --family FAMILY     Model family prefix (e.g., gemma, qwen3)
+#   --sizes SIZES       Comma-separated sizes (e.g., 2b,7b or 1.7b,4b,8b)
+
+# Optional arguments:
+#   --run-missing {true,false}  Run inference for missing models (default: true)
+#   --out OUTPUT_PATH          Custom output CSV path
+
+# Advanced usage:
+COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply_cmr.sh  # override sizes
+```
+
+#### Per-Class Analysis and Reporting
+```bash
+# Generate per-class metrics and disagreement analysis
+COUNTRY=cmr .venv/bin/python tools/per_class_and_disagreements.py
+
+# Generate visualizations from analysis reports  
+COUNTRY=cmr .venv/bin/python tools/visualize_reports.py
+```
+
+### Utility Tools
+
+#### Ollama Inference Helpers
+```bash
+# Direct model testing (for debugging)
+.venv/bin/python -c "
+from tools.ollama_helpers import run_ollama_structured
+import json
+result = run_ollama_structured('gemma:2b', 'Military forces beat civilians')
+print(json.dumps(result, indent=2))
+"
+```
+
+### File Requirements
+
+#### Required Files by Tool
+
+**compare_model_sizes.py:**
+- Required: `datasets/<COUNTRY>/state_actor_sample_<COUNTRY>.csv` (sample dataset)
+- Optional: `results/<COUNTRY>/ollama_results_calibrated.csv` (existing results; will run inference if missing models)
+- Outputs: `results/<COUNTRY>/compare_<family>_sizes.csv`, `results/<COUNTRY>/compare_<family>_sizes_pairwise.csv`, `results/<COUNTRY>/ollama_inference_<family>-<sizes>.csv`
+
+**calibrate_confidences.py:**
+- Required: `results/<COUNTRY>/ollama_results_<dataset>.csv` (raw predictions)
+- Outputs: `results/<COUNTRY>/calibration_params_<dataset>.json`
+
+**apply_calibration_and_evaluate.py:**
+- Required: `results/<COUNTRY>/ollama_results_<dataset>.csv`, `results/<COUNTRY>/calibration_params_<dataset>.json`
+- Outputs: `results/<COUNTRY>/ollama_results_calibrated.csv`, plots, metrics
+
+**per_class_and_disagreements.py:**
+- Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
+- Outputs: `results/<COUNTRY>/per_class_report.csv`, `results/<COUNTRY>/top_disagreements.csv`
+
+**visualize_reports.py:**
+- Required: `results/<COUNTRY>/per_class_report.csv`, `results/<COUNTRY>/top_disagreements.csv`
+- Outputs: `results/<COUNTRY>/per_class_metrics.png`, `results/<COUNTRY>/top_disagreements_table.png`
+
+## Outputs and File Structure
+- All outputs are organized under `results/<COUNTRY>/` (e.g., `results/cmr/` or `results/nga/`)
+- **Core pipeline outputs**: `ollama_results_acled_<country>_state_actors.csv`, `ollama_results_calibrated.csv`, `calibration_params_acled_<country>_state_actors.json`, `metrics_thresholds_calibrated.csv`, `reliability_diagrams.png`, `accuracy_vs_coverage.png`
+- **Model size comparisons**: `compare_<family>_sizes.csv` (FL/FI summary), `compare_<family>_sizes_pairwise.csv` (McNemar test results), `ollama_inference_<family>-<sizes>.csv` (inference-only results)
+- **Analysis reports**: `per_class_report.csv`, `top_disagreements.csv`, `per_class_metrics.png`, `top_disagreements_table.png`
+
+## Model size comparisons
+
+The `tools/compare_model_sizes.py` script enables systematic comparison of false legitimization (FL) and false illegitimization (FI) rates across different model sizes within the same family (e.g., gemma:2b vs gemma:7b). Key features:
+
+- **Statistical testing**: Uses McNemar's test for paired comparisons on the same events to determine if differences between models are statistically significant
+- **Automatic inference**: Can run inference on missing models using the `--run-missing` flag, generating inference-only CSV files for traceability and debugging
+- **FL/FI metrics**: Computes false legitimization (classifying illegitimate state actions as legitimate) and false illegitimization (classifying legitimate state actions as illegitimate) rates
+- **Country-scoped**: Reads from country-specific calibrated results and sample datasets
+
+## Requirements and Notes
+- **Ollama setup**: Ollama daemon must be running locally and the required models pulled to run classification
+- **Data dependencies**: Scripts expect country-scoped calibrated CSV (e.g., `results/cmr/ollama_results_calibrated.csv`) with calibrated probability column `pred_conf_temp`
+- **Statistical considerations**: Small-sample thresholds are noisy; use larger calibration sets or bootstrapping for robust thresholds
+- **Model comparisons**: Require consistent sample datasets across models for valid statistical testing  
+- **Inference optimization**: Pipeline uses simplified, direct prompts optimized for JSON output to avoid parsing failures and focus on core classification performance rather than explanation/reasoning extraction

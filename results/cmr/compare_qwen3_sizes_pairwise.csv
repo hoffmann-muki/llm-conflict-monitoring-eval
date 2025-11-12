@@ -1,0 +1,4 @@
+model_a,model_b,n_common,b,c,mcnemar_stat,mcnemar_p
+qwen3:1.7b,qwen3:4b,5,0,1,0.0,1.0
+qwen3:1.7b,qwen3:8b,5,0,1,0.0,1.0
+qwen3:4b,qwen3:8b,5,0,0,inf,0.0

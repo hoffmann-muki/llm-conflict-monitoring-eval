@@ -25,27 +25,23 @@ OUT_CSV = os.path.join(RESULTS_DIR, 'fl_fi_by_model.csv')
 if not os.path.exists(CAL_CSV) and os.path.exists('results/ollama_results_calibrated.csv'):
     CAL_CSV = 'results/ollama_results_calibrated.csv'
 
-# Configure mappings
-LEGIT = set(['B','S'])
-ILLEG = set(['V'])
-LABELS = ['V','B','E','P','R','S']
+import os
+import pandas as pd
+from tools.metrics_helpers import aggregate_fl_fi
+from tools.data_helpers import paths_for_country
+
+COUNTRY = os.environ.get('COUNTRY', 'cmr')
+paths = paths_for_country(COUNTRY)
+os.makedirs(paths['results_dir'], exist_ok=True)
+
+CAL_CSV = paths['calibrated_csv']
+OUT_CSV = os.path.join(paths['results_dir'], 'fl_fi_by_model.csv')
 
 def main():
     if not os.path.exists(CAL_CSV):
         raise SystemExit(f"Missing {CAL_CSV}")
     df = pd.read_csv(CAL_CSV)
-    rows = []
-    for m in df['model'].unique():
-        sub = df[(df['model']==m) & df['true_label'].isin(LABELS) & df['pred_label'].isin(LABELS)].copy()
-        total = len(sub)
-        # FL: true in ILLEG but predicted in LEGIT
-        fl_mask = sub['true_label'].isin(ILLEG) & sub['pred_label'].isin(LEGIT)
-        fl = int(fl_mask.sum())
-        # FI: true in LEGIT but predicted in ILLEG
-        fi_mask = sub['true_label'].isin(LEGIT) & sub['pred_label'].isin(ILLEG)
-        fi = int(fi_mask.sum())
-        rows.append({'model': m, 'total': total, 'fl': fl, 'fi': fi}) # type: ignore
-    out = pd.DataFrame(rows)
+    out = aggregate_fl_fi(df, by='model')
     out.to_csv(OUT_CSV, index=False)
     print('Wrote', OUT_CSV)
     print(out.to_string(index=False))

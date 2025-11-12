@@ -1,4 +1,4 @@
-model,total,fl,fi
-llama3.2,20,1,1
-qwen2.5,20,0,0
-mistral,20,1,0
+total,fl,fi,model
+20,1,1,llama3.2
+20,0,0,qwen2.5
+20,1,0,mistral
