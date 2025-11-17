@@ -130,7 +130,7 @@ print(final_df.to_string(index=False))
 PY
 
 echo "--- Generating reports ---"
-COUNTRY=$COUNTRY "$VENV_PY" -m tools.per_class_and_disagreements
+COUNTRY=$COUNTRY "$VENV_PY" -m tools.per_class_metrics_and_disagreements
 COUNTRY=$COUNTRY "$VENV_PY" -m tools.visualize_reports
 
 echo "Done! Check results/$COUNTRY/ for outputs."

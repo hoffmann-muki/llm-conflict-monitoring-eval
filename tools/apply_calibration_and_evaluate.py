@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import calibration_curve
+from sklearn.metrics import brier_score_loss
 import matplotlib.pyplot as plt
 from data_helpers import setup_country_environment
 
@@ -16,6 +17,7 @@ CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_acled_{COUNTRY}_stat
 # Outputs
 OUT_CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
 OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')
+OUT_BRIER_CSV = os.path.join(RESULTS_DIR, 'calibration_brier_scores.csv')
 OUT_PLOT_REL = os.path.join(RESULTS_DIR, 'reliability_diagrams.png')
 OUT_PLOT_ACC = os.path.join(RESULTS_DIR, 'accuracy_vs_coverage.png')
 OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
@@ -43,6 +45,56 @@ def compute_threshold_metrics(df, prob_col):
             acc = correct/accepted if accepted>0 else None
             rows.append({'model':m, 'prob_col':prob_col, 'threshold':t, 'accepted':accepted, 'coverage':coverage, 'correct':int(correct), 'accuracy':(None if acc is None else round(acc,3)), 'total_valid':total_valid})
     return pd.DataFrame(rows)
+
+def compute_brier_scores(df, mappings, cal_params):
+    """Compute Brier scores for raw and calibrated probabilities."""
+    brier_results = []
+    
+    for model in df['model'].unique():
+        sub = df[df['model'] == model].copy()
+        sub = sub[sub['true_label'].isin(labels) & sub['pred_label'].isin(labels)]
+        
+        if len(sub) == 0:
+            continue
+        
+        # Binary outcome: prediction matches ground truth
+        y_true = (sub['pred_label'] == sub['true_label']).astype(int).values
+        
+        # Raw probabilities
+        probs_raw = pd.to_numeric(sub['pred_conf'], errors='coerce').fillna(0.0).values
+        
+        # Isotonic calibrated
+        iso = mappings.get(model)
+        if iso is not None:
+            ir = IsotonicRegression(out_of_bounds='clip')
+            ir.fit(iso['x'], iso['y'])
+            probs_iso = ir.transform(probs_raw)
+        else:
+            probs_iso = probs_raw
+        
+        # Temperature calibrated
+        T = cal_params.get(model, {}).get('T', 1.0)
+        probs_temp = temp_scaled(probs_raw, T)
+        
+        # Compute Brier scores
+        try:
+            brier_raw = brier_score_loss(y_true, probs_raw)
+            brier_iso = brier_score_loss(y_true, probs_iso)
+            brier_temp = brier_score_loss(y_true, probs_temp)
+        except:
+            brier_raw = brier_iso = brier_temp = None
+        
+        brier_results.append({
+            'model': model,
+            'n_samples': len(sub),
+            'brier_score_raw': brier_raw,
+            'brier_score_isotonic': brier_iso,
+            'brier_score_temperature': brier_temp,
+            'brier_improvement_iso': (brier_raw - brier_iso) if brier_raw and brier_iso else None,
+            'brier_improvement_temp': (brier_raw - brier_temp) if brier_raw and brier_temp else None
+        })
+    
+    return pd.DataFrame(brier_results)
 
 def reliability_curve_plot(df, mappings, cal_params):
     # For each model, plot before and after calibration reliability diagram
@@ -160,9 +212,16 @@ def main():
     all_metrics = pd.concat([df_raw, df_iso, df_temp], ignore_index=True)
     all_metrics.to_csv(OUT_METRICS_CSV, index=False)
     print('Saved threshold metrics to', OUT_METRICS_CSV)
+    # Compute Brier scores
+    brier_df = compute_brier_scores(df, iso_mappings, cal_params)
+    brier_df.to_csv(OUT_BRIER_CSV, index=False)
+    print('\nBrier Scores (lower is better):')
+    print(brier_df.to_string(index=False))
+    print(f'\nSaved Brier scores to {OUT_BRIER_CSV}')
+    
     # Plots
     reliability_curve_plot(df, iso_mappings, cal_params)
-    print('Saved reliability diagrams to', OUT_PLOT_REL)
+    print('\nSaved reliability diagrams to', OUT_PLOT_REL)
     # Accuracy vs coverage plots
     fig, ax = plt.subplots(figsize=(8,6))
     for prob_col, label in [('pred_conf','raw'), ('pred_conf_iso','isotonic'), ('pred_conf_temp','temp')]:

@@ -20,6 +20,7 @@ from collections import defaultdict
 from scipy import stats
 from statsmodels.stats.contingency_tables import mcnemar
 import itertools
+from difflib import SequenceMatcher
 
 from tools.ollama_helpers import run_ollama_structured
 from tools.data_helpers import paths_for_country
@@ -28,13 +29,49 @@ from tools.constants import LABEL_MAP, EVENT_CLASSES_FULL
 class PerturbationGenerator:
     """Generate hypothesis-driven perturbations for counterfactual analysis."""
     
-    def __init__(self):
+    def __init__(self, edit_distance_threshold=0.3, min_fluency_score=0.7):
+        self.edit_distance_threshold = edit_distance_threshold
+        self.min_fluency_score = min_fluency_score
+        
         self.actor_replacements = {
             'military': ['security forces', 'armed forces', 'government troops', 'state forces'],
             'police': ['law enforcement', 'security personnel', 'officers', 'authorities'],
             'soldiers': ['troops', 'military personnel', 'armed personnel', 'government forces'],
-            'forces': ['troops', 'personnel', 'units', 'operatives']
+            'forces': ['troops', 'personnel', 'units', 'operatives'],
+            'state forces': ['non-state forces', 'rebel forces', 'opposition forces'],
+            'government forces': ['rebel fighters', 'opposition fighters', 'insurgent forces']
         }
+        
+        # Legitimizing and de-legitimizing phrases
+        self.legitimizing_phrases = [
+            'to restore order',
+            'in response to violent provocation',
+            'to maintain security',
+            'in self-defense',
+            'following credible threats',
+            'to protect civilians'
+        ]
+        
+        self.delegitimizing_phrases = [
+            'unprovoked',
+            'using excessive force',
+            'without justification',
+            'in a brutal manner',
+            'violating human rights',
+            'targeting civilians indiscriminately'
+        ]
+        
+        # Source provenance variations
+        self.source_attributions = [
+            'According to state media,',
+            'State-run media reported that',
+            'Official sources claimed that',
+            'Government officials stated that',
+            'Independent local reporters said',
+            'Local witnesses reported that',
+            'Human rights organizations documented that',
+            'International observers confirmed that'
+        ]
         
         self.intensity_modifiers = {
             'high': ['severely', 'brutally', 'violently', 'aggressively'],
@@ -47,6 +84,61 @@ class PerturbationGenerator:
             'beat': ['assaulted', 'attacked', 'struck', 'hit'],
             'arrested': ['detained', 'captured', 'apprehended', 'seized'],
             'clashed': ['fought', 'engaged', 'confronted', 'battled']
+        }
+        
+        # Generic location placeholders for decontextualization
+        self.generic_locations = ['Location X', 'Location Y', 'the area', 'the region']
+    
+    def compute_edit_distance_ratio(self, text1: str, text2: str) -> float:
+        """Compute normalized edit distance between two texts."""
+        return SequenceMatcher(None, text1, text2).ratio()
+    
+    def check_grammaticality(self, text: str) -> float:
+        """Heuristic grammaticality check based on basic linguistic features.
+        Returns score 0-1 (higher is better)."""
+        score = 1.0
+        
+        # Check for basic sentence structure
+        if not text or len(text.strip()) < 10:
+            score -= 0.3
+        
+        # Check for proper capitalization at start
+        if text and not text[0].isupper():
+            score -= 0.1
+        
+        # Check for ending punctuation
+        if text and text[-1] not in '.!?':
+            score -= 0.1
+        
+        # Check for multiple consecutive spaces (sign of poor editing)
+        if '  ' in text:
+            score -= 0.2
+        
+        # Check for balanced parentheses
+        if text.count('(') != text.count(')'):
+            score -= 0.2
+        
+        return max(0.0, score)
+    
+    def validate_perturbation(self, original: str, perturbed: str) -> Dict[str, Any]:
+        """Validate a perturbation for semantic preservation and fluency."""
+        edit_ratio = self.compute_edit_distance_ratio(original, perturbed)
+        fluency = self.check_grammaticality(perturbed)
+        
+        # Perturbation should be similar enough but not identical
+        is_valid = (
+            edit_ratio > (1.0 - self.edit_distance_threshold) and
+            edit_ratio < 1.0 and
+            fluency >= self.min_fluency_score
+        )
+        
+        return {
+            'valid': is_valid,
+            'edit_distance_ratio': edit_ratio,
+            'fluency_score': fluency,
+            'too_different': edit_ratio <= (1.0 - self.edit_distance_threshold),
+            'too_similar': edit_ratio >= 0.99,
+            'low_fluency': fluency < self.min_fluency_score
         }
 
     def generate_actor_perturbations(self, text: str) -> List[Dict[str, Any]]:
@@ -165,9 +257,102 @@ class PerturbationGenerator:
                 })
         
         return perturbations
+    
+    def generate_legitimation_perturbations(self, text: str) -> List[Dict[str, Any]]:
+        """Add or remove legitimizing/delegitimizing phrases."""
+        perturbations = []
+        
+        # Add legitimizing phrases (insert before main action or at end)
+        for phrase in self.legitimizing_phrases:
+            # Try inserting before key action verbs
+            for action in ['killed', 'beat', 'shot', 'arrested', 'attacked', 'detained']:
+                if action in text.lower():
+                    pattern = rf'\b({re.escape(action)})'
+                    replacement = f'{action} {phrase}'
+                    perturbed = re.sub(pattern, replacement, text, flags=re.IGNORECASE, count=1)
+                    if perturbed != text:
+                        perturbations.append({
+                            'type': 'legitimation_add',
+                            'phrase': phrase,
+                            'text': perturbed,
+                            'description': f'Add legitimizing phrase: "{phrase}"'
+                        })
+                        break
+        
+        # Add delegitimizing phrases
+        for phrase in self.delegitimizing_phrases:
+            # Insert at beginning or before key actions
+            perturbed = f"{phrase.capitalize()}, " + text.lower().capitalize()
+            if perturbed != text:
+                perturbations.append({
+                    'type': 'delegitimation_add',
+                    'phrase': phrase,
+                    'text': perturbed,
+                    'description': f'Add delegitimizing phrase: "{phrase}"'
+                })
+        
+        return perturbations
+    
+    def generate_provenance_perturbations(self, text: str) -> List[Dict[str, Any]]:
+        """Add or remove source attribution."""
+        perturbations = []
+        
+        # Add source attribution at beginning
+        for source in self.source_attributions:
+            perturbed = f"{source} {text.lower().capitalize()}"
+            perturbations.append({
+                'type': 'provenance_add',
+                'source': source,
+                'text': perturbed,
+                'description': f'Add source attribution: "{source}"'
+            })
+        
+        # Remove existing source attributions (if present)
+        for source in self.source_attributions:
+            if source.lower() in text.lower():
+                perturbed = re.sub(rf'^{re.escape(source)}\s*', '', text, flags=re.IGNORECASE)
+                if perturbed != text:
+                    perturbations.append({
+                        'type': 'provenance_remove',
+                        'source': source,
+                        'text': perturbed,
+                        'description': f'Remove source attribution: "{source}"'
+                    })
+        
+        return perturbations
+    
+    def generate_decontextualization_perturbations(self, text: str) -> List[Dict[str, Any]]:
+        """Replace specific location/entity names with generic placeholders."""
+        perturbations = []
+        
+        # Pattern to match location references (simplified)
+        # Look for parenthetical location info or specific place names
+        location_patterns = [
+            r'\([^)]+,\s*[^)]+\)',  # (Village, Region, Province)
+            r'\bin\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:village|town|city|region|province|district))?',
+        ]
+        
+        for generic_loc in self.generic_locations[:2]:  # Limit to 2 to avoid explosion
+            for pattern in location_patterns:
+                matches = list(re.finditer(pattern, text))
+                if matches:
+                    # Replace first match
+                    match = matches[0]
+                    perturbed = text[:match.start()] + generic_loc + text[match.end():]
+                    if perturbed != text:
+                        perturbations.append({
+                            'type': 'decontextualization',
+                            'original': match.group(0),
+                            'replacement': generic_loc,
+                            'text': perturbed,
+                            'description': f'Replace location "{match.group(0)}" with "{generic_loc}"'
+                        })
+                        break
+        
+        return perturbations
 
     def generate_all_perturbations(self, text: str, max_per_type: int = 3) -> List[Dict[str, Any]]:
-        """Generate all types of perturbations for a given text."""
+        """Generate all types of perturbations for a given text with validation."""
         all_perturbations = []
         
         # Generate each type
@@ -176,15 +361,29 @@ class PerturbationGenerator:
             self.generate_intensity_perturbations,
             self.generate_action_perturbations,
             self.generate_negation_perturbations,
-            self.generate_sufficiency_perturbations
+            self.generate_sufficiency_perturbations,
+            self.generate_legitimation_perturbations,
+            self.generate_provenance_perturbations,
+            self.generate_decontextualization_perturbations
         ]
         
         for generator in generators:
             perturbations = generator(text)
+            
+            # Validate each perturbation
+            validated_perturbations = []
+            for pert in perturbations:
+                validation = self.validate_perturbation(text, pert['text'])
+                pert['validation'] = validation
+                
+                # Only keep valid perturbations
+                if validation['valid']:
+                    validated_perturbations.append(pert)
+            
             # Limit per type to avoid explosion
-            if len(perturbations) > max_per_type:
-                perturbations = perturbations[:max_per_type]
-            all_perturbations.extend(perturbations)
+            if len(validated_perturbations) > max_per_type:
+                validated_perturbations = validated_perturbations[:max_per_type]
+            all_perturbations.extend(validated_perturbations)
         
         return all_perturbations
 
@@ -286,7 +485,7 @@ class CounterfactualAnalyzer:
         return results
     
     def compute_flip_metrics(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Compute aggregated flip metrics across all events."""
+        """Compute aggregated flip metrics across all events (CFR)."""
         metrics = defaultdict(lambda: defaultdict(list))
         
         for event_result in results:
@@ -301,16 +500,16 @@ class CounterfactualAnalyzer:
                             'flip_direction': model_result.get('flip_direction')
                         })
         
-        # Compute summary statistics
+        # Compute summary statistics including CFR
         summary = {}
         for pert_type, model_data in metrics.items():
             summary[pert_type] = {}
             for model, flips in model_data.items():
                 if flips:
-                    flip_rate = sum(1 for f in flips if f['flipped']) / len(flips)
+                    flip_rate = sum(1 for f in flips if f['flipped']) / len(flips)  # This is CFR
                     conf_deltas = [f['confidence_delta'] for f in flips]
                     summary[pert_type][model] = {
-                        'flip_rate': flip_rate,
+                        'counterfactual_flip_rate_CFR': flip_rate,
                         'n_perturbations': len(flips),
                         'mean_confidence_delta': np.mean(conf_deltas),
                         'std_confidence_delta': np.std(conf_deltas),
@@ -318,6 +517,86 @@ class CounterfactualAnalyzer:
                     }
         
         return summary
+    
+    def compute_counterfactual_differential_effect(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Compute Counterfactual Differential Effect (CDE) with statistical tests.
+        CDE: Average change in predicted probability across counterfactuals per perturbation type."""
+        cde_metrics = defaultdict(lambda: defaultdict(list))
+        
+        # Collect confidence deltas by perturbation type and model
+        for event_result in results:
+            for pert_result in event_result['perturbations']:
+                pert_type = pert_result['perturbation']['type']
+                
+                for model, model_result in pert_result['model_results'].items():
+                    if model_result['success'] and 'confidence_delta' in model_result:
+                        cde_metrics[pert_type][model].append(model_result['confidence_delta'])
+        
+        # Compute CDE and perform statistical tests
+        cde_summary = {}
+        for pert_type, model_data in cde_metrics.items():
+            cde_summary[pert_type] = {}
+            for model, deltas in model_data.items():
+                if len(deltas) > 1:
+                    # Paired t-test (H0: mean delta = 0)
+                    t_test_result = stats.ttest_1samp(deltas, 0)
+                    t_stat = t_test_result[0]
+                    t_pval = t_test_result[1]
+                    
+                    # Wilcoxon signed-rank test (non-parametric alternative)
+                    w_stat, w_pval = None, None
+                    try:
+                        wilcoxon_result = stats.wilcoxon(deltas)
+                        w_stat = wilcoxon_result[0]
+                        w_pval = wilcoxon_result[1]
+                    except:
+                        pass
+                    
+                    cde_summary[pert_type][model] = {
+                        'CDE_mean': float(np.mean(deltas)),
+                        'CDE_std': float(np.std(deltas)),
+                        'CDE_median': float(np.median(deltas)),
+                        'n_samples': len(deltas),
+                        't_statistic': t_stat,
+                        't_pvalue': t_pval,
+                        'wilcoxon_statistic': w_stat,
+                        'wilcoxon_pvalue': w_pval
+                    }
+        
+        return cde_summary
+    
+    def compute_soft_counterfactual_validity(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Compute soft-counterfactual validity metrics (inspired by SCENE framework).
+        Measures how well perturbations preserve semantic validity."""
+        validity_metrics = defaultdict(lambda: defaultdict(list))
+        
+        for event_result in results:
+            for pert_result in event_result['perturbations']:
+                pert_type = pert_result['perturbation']['type']
+                
+                if 'validation' in pert_result['perturbation']:
+                    validation = pert_result['perturbation']['validation']
+                    validity_metrics[pert_type]['edit_distance_ratios'].append(
+                        validation['edit_distance_ratio']
+                    )
+                    validity_metrics[pert_type]['fluency_scores'].append(
+                        validation['fluency_score']
+                    )
+        
+        # Compute aggregate validity metrics
+        validity_summary = {}
+        for pert_type, metrics in validity_metrics.items():
+            if metrics['edit_distance_ratios']:
+                validity_summary[pert_type] = {
+                    'mean_edit_distance_ratio': np.mean(metrics['edit_distance_ratios']),
+                    'std_edit_distance_ratio': np.std(metrics['edit_distance_ratios']),
+                    'mean_fluency_score': np.mean(metrics['fluency_scores']),
+                    'std_fluency_score': np.std(metrics['fluency_scores']),
+                    'n_perturbations': len(metrics['edit_distance_ratios']),
+                    'validity_soft': np.mean(metrics['fluency_scores']) * np.mean(metrics['edit_distance_ratios'])
+                }
+        
+        return validity_summary
     
     def statistical_tests(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Perform statistical tests on model differences."""
@@ -400,6 +679,8 @@ class CounterfactualAnalyzer:
     def generate_report(self, results: List[Dict[str, Any]], output_path: str):
         """Generate comprehensive analysis report."""
         flip_metrics = self.compute_flip_metrics(results)
+        cde_metrics = self.compute_counterfactual_differential_effect(results)
+        soft_validity = self.compute_soft_counterfactual_validity(results)
         test_results = self.statistical_tests(results)
         clusters = self.cluster_sensitivity_patterns(results)
         
@@ -410,7 +691,9 @@ class CounterfactualAnalyzer:
                 'n_events': len(results),
                 'n_perturbations_total': sum(len(r['perturbations']) for r in results)
             },
-            'flip_metrics': flip_metrics,
+            'counterfactual_flip_rate_CFR': flip_metrics,
+            'counterfactual_differential_effect_CDE': cde_metrics,
+            'soft_counterfactual_validity': soft_validity,
             'statistical_tests': test_results,
             'sensitivity_clusters': clusters,
             'detailed_results': results
@@ -422,26 +705,38 @@ class CounterfactualAnalyzer:
         
         # Generate summary CSV
         summary_path = output_path.replace('.json', '_summary.csv')
-        self.generate_summary_csv(flip_metrics, summary_path)
+        self.generate_summary_csv(flip_metrics, cde_metrics, summary_path)
         
         print(f"Report saved to: {output_path}")
         print(f"Summary saved to: {summary_path}")
         
         return report
     
-    def generate_summary_csv(self, flip_metrics: Dict, output_path: str):
-        """Generate CSV summary of flip metrics."""
+    def generate_summary_csv(self, flip_metrics: Dict, cde_metrics: Dict, output_path: str):
+        """Generate CSV summary of flip metrics and CDE."""
         rows = []
         for pert_type, model_data in flip_metrics.items():
             for model, metrics in model_data.items():
-                rows.append({
+                row = {
                     'perturbation_type': pert_type,
                     'model': model,
-                    'flip_rate': metrics['flip_rate'],
+                    'CFR_flip_rate': metrics['counterfactual_flip_rate_CFR'],
                     'n_perturbations': metrics['n_perturbations'],
                     'mean_confidence_delta': metrics['mean_confidence_delta'],
                     'mean_abs_confidence_delta': metrics['mean_abs_confidence_delta']
-                })
+                }
+                
+                # Add CDE metrics if available
+                if pert_type in cde_metrics and model in cde_metrics[pert_type]:
+                    cde_data = cde_metrics[pert_type][model]
+                    row.update({
+                        'CDE_mean': cde_data.get('CDE_mean'),
+                        'CDE_median': cde_data.get('CDE_median'),
+                        't_pvalue': cde_data.get('t_pvalue'),
+                        'wilcoxon_pvalue': cde_data.get('wilcoxon_pvalue')
+                    })
+                
+                rows.append(row)
         
         df = pd.DataFrame(rows)
         df.to_csv(output_path, index=False)

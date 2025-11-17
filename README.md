@@ -18,7 +18,7 @@ Two country flows are available (Cameroon, Nigeria). The repository namespaces d
 - `tools/compare_model_sizes.py` — compares FL/FI across different model sizes within a family (e.g., gemma:2b vs gemma:7b) with McNemar statistical tests and optional inference for missing models.
 - `tools/counterfactual_analysis.py` — counterfactual analysis framework for understanding model disagreements through hypothesis-driven perturbations.
 - `tools/visualize_counterfactual.py` — visualization suite for counterfactual analysis results with statistical plots and summary tables.
-- `tools/per_class_and_disagreements.py` — generates per-class metrics and extracts top disagreement examples between models.
+- `tools/per_class_metrics_and_disagreements.py` — generates per-class metrics and extracts top disagreement examples between models.
 - `tools/visualize_reports.py` — creates visualization plots from analysis reports (per-class metrics, disagreements).
 - `tools/compute_fl_fi.py` — computes False Legitimacy and False Illegitimacy metrics per model.
 - `tools/ollama_helpers.py` — centralized utilities for Ollama model inference with structured JSON output parsing, simplified prompts optimized for reliable JSON output, and robust response parsing handling different model output patterns.
@@ -48,17 +48,60 @@ The repository includes VS Code configuration (`.vscode/settings.json`) that add
 
 ## Running the pipeline
 
-### Quick Start Examples
+### ⚡ Quick Start: Complete Analysis (Recommended)
+
+Run the full analysis pipeline with a single command:
+
 ```bash
-# Main classification pipelines
+# Complete analysis for Cameroon (default)
+COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_full_analysis.sh
+
+# Complete analysis for Nigeria
+COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_full_analysis.sh
+
+# Skip inference if predictions already exist
+COUNTRY=cmr SKIP_INFERENCE=true ./scripts/run_full_analysis.sh
+
+# Skip counterfactual analysis (faster)
+COUNTRY=cmr SKIP_COUNTERFACTUAL=true ./scripts/run_full_analysis.sh
+
+# Customize counterfactual analysis
+COUNTRY=cmr CF_MODELS="llama3.2,qwen3:8b" CF_EVENTS=100 ./scripts/run_full_analysis.sh
+```
+
+**This single script runs all analysis phases:**
+1. Model inference (predictions generation)
+2. Calibration and core metrics (Brier scores, P/R/F1, fairness, error correlations)
+3. Bias and harm analysis (FL/FI rates, error case sampling)
+4. Counterfactual perturbation analysis (CFR, CDE, validity metrics)
+5. Visualization and summary report generation
+
+**All metrics computed:**
+- Classification: Precision, Recall, F1, Accuracy, Confusion matrices
+- Calibration: Brier scores, reliability diagrams
+- Fairness: Statistical Parity Difference (SPD) with 95% bootstrap CI
+- Fairness: Equalized Odds (TPR/FPR differences) with permutation tests
+- Harm: False Legitimization Rate (FLR), False Illegitimization Rate (FIR)
+- Source Analysis: Error correlation with ACLED notes length
+- Counterfactual: Flip rates (CFR), Differential effects (CDE) with t-tests/Wilcoxon
+- Counterfactual: Soft-validity metrics (edit distance, fluency)
+
+---
+
+### Alternative: Individual Scripts
+
+For fine-grained control, run individual steps:
+
+```bash
+# 1. Main classification pipelines
 COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
 COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
 
-# Calibrate-then-apply workflow
+# 2. Calibrate-then-apply workflow (partial automation)
 COUNTRY=cmr ./scripts/run_calibrate_then_apply.sh
 COUNTRY=nga ./scripts/run_calibrate_then_apply.sh
 
-# Model size comparisons
+# 3. Model size comparisons
 COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes 2b,7b --run-missing true
 COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family qwen3 --sizes 1.7b,4b,8b --run-missing true
 ```
@@ -111,7 +154,7 @@ COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.
 #### Per-Class Analysis and Reporting
 ```bash
 # Generate per-class metrics and disagreement analysis
-COUNTRY=cmr .venv/bin/python -m tools.per_class_and_disagreements
+COUNTRY=cmr .venv/bin/python -m tools.per_class_metrics_and_disagreements
 
 # Generate visualizations from analysis reports  
 COUNTRY=cmr .venv/bin/python -m tools.visualize_reports
@@ -153,7 +196,7 @@ print(json.dumps(result, indent=2))
 - Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
 - Outputs: `results/<COUNTRY>/selected_thresholds_per_class.csv`, `results/<COUNTRY>/selected_thresholds.json`
 
-**per_class_and_disagreements.py:**
+**per_class_metrics_and_disagreements.py:**
 - Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
 - Outputs: `results/<COUNTRY>/per_class_report.csv`, `results/<COUNTRY>/top_disagreements.csv`
 
@@ -169,14 +212,77 @@ print(json.dumps(result, indent=2))
 - Required: `results/<COUNTRY>/counterfactual_analysis_<models>.json`
 - Outputs: Multiple visualization plots and `counterfactual_report.txt`
 
+## Complete Analysis Workflow
+
+### Execution Order (Automated by `run_full_analysis.sh`)
+
+**Phase 1: Model Inference**
+1. `political_bias_of_llms_generic.py` → Generates predictions
+
+**Phase 2: Calibration & Core Metrics**
+2. `tools.apply_calibration_and_evaluate` → Calibration + Brier scores
+3. `tools.compute_metrics` → Classification metrics + fairness + error correlations
+4. `tools.compute_thresholds_per_class` → Per-class decision thresholds
+
+**Phase 3: Bias & Harm Analysis**
+5. `tools.compute_fl_fi` → False Legitimization/Illegitimization rates
+6. `tools.per_class_metrics_and_disagreements` → Error case sampling (N≤200 per type)
+7. `tools.visualize_reports` → Generate visualization plots
+
+**Phase 4: Counterfactual Analysis** (Optional)
+8. `tools.counterfactual_analysis` → Perturbation testing (CFR, CDE, validity)
+9. `tools.visualize_counterfactual` → Counterfactual visualizations
+
+### Environment Variables
+
+**`run_full_analysis.sh` supports:**
+- `COUNTRY` - Country code (cmr, nga) [default: cmr]
+- `SAMPLE_SIZE` - Number of events [default: 500]
+- `CF_MODELS` - Models for counterfactual [default: llama3.2,mistral:7b]
+- `CF_EVENTS` - Counterfactual event count [default: 50]
+- `SKIP_INFERENCE` - Skip phase 1 [default: false]
+- `SKIP_COUNTERFACTUAL` - Skip phase 4 [default: false]
+
 ## Outputs and File Structure
-- All outputs are organized under `results/<COUNTRY>/` (e.g., `results/cmr/` or `results/nga/`)
-- **Core pipeline outputs**: `ollama_results_acled_<country>_state_actors.csv`, `ollama_results_calibrated.csv`, `calibration_params_acled_<country>_state_actors.json`, `metrics_thresholds_calibrated.csv`, `reliability_diagrams.png`, `accuracy_vs_coverage.png`
-- **Model size comparisons**: `compare_<family>_sizes.csv` (FL/FI summary), `compare_<family>_sizes_pairwise.csv` (McNemar test results), `ollama_inference_<family>-<sizes>.csv` (inference-only results)
-- **Analysis reports**: `per_class_report.csv`, `top_disagreements.csv`, `per_class_metrics.png`, `top_disagreements_table.png`
-- **Metrics and thresholds**: `metrics_acled_<country>_state_actors.csv`, `confusion_matrices_acled_<country>_state_actors.json`, `selected_thresholds_per_class.csv`, `selected_thresholds.json`
-- **FL/FI analysis**: `fl_fi_by_model.csv`
-- **Counterfactual analysis**: `counterfactual_analysis_<models>.json`, `counterfactual_analysis_<models>_summary.csv`, various visualization plots
+
+All outputs are organized under `results/<COUNTRY>/` (e.g., `results/cmr/` or `results/nga/`)
+
+### Core Predictions & Calibration
+- `ollama_results_acled_<country>_state_actors.csv` - Raw model predictions
+- `ollama_results_calibrated.csv` - Calibrated predictions with isotonic/temperature scaling
+- `calibration_params_acled_<country>_state_actors.json` - Calibration parameters
+- `calibration_brier_scores.csv` - **NEW**: Brier scores (raw, isotonic, temperature)
+- `reliability_diagrams.png` - Calibration quality plots
+- `accuracy_vs_coverage.png` - Selective prediction analysis
+- `isotonic_mappings.json` - Isotonic regression mappings
+
+### Classification & Fairness Metrics
+- `metrics_acled_<country>_state_actors.csv` - Precision, Recall, F1, Accuracy per model
+- `confusion_matrices_acled_<country>_state_actors.json` - Per-model confusion matrices
+- `fairness_metrics_acled_<country>_state_actors.csv` - **NEW**: SPD, Equalized Odds, bootstrap CI, permutation tests
+- `per_class_report.csv` - Per-class performance metrics
+- `selected_thresholds_per_class.csv` - Optimized decision thresholds per class
+- `metrics_thresholds_calibrated.csv` - Threshold analysis
+
+### Bias & Harm Analysis
+- `fl_fi_by_model.csv` - False Legitimacy/Illegitimacy counts
+- `harm_metrics_detailed.csv` - **NEW**: FLR, FIR rates, harm ratios
+- `error_cases_false_legitimization.csv` - **NEW**: N≤200 error samples for analysis
+- `error_cases_false_illegitimization.csv` - **NEW**: N≤200 error samples for analysis
+- `top_disagreements.csv` - High-confidence model disagreements
+
+### Source & Correlation Analysis
+- `error_correlations_acled_<country>_state_actors.csv` - **NEW**: Error rate vs notes length, Spearman correlations
+
+### Counterfactual Analysis
+- `counterfactual_analysis_<models>.json` - **NEW**: Full counterfactual results with CFR, CDE, soft-validity
+- `counterfactual_analysis_<models>_summary.csv` - Summary table
+- Various counterfactual visualization plots
+
+### Visualizations
+- `per_class_metrics.png` - Per-class performance visualization
+- `top_disagreements_table.png` - Disagreement table visualization
+- Additional counterfactual visualizations (if phase 4 runs)
 
 ## Counterfactual Analysis
 
