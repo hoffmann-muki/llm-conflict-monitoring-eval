@@ -2,30 +2,62 @@
 
 This repository contains code and data for evaluating potential bias in LLM classification of ACLED event types when the primary actor is a state actor.
 
-Two country flows are available (Cameroon, Nigeria). The repository namespaces dataset and result artifacts by country under `datasets/<country>/` and `results/<country>/`.
+Two country flows are available (Cameroon, Nigeria). The repository namespaces dataset and result artifacts by country under `datasets/<country>/` and `results/<country>/<strategy>/`.
+
+## Repository Structure
+
+```
+experiments/              # Experimental pipelines for different prompting strategies
+├── prompting_strategies/ # Different prompting approaches (zero-shot, few-shot, explainable)
+├── pipelines/            # Classification pipeline (strategy-agnostic)
+└── scripts/              # Automation scripts for running experiments
+
+lib/                      # Reusable library components
+├── data_preparation/     # Data extraction, normalization, sampling
+├── inference/            # Ollama client and inference utilities
+├── analysis/             # Metrics, calibration, fairness, counterfactual analysis
+└── core/                 # Constants, helpers, shared utilities
+
+tests/                    # Test suite
+datasets/                 # Country-specific datasets
+results/                  # Experiment results organized by country/strategy
+```
 
 ## What this project does
+
 - Extracts country-specific rows from ACLED-like datasets, normalizes actor text and selects usable rows (has notes and known event types).
 - Builds stratified samples (configurable size) with a primary-group oversample for Violence against civilians.
-- Runs classification with locally-hosted models (via Ollama) and saves structured predictions.
+- Runs classification experiments with **different prompting strategies** (zero-shot, few-shot, explainable) to compare model performance.
+- Generates **complete quantitative analysis** for each strategy: classification metrics, fairness analysis, harm metrics, counterfactual robustness.
 - Calibrates model confidences (isotonic regression + temperature scaling), evaluates thresholding strategies, and produces reliability and accuracy-vs-coverage plots.
 
-## Files of interest
-- `political_bias_of_llms_generic.py` — Generic country pipeline: builds stratified sample (env `SAMPLE_SIZE`), runs classifiers, and writes predictions to `results/{country}/`. Supports both Cameroon (`cmr`) and Nigeria (`nga`).
-- `tools/apply_calibration_and_evaluate.py` — fits calibration models AND applies them to predictions; writes calibrated CSV, threshold metrics and plots under `results/<COUNTRY>/`.
-- `tools/compute_metrics.py` — computes per-model confusion matrices and summary metrics (country-generic).
-- `tools/compute_thresholds_per_class.py` — computes per-class thresholds for improved classification decisions based on calibrated probabilities.
-- `tools/compare_model_sizes.py` — compares FL/FI across different model sizes within a family (e.g., gemma:2b vs gemma:7b) with McNemar statistical tests and optional inference for missing models.
-- `tools/counterfactual_analysis.py` — counterfactual analysis framework for understanding model disagreements through hypothesis-driven perturbations.
-- `tools/visualize_counterfactual.py` — visualization suite for counterfactual analysis results with statistical plots and summary tables.
-- `tools/per_class_metrics_and_disagreements.py` — generates per-class metrics and extracts top disagreement examples between models.
-- `tools/visualize_reports.py` — creates visualization plots from analysis reports (per-class metrics, disagreements).
-- `tools/compute_fl_fi.py` — computes False Legitimacy and False Illegitimacy metrics per model.
-- `tools/ollama_helpers.py` — centralized utilities for Ollama model inference with structured JSON output parsing, simplified prompts optimized for reliable JSON output, and robust response parsing handling different model output patterns.
-- `tools/data_helpers.py` — shared data loading and path management utilities with country-specific configuration handling and setup_country_environment() function.
-- `tools/metrics_helpers.py` — shared FL/FI computation and aggregation functions for improved code reuse across analysis scripts.
-- `tools/constants.py` — shared constants and mappings (ACLED event type labels, etc.).
-- `scripts/run_calibrate_then_apply.sh` — unified driver script that accepts a country parameter (cmr or nga).
+## Key Components
+
+### Experiments
+- `experiments/pipelines/run_classification.py` — Strategy-agnostic classification pipeline; accepts `STRATEGY` env var
+- `experiments/prompting_strategies/` — Modular prompting strategies:
+  - `zero_shot.py` — Direct classification without examples (current default)
+  - `few_shot.py` — Classification with example demonstrations (ready for implementation)
+  - `explainable.py` — Chain-of-thought reasoning prompts (ready for implementation)
+- `experiments/scripts/run_experiment.sh` — Main experiment runner with strategy selection
+- `experiments/scripts/run_full_analysis.sh` — Complete analysis pipeline automation
+- `experiments/scripts/run_calibrate_then_apply.sh` — Calibration workflow
+
+### Library (lib/)
+- `lib/data_preparation/` — Data extraction, normalization, and sampling utilities
+- `lib/inference/ollama_client.py` — Ollama model inference with structured JSON output
+- `lib/analysis/calibration.py` — Calibration (isotonic + temperature scaling) and Brier scores
+- `lib/analysis/metrics.py` — Classification metrics, confusion matrices, fairness analysis
+- `lib/analysis/harm.py` — False Legitimization/Illegitimization rates and harm metrics
+- `lib/analysis/counterfactual.py` — Counterfactual perturbation analysis framework
+- `lib/analysis/thresholds.py` — Per-class decision threshold optimization
+- `lib/analysis/per_class.py` — Per-class metrics and error case sampling
+- `lib/analysis/visualize_reports.py` — Visualization plots for analysis reports
+- `lib/analysis/visualize_counterfactual.py` — Counterfactual analysis visualizations
+- `lib/analysis/compare_models.py` — Model size comparisons with McNemar tests
+- `lib/core/constants.py` — Shared constants and ACLED event type mappings
+- `lib/core/data_helpers.py` — Path management and country-specific configuration
+- `lib/core/metrics_helpers.py` — FL/FI computation and aggregation functions
 
 ## Environment
 1. Create and activate your venv (example):
@@ -44,29 +76,52 @@ source .venv/bin/activate
 ```
 
 ### Development Environment
-The repository includes VS Code configuration (`.vscode/settings.json`) that adds the `tools/` directory to the Python analysis path for improved import resolution and IntelliSense support.
+The repository includes VS Code configuration (`.vscode/settings.json`) that adds the `lib/` and `experiments/` directories to the Python analysis path for improved import resolution and IntelliSense support.
 
-## Running the pipeline
+## Running Experiments
 
-### ⚡ Quick Start: Complete Analysis (Recommended)
+### ⚡ Quick Start: Complete Experiment with Strategy Selection
 
-Run the full analysis pipeline with a single command:
+Run experiments with different prompting strategies to compare quantitative results:
 
 ```bash
-# Complete analysis for Cameroon (default)
-COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_full_analysis.sh
+# Zero-shot experiment (current default approach)
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_experiment.sh
 
-# Complete analysis for Nigeria
-COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_full_analysis.sh
+# Few-shot experiment with examples (once implemented)
+STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_experiment.sh
+
+# Explainable experiment with chain-of-thought (once implemented)
+STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_experiment.sh
 
 # Skip inference if predictions already exist
-COUNTRY=cmr SKIP_INFERENCE=true ./scripts/run_full_analysis.sh
+STRATEGY=zero_shot COUNTRY=cmr SKIP_INFERENCE=true ./experiments/scripts/run_experiment.sh
 
 # Skip counterfactual analysis (faster)
-COUNTRY=cmr SKIP_COUNTERFACTUAL=true ./scripts/run_full_analysis.sh
+STRATEGY=zero_shot COUNTRY=cmr SKIP_COUNTERFACTUAL=true ./experiments/scripts/run_experiment.sh
 
 # Customize counterfactual analysis
-COUNTRY=cmr CF_MODELS="llama3.2,qwen3:8b" CF_EVENTS=100 ./scripts/run_full_analysis.sh
+STRATEGY=zero_shot COUNTRY=cmr CF_MODELS="llama3.2,qwen3:8b" CF_EVENTS=100 ./experiments/scripts/run_experiment.sh
+```
+
+**Each experiment generates complete quantitative analysis:**
+- Classification metrics (P/R/F1, accuracy, confusion matrices)
+- Fairness metrics (SPD, Equalized Odds with statistical tests)
+- Calibration metrics (Brier scores, reliability diagrams)
+- Harm metrics (False Legitimization/Illegitimization rates)
+- Error analysis (N≤200 sampled cases per type)
+- Source correlations (error rates vs text features)
+- Counterfactual robustness (perturbation testing, CFR, CDE)
+
+**Results are organized by strategy:**
+```
+results/
+├── cmr/
+│   ├── zero_shot/          # Zero-shot strategy results
+│   ├── few_shot/           # Few-shot strategy results  
+│   └── explainable/        # Explainable strategy results
+└── nga/
+    └── ...
 ```
 
 **This single script runs all analysis phases:**
@@ -88,48 +143,69 @@ COUNTRY=cmr CF_MODELS="llama3.2,qwen3:8b" CF_EVENTS=100 ./scripts/run_full_analy
 
 ---
 
-### Alternative: Individual Scripts
+### Alternative: Individual Steps
 
-For fine-grained control, run individual steps:
+For fine-grained control, run individual pipeline steps:
 
 ```bash
-# 1. Main classification pipelines
-COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
-COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
+# 1. Classification with specific strategy
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python experiments/pipelines/run_classification.py
 
-# 2. Calibrate-then-apply workflow (partial automation)
-COUNTRY=cmr ./scripts/run_calibrate_then_apply.sh
-COUNTRY=nga ./scripts/run_calibrate_then_apply.sh
+# 2. Calibration and evaluation
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.calibration
 
-# 3. Model size comparisons
-COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes 2b,7b --run-missing true
-COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family qwen3 --sizes 1.7b,4b,8b --run-missing true
+# 3. Compute metrics and fairness analysis
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.metrics
+
+# 4. Harm analysis
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.harm
+
+# 5. Counterfactual analysis
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.counterfactual --models llama3.2,mistral:7b --events 50
+
+# 6. Model size comparisons
+COUNTRY=cmr .venv/bin/python -m lib.analysis.compare_models --family gemma --sizes 2b,7b --run-missing true
 ```
 
 ## Command Line Usage
 
-### Core Pipeline Scripts
+### Experiment Runner (Recommended)
 
-#### Main Classification Pipelines
 ```bash
-# Cameroon pipeline - builds sample and runs classification
-COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
+# Run complete experiment with strategy selection
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_experiment.sh
 
-# Nigeria pipeline - builds sample and runs classification  
-COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python political_bias_of_llms_generic.py
+# Environment variables:
+#   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
+#   COUNTRY              - Country code (cmr, nga) [default: cmr]
+#   SAMPLE_SIZE          - Number of events [default: 500]
+#   CF_MODELS            - Models for counterfactual [default: llama3.2,mistral:7b]
+#   CF_EVENTS            - Counterfactual event count [default: 50]
+#   SKIP_INFERENCE       - Skip phase 1 [default: false]
+#   SKIP_COUNTERFACTUAL  - Skip phase 4 [default: false]
+```
+
+### Individual Pipeline Components
+
+#### Classification Pipelines
+```bash
+# Cameroon pipeline with zero-shot strategy
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=100 .venv/bin/python experiments/pipelines/run_classification.py
+
+# Nigeria pipeline with few-shot strategy (once implemented)
+STRATEGY=few_shot COUNTRY=nga SAMPLE_SIZE=100 .venv/bin/python experiments/pipelines/run_classification.py
 ```
 
 #### Calibration and Evaluation
 ```bash
-# Apply calibration and generate evaluation metrics/plots (combines calibration fitting + application)
-COUNTRY=cmr .venv/bin/python -m tools.apply_calibration_and_evaluate
+# Apply calibration and generate evaluation metrics/plots
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.calibration
 
 # Compute per-class thresholds for improved classification
-COUNTRY=cmr .venv/bin/python -m tools.compute_thresholds_per_class
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.thresholds
 
 # Combined calibrate-then-apply workflow
-COUNTRY=cmr ./scripts/run_calibrate_then_apply.sh
-COUNTRY=nga ./scripts/run_calibrate_then_apply.sh
+COUNTRY=cmr ./experiments/scripts/run_calibrate_then_apply.sh
 ```
 
 ### Analysis Tools
@@ -137,7 +213,7 @@ COUNTRY=nga ./scripts/run_calibrate_then_apply.sh
 #### Model Size Comparisons
 ```bash
 # Compare FL/FI across model sizes within a family
-COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes 2b,7b [OPTIONS]
+COUNTRY=cmr .venv/bin/python -m lib.analysis.compare_models --family gemma --sizes 2b,7b [OPTIONS]
 
 # Required arguments:
 #   --family FAMILY     Model family prefix (e.g., gemma, qwen3)
@@ -146,24 +222,21 @@ COUNTRY=cmr .venv/bin/python -m tools.compare_model_sizes --family gemma --sizes
 # Optional arguments:
 #   --run-missing {true,false}  Run inference for missing models (default: true)
 #   --out OUTPUT_PATH          Custom output CSV path
-
-# Advanced usage:
-COUNTRY=cmr SMALL_SAMPLE=10 LARGE_SAMPLE=100 ./scripts/run_calibrate_then_apply.sh  # override sizes
 ```
 
 #### Per-Class Analysis and Reporting
 ```bash
 # Generate per-class metrics and disagreement analysis
-COUNTRY=cmr .venv/bin/python -m tools.per_class_metrics_and_disagreements
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.per_class
 
 # Generate visualizations from analysis reports  
-COUNTRY=cmr .venv/bin/python -m tools.visualize_reports
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.visualize_reports
 
 # Compute FL/FI metrics by model
-COUNTRY=cmr .venv/bin/python -m tools.compute_fl_fi
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.harm
 
 # Generate confusion matrices and summary metrics
-COUNTRY=cmr .venv/bin/python -m tools.compute_metrics
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot .venv/bin/python -m lib.analysis.metrics
 ```
 
 ### Utility Tools
@@ -172,7 +245,7 @@ COUNTRY=cmr .venv/bin/python -m tools.compute_metrics
 ```bash
 # Direct model testing (for debugging)
 .venv/bin/python -c "
-from tools.ollama_helpers import run_ollama_structured
+from lib.inference.ollama_client import run_ollama_structured
 import json
 result = run_ollama_structured('gemma:2b', 'Military forces beat civilians')
 print(json.dumps(result, indent=2))
@@ -183,34 +256,34 @@ print(json.dumps(result, indent=2))
 
 #### Required Files by Tool
 
-**compare_model_sizes.py:**
+**lib.analysis.compare_models:**
 - Required: `datasets/<COUNTRY>/state_actor_sample_<COUNTRY>.csv` (sample dataset)
-- Optional: `results/<COUNTRY>/ollama_results_calibrated.csv` (existing results; will run inference if missing models)
-- Outputs: `results/<COUNTRY>/compare_<family>_sizes.csv`, `results/<COUNTRY>/compare_<family>_sizes_pairwise.csv`, `results/<COUNTRY>/ollama_inference_<family>-<sizes>.csv`
+- Optional: `results/<COUNTRY>/<STRATEGY>/ollama_results_calibrated.csv` (existing results; will run inference if missing models)
+- Outputs: `results/<COUNTRY>/<STRATEGY>/compare_<family>_sizes.csv`, pairwise comparisons, inference logs
 
-**apply_calibration_and_evaluate.py:**
-- Required: `results/<COUNTRY>/ollama_results_acled_<COUNTRY>_state_actors.csv` (raw predictions)
-- Outputs: `results/<COUNTRY>/ollama_results_calibrated.csv`, `results/<COUNTRY>/calibration_params_acled_<COUNTRY>_state_actors.json`, plots, metrics
+**lib.analysis.calibration:**
+- Required: `results/<COUNTRY>/<STRATEGY>/ollama_results_acled_<COUNTRY>_state_actors.csv` (raw predictions)
+- Outputs: `results/<COUNTRY>/<STRATEGY>/ollama_results_calibrated.csv`, calibration parameters, reliability plots, Brier scores
 
-**compute_thresholds_per_class.py:**
-- Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
-- Outputs: `results/<COUNTRY>/selected_thresholds_per_class.csv`, `results/<COUNTRY>/selected_thresholds.json`
+**lib.analysis.thresholds:**
+- Required: `results/<COUNTRY>/<STRATEGY>/ollama_results_calibrated.csv`
+- Outputs: `results/<COUNTRY>/<STRATEGY>/selected_thresholds_per_class.csv`, threshold configurations
 
-**per_class_metrics_and_disagreements.py:**
-- Required: `results/<COUNTRY>/ollama_results_calibrated.csv`
-- Outputs: `results/<COUNTRY>/per_class_report.csv`, `results/<COUNTRY>/top_disagreements.csv`
+**lib.analysis.per_class:**
+- Required: `results/<COUNTRY>/<STRATEGY>/ollama_results_calibrated.csv`
+- Outputs: `results/<COUNTRY>/<STRATEGY>/per_class_report.csv`, error case samples, top disagreements
 
-**visualize_reports.py:**
-- Required: `results/<COUNTRY>/per_class_report.csv`, `results/<COUNTRY>/top_disagreements.csv`
-- Outputs: `results/<COUNTRY>/per_class_metrics.png`, `results/<COUNTRY>/top_disagreements_table.png`
+**lib.analysis.visualize_reports:**
+- Required: Per-class reports and disagreements from previous step
+- Outputs: Visualization plots (per-class metrics, disagreement tables)
 
-**counterfactual_analysis.py:**
-- Required: `datasets/<COUNTRY>/state_actor_sample_<COUNTRY>.csv`, `results/<COUNTRY>/ollama_results_calibrated.csv`
-- Outputs: `results/<COUNTRY>/counterfactual_analysis_<models>.json`, `results/<COUNTRY>/counterfactual_analysis_<models>_summary.csv`
+**lib.analysis.counterfactual:**
+- Required: `datasets/<COUNTRY>/state_actor_sample_<COUNTRY>.csv`, calibrated predictions
+- Outputs: `results/<COUNTRY>/<STRATEGY>/counterfactual_analysis_<models>.json`, summary tables
 
-**visualize_counterfactual.py:**
-- Required: `results/<COUNTRY>/counterfactual_analysis_<models>.json`
-- Outputs: Multiple visualization plots and `counterfactual_report.txt`
+**lib.analysis.visualize_counterfactual:**
+- Required: Counterfactual analysis JSON from previous step
+- Outputs: Multiple visualization plots and analysis report
 
 ## Complete Analysis Workflow
 
@@ -224,20 +297,20 @@ The `run_full_analysis.sh` script automates the following phases:
 
 **Phase 2: Calibration & Core Metrics**
 
-2. `tools.apply_calibration_and_evaluate` → Calibration + Brier scores
-3. `tools.compute_metrics` → Classification metrics + fairness + error correlations
-4. `tools.compute_thresholds_per_class` → Per-class decision thresholds
+2. `lib.analysis.calibration` → Calibration + Brier scores
+3. `lib.analysis.metrics` → Classification metrics + fairness + error correlations
+4. `lib.analysis.thresholds` → Per-class decision thresholds
 
 **Phase 3: Bias & Harm Analysis**
 
-5. `tools.compute_fl_fi` → False Legitimization/Illegitimization rates
-6. `tools.per_class_metrics_and_disagreements` → Error case sampling (N≤200 per type)
-7. `tools.visualize_reports` → Generate visualization plots
+5. `lib.analysis.harm` → False Legitimization/Illegitimization rates
+6. `lib.analysis.per_class` → Error case sampling (N≤200 per type)
+7. `lib.analysis.visualize_reports` → Generate visualization plots
 
 **Phase 4: Counterfactual Analysis** (Optional)
 
-8. `tools.counterfactual_analysis` → Perturbation testing (CFR, CDE, validity)
-9. `tools.visualize_counterfactual` → Counterfactual visualizations
+8. `lib.analysis.counterfactual` → Perturbation testing (CFR, CDE, validity)
+9. `lib.analysis.visualize_counterfactual` → Counterfactual visualizations
 
 ### Environment Variables
 
@@ -310,10 +383,10 @@ The repository includes a counterfactual analysis framework for understanding wh
 
 ```bash
 # Run counterfactual analysis to understand model disagreements
-COUNTRY=nga .venv/bin/python -m tools.counterfactual_analysis --models llama3.2,mistral:7b --events 10
+COUNTRY=nga RESULTS_DIR=results/nga/zero_shot .venv/bin/python -m lib.analysis.counterfactual --models llama3.2,mistral:7b --events 10
 
 # Generate visualizations for counterfactual results
-COUNTRY=nga .venv/bin/python -m tools.visualize_counterfactual --input results/nga/counterfactual_analysis.json
+COUNTRY=nga .venv/bin/python -m lib.analysis.visualize_counterfactual --input results/nga/zero_shot/counterfactual_analysis.json
 ```
 
 ## Testing
@@ -332,9 +405,9 @@ The repository includes a test suite under `tests/` to validate components:
 - `tests/test_generic_pipeline.py` — Validates the generic pipeline imports, country setup, and basic functionality
 - `tests/test_counterfactual.py` — Tests the counterfactual analysis framework with sample data
 
-## Model size comparisons
+## Model Size Comparisons
 
-The `tools/compare_model_sizes.py` script enables systematic comparison of false legitimization (FL) and false illegitimization (FI) rates across different model sizes within the same family (e.g., gemma:2b vs gemma:7b). Key features:
+The `lib.analysis.compare_models` module enables systematic comparison of false legitimization (FL) and false illegitimization (FI) rates across different model sizes within the same family (e.g., gemma:2b vs gemma:7b). Key features:
 
 - **Statistical testing**: Uses McNemar's test for paired comparisons on the same events to determine if differences between models are statistically significant
 - **Automatic inference**: Can run inference on missing models using the `--run-missing` flag, generating inference-only CSV files for traceability and debugging

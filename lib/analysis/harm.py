@@ -18,8 +18,8 @@ This aligns with bias-in-conflict-data literature on societal harm proxies.
 import os
 import pandas as pd
 import numpy as np
-from tools.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
-from tools.data_helpers import paths_for_country
+from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
+from lib.core.data_helpers import paths_for_country
 
 COUNTRY = os.environ.get('COUNTRY', 'cmr')
 paths = paths_for_country(COUNTRY)

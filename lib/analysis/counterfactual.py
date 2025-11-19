@@ -22,9 +22,9 @@ from statsmodels.stats.contingency_tables import mcnemar
 import itertools
 from difflib import SequenceMatcher
 
-from tools.ollama_helpers import run_ollama_structured
-from tools.data_helpers import paths_for_country
-from tools.constants import LABEL_MAP, EVENT_CLASSES_FULL
+from lib.inference.ollama_client import run_ollama_structured
+from lib.core.data_helpers import paths_for_country
+from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL
 
 class PerturbationGenerator:
     """Generate hypothesis-driven perturbations for counterfactual analysis."""

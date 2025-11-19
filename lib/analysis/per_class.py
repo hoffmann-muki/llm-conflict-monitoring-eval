@@ -14,7 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
-from data_helpers import setup_country_environment
+from lib.core.data_helpers import setup_country_environment
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
 

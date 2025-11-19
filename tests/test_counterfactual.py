@@ -10,8 +10,8 @@ from pathlib import Path
 project_root = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
 
-from tools.counterfactual_analysis import CounterfactualAnalyzer
-from tools.visualize_counterfactual import main as visualize_main
+from lib.analysis.counterfactual import CounterfactualAnalyzer
+from lib.analysis.visualize_counterfactual import main as visualize_main
 
 def test_counterfactual_pipeline():
     """Test the complete counterfactual analysis pipeline."""

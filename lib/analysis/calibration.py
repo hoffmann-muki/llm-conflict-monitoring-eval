@@ -6,7 +6,7 @@ from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss
 import matplotlib.pyplot as plt
-from data_helpers import setup_country_environment
+from lib.core.data_helpers import setup_country_environment
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
 

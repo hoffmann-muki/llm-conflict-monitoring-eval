@@ -3,7 +3,7 @@ import numpy as np
 import json
 import os
 from scipy import stats
-from data_helpers import setup_country_environment
+from lib.core.data_helpers import setup_country_environment
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
 
