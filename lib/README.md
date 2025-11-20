@@ -59,7 +59,7 @@ python -m lib.analysis.calibration
 python -m lib.analysis.harm
 
 # Per-class metrics and error sampling
-python -m lib.analysis.per_class
+python -m lib.analysis.per_class_metrics
 
 # Counterfactual perturbation testing
 python -m lib.analysis.counterfactual --models llama3.2,mistral:7b --events 50

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import json
 import os
-from scipy import stats
+from scipy.stats import spearmanr
 from lib.core.data_helpers import setup_country_environment
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
@@ -255,7 +255,6 @@ def analyze_error_correlations(df: pd.DataFrame) -> pd.DataFrame:
         
         # Correlation with numerical length
         if len(model_df) > 10:
-            from scipy.stats import spearmanr
             try:
                 corr, pval = spearmanr(model_df['notes_length'], model_df['is_error'])
                 correlation_results.append({

@@ -169,7 +169,7 @@ COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
 
 log_step "Generating per-class metrics and error case sampling..."
 COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
-    "$VENV_PY" -m lib.analysis.per_class
+    "$VENV_PY" -m lib.analysis.per_class_metrics
 
 log_step "Creating visualization plots..."
 COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
