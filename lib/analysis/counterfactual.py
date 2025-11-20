@@ -166,7 +166,11 @@ class PerturbationGenerator:
         """Generate intensity/hedging perturbations."""
         perturbations = []
         
-        # Add hedging words
+        # Map actions to whether they work better before or after the verb
+        # Adverbs of manner (brutally, violently) can go before past tense verbs
+        # Hedging auxiliaries (may have, might have) must go before verbs
+        # Epistemic adverbs (allegedly, reportedly) can go before verbs
+        
         for category, modifiers in self.intensity_modifiers.items():
             for modifier in modifiers:
                 # Insert before main action verbs
@@ -266,22 +270,21 @@ class PerturbationGenerator:
         """Add or remove legitimizing/delegitimizing phrases."""
         perturbations = []
         
-        # Add legitimizing phrases (insert before main action or at end)
+        # Add legitimizing phrases (append at end for proper grammar)
         for phrase in self.legitimizing_phrases:
-            # Try inserting before key action verbs
-            for action in ['killed', 'beat', 'shot', 'arrested', 'attacked', 'detained']:
-                if action in text.lower():
-                    pattern = rf'\b({re.escape(action)})'
-                    replacement = f'{action} {phrase}'
-                    perturbed = re.sub(pattern, replacement, text, flags=re.IGNORECASE, count=1)
-                    if perturbed != text:
-                        perturbations.append({
-                            'type': 'legitimation_add',
-                            'phrase': phrase,
-                            'text': perturbed,
-                            'description': f'Add legitimizing phrase: "{phrase}"'
-                        })
-                        break
+            # Append phrase at the end of the sentence
+            # Remove trailing punctuation, add phrase, then add period
+            text_clean = text.rstrip('.!?')
+            perturbed = f"{text_clean} {phrase}."
+            if perturbed != text:
+                perturbations.append({
+                    'type': 'legitimation_add',
+                    'phrase': phrase,
+                    'text': perturbed,
+                    'description': f'Add legitimizing phrase: "{phrase}"'
+                })
+                # Only add one legitimizing phrase per call to avoid explosion
+                break
         
         # Add delegitimizing phrases
         for phrase in self.delegitimizing_phrases:
