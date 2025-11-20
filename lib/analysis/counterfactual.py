@@ -572,10 +572,17 @@ class CounterfactualAnalyzer:
         
         return cde_summary
     
-    def compute_soft_counterfactual_validity(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Compute soft-counterfactual validity metrics (inspired by SCENE framework).
-        Measures how well perturbations preserve semantic validity."""
-        validity_metrics = defaultdict(lambda: defaultdict(list))
+    def compute_perturbation_quality_metrics(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Compute perturbation quality metrics (edit distance and fluency).
+        
+        These metrics assess the technical quality of perturbations:
+        - Edit distance: How much the text changed (higher = more similar to original)
+        - Fluency: Grammaticality and coherence of perturbed text (higher = better)
+        
+        Note: These are NOT counterfactual validity metrics (which would measure
+        whether perturbations cause expected model behavior changes).
+        """
+        quality_metrics = defaultdict(lambda: defaultdict(list))
         
         for event_result in results:
             for pert_result in event_result['perturbations']:
@@ -583,27 +590,29 @@ class CounterfactualAnalyzer:
                 
                 if 'validation' in pert_result['perturbation']:
                     validation = pert_result['perturbation']['validation']
-                    validity_metrics[pert_type]['edit_distance_ratios'].append(
+                    quality_metrics[pert_type]['edit_distance_ratios'].append(
                         validation['edit_distance_ratio']
                     )
-                    validity_metrics[pert_type]['fluency_scores'].append(
+                    quality_metrics[pert_type]['fluency_scores'].append(
                         validation['fluency_score']
                     )
         
-        # Compute aggregate validity metrics
-        validity_summary = {}
-        for pert_type, metrics in validity_metrics.items():
+        # Compute aggregate quality metrics
+        quality_summary = {}
+        for pert_type, metrics in quality_metrics.items():
             if metrics['edit_distance_ratios']:
-                validity_summary[pert_type] = {
+                quality_summary[pert_type] = {
                     'mean_edit_distance_ratio': np.mean(metrics['edit_distance_ratios']),
                     'std_edit_distance_ratio': np.std(metrics['edit_distance_ratios']),
                     'mean_fluency_score': np.mean(metrics['fluency_scores']),
                     'std_fluency_score': np.std(metrics['fluency_scores']),
                     'n_perturbations': len(metrics['edit_distance_ratios']),
-                    'validity_soft': np.mean(metrics['fluency_scores']) * np.mean(metrics['edit_distance_ratios'])
+                    'min_edit_distance_ratio': np.min(metrics['edit_distance_ratios']),
+                    'min_fluency_score': np.min(metrics['fluency_scores']),
+                    'quality_score': np.mean(metrics['fluency_scores'])  # Fluency is primary quality indicator
                 }
         
-        return validity_summary
+        return quality_summary
     
     def statistical_tests(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Perform statistical tests on model differences."""
@@ -687,7 +696,7 @@ class CounterfactualAnalyzer:
         """Generate comprehensive analysis report."""
         flip_metrics = self.compute_flip_metrics(results)
         cde_metrics = self.compute_counterfactual_differential_effect(results)
-        soft_validity = self.compute_soft_counterfactual_validity(results)
+        quality_metrics = self.compute_perturbation_quality_metrics(results)
         test_results = self.statistical_tests(results)
         clusters = self.cluster_sensitivity_patterns(results)
         
@@ -700,7 +709,7 @@ class CounterfactualAnalyzer:
             },
             'counterfactual_flip_rate_CFR': flip_metrics,
             'counterfactual_differential_effect_CDE': cde_metrics,
-            'soft_counterfactual_validity': soft_validity,
+            'perturbation_quality': quality_metrics,
             'statistical_tests': test_results,
             'sensitivity_clusters': clusters,
             'detailed_results': results
