@@ -14,10 +14,10 @@ strategy = ZeroShotStrategy()
 prompt = strategy.make_prompt("Military forces attacked civilians")
 ```
 
-### Few-Shot (Ready for Implementation)
-Classification with example demonstrations (1-3 examples per category).
+### Few-Shot (Implemented)
+Classification with example demonstrations (1-5 examples per category).
 
-### Explainable (Ready for Implementation)
+### Explainable (Implemented)
 Chain-of-thought reasoning prompts for transparent decision-making.
 
 ## Creating New Strategies

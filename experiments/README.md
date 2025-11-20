@@ -19,10 +19,10 @@ experiments/
 # Run complete experiment with zero-shot strategy
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
 
-# Run with few-shot strategy (once implemented)
+# Run with few-shot strategy
 STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
 
-# Run with explainable strategy (once implemented)
+# Run with explainable strategy
 STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_experiment.sh
 ```
 
