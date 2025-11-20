@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from lib.core.data_helpers import setup_country_environment
 
@@ -24,6 +25,7 @@ OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
 
 labels = ['V','B','E','P','R','S']
 thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+RANDOM_SEED = 42  # For reproducible train/test splits
 
 def temp_scaled(p, T):
     p = np.clip(p, 1e-12, 1-1e-12)
@@ -140,10 +142,44 @@ def main():
     if os.path.exists(CAL_PARAMS):
         with open(CAL_PARAMS) as f:
             cal_params = json.load(f)
+    
+    # Split data into train (for fitting isotonic) and test (for evaluation)
+    # Filter to valid labels first
+    df_valid = df[df['true_label'].isin(labels) & df['pred_label'].isin(labels)].copy()
+    
+    if len(df_valid) == 0:
+        print("No valid data for calibration")
+        return
+    
+    # Stratified split by model to ensure each model has train/test data
+    train_indices = []
+    test_indices = []
+    for m in df_valid['model'].unique():
+        model_mask = df_valid['model'] == m
+        model_indices = df_valid[model_mask].index.tolist()
+        if len(model_indices) < 2:
+            # Too few samples, use all for both train and test
+            train_indices.extend(model_indices)
+            test_indices.extend(model_indices)
+        else:
+            m_train, m_test = train_test_split(
+                model_indices, 
+                test_size=0.2, 
+                random_state=RANDOM_SEED
+            )
+            train_indices.extend(m_train)
+            test_indices.extend(m_test)
+    
+    df_train = df_valid.loc[train_indices].copy()
+    df_test = df_valid.loc[test_indices].copy()
+    
+    print(f"Train set: {len(df_train)} samples")
+    print(f"Test set: {len(df_test)} samples")
+    
     iso_mappings = {}
-    # Fit isotonic on full data per model
-    for m in df['model'].unique():
-        sub = df[(df['model']==m) & df['true_label'].isin(labels) & df['pred_label'].isin(labels)].copy()
+    # Fit isotonic on TRAIN set per model
+    for m in df_train['model'].unique():
+        sub = df_train[df_train['model']==m].copy()
         if len(sub)==0:
             continue
         probs = pd.to_numeric(sub['pred_conf'], errors='coerce').fillna(0.0).values
@@ -157,27 +193,28 @@ def main():
             iso_mappings[m] = {'x': xs.tolist(), 'y': ys}
         except Exception:
             iso_mappings[m] = None
-    # apply calibrations
-    df['pred_conf_iso'] = df['pred_conf']
-    df['pred_conf_temp'] = df['pred_conf']
+    
+    # Apply calibrations to TEST set only
+    df_test['pred_conf_iso'] = df_test['pred_conf']
+    df_test['pred_conf_temp'] = df_test['pred_conf']
     # initialize per-class prob columns (if logits absent these will remain NaN)
     for lab in labels:
-        df[f'prob_{lab}'] = float('nan')
+        df_test[f'prob_{lab}'] = float('nan')
     for m, mapv in iso_mappings.items():
-        mask = df['model']==m
+        mask = df_test['model']==m
         if mapv is not None:
             ir = IsotonicRegression(out_of_bounds='clip')
             ir.fit(mapv['x'], mapv['y'])
             # Ensure we operate on a pandas Series so .fillna is available,
             # then convert to a plain numpy float array for the transformer.
-            numeric_vals = pd.to_numeric(df.loc[mask, 'pred_conf'], errors='coerce').fillna(0.0).to_numpy(dtype=float) # type: ignore
-            df.loc[mask, 'pred_conf_iso'] = ir.transform(numeric_vals)
+            numeric_vals = pd.to_numeric(df_test.loc[mask, 'pred_conf'], errors='coerce').fillna(0.0).to_numpy(dtype=float) # type: ignore
+            df_test.loc[mask, 'pred_conf_iso'] = ir.transform(numeric_vals)
         T = cal_params.get(m, {}).get('T', 1.0)
-        numeric_vals_temp = pd.to_numeric(df.loc[mask, 'pred_conf'], errors='coerce').fillna(0.0).to_numpy(dtype=float) # type: ignore
-        df.loc[mask, 'pred_conf_temp'] = temp_scaled(numeric_vals_temp, T)
+        numeric_vals_temp = pd.to_numeric(df_test.loc[mask, 'pred_conf'], errors='coerce').fillna(0.0).to_numpy(dtype=float) # type: ignore
+        df_test.loc[mask, 'pred_conf_temp'] = temp_scaled(numeric_vals_temp, T)
         # If multiclass temperature available and logits column exists, compute per-class probs
         T_multi = cal_params.get(m, {}).get('T_multiclass', 1.0)
-        if 'logits' in df.columns:
+        if 'logits' in df_test.columns:
             # parse JSON lists and compute softmax(logits / T_multi)
             def compute_probs_json(x):
                 try:
@@ -193,46 +230,46 @@ def main():
                     return probs.tolist()
                 except Exception:
                     return [np.nan]*len(labels)
-            probs_mat = df.loc[mask, 'logits'].apply(compute_probs_json).tolist() # type: ignore
+            probs_mat = df_test.loc[mask, 'logits'].apply(compute_probs_json).tolist() # type: ignore
             if len(probs_mat) > 0:
                 probs_arr = np.vstack(probs_mat)
                 for i, lab in enumerate(labels):
-                    df.loc[mask, f'prob_{lab}'] = probs_arr[:, i]
-    # Save calibrated CSV
+                    df_test.loc[mask, f'prob_{lab}'] = probs_arr[:, i]
+    # Save calibrated CSV (test set only to avoid data leakage)
     os.makedirs('results', exist_ok=True)
-    df.to_csv(OUT_CAL_CSV, index=False)
-    print('Saved calibrated CSV to', OUT_CAL_CSV)
+    df_test.to_csv(OUT_CAL_CSV, index=False)
+    print('Saved calibrated TEST set to', OUT_CAL_CSV)
     # Save isotonic mappings
     with open(OUT_ISO_MAP,'w') as f:
         json.dump(iso_mappings, f)
-    # Compute threshold metrics for raw, isotonic, temp
-    df_raw = compute_threshold_metrics(df, 'pred_conf')
-    df_iso = compute_threshold_metrics(df, 'pred_conf_iso')
-    df_temp = compute_threshold_metrics(df, 'pred_conf_temp')
+    # Compute threshold metrics for raw, isotonic, temp (on TEST set only)
+    df_raw = compute_threshold_metrics(df_test, 'pred_conf')
+    df_iso = compute_threshold_metrics(df_test, 'pred_conf_iso')
+    df_temp = compute_threshold_metrics(df_test, 'pred_conf_temp')
     all_metrics = pd.concat([df_raw, df_iso, df_temp], ignore_index=True)
     all_metrics.to_csv(OUT_METRICS_CSV, index=False)
-    print('Saved threshold metrics to', OUT_METRICS_CSV)
-    # Compute Brier scores
-    brier_df = compute_brier_scores(df, iso_mappings, cal_params)
+    print('Saved threshold metrics (test set) to', OUT_METRICS_CSV)
+    # Compute Brier scores (on TEST set only)
+    brier_df = compute_brier_scores(df_test, iso_mappings, cal_params)
     brier_df.to_csv(OUT_BRIER_CSV, index=False)
-    print('\nBrier Scores (lower is better):')
+    print('\nBrier Scores on TEST set (lower is better):')
     print(brier_df.to_string(index=False))
     print(f'\nSaved Brier scores to {OUT_BRIER_CSV}')
     
-    # Plots
-    reliability_curve_plot(df, iso_mappings, cal_params)
-    print('\nSaved reliability diagrams to', OUT_PLOT_REL)
+    # Plots (on TEST set only)
+    reliability_curve_plot(df_test, iso_mappings, cal_params)
+    print('\nSaved reliability diagrams (test set) to', OUT_PLOT_REL)
     # Accuracy vs coverage plots
     fig, ax = plt.subplots(figsize=(8,6))
     for prob_col, label in [('pred_conf','raw'), ('pred_conf_iso','isotonic'), ('pred_conf_temp','temp')]:
-        for m in df['model'].unique():
+        for m in df_test['model'].unique():
             sub = all_metrics[(all_metrics['model']==m)&(all_metrics['prob_col']==prob_col)]
             ax.plot(sub['coverage'], sub['accuracy'], marker='o', label=f"{m}-{label}")
     ax.set_xlabel('Coverage')
     ax.set_ylabel('Accuracy')
     ax.legend()
     fig.savefig(OUT_PLOT_ACC)
-    print('Saved accuracy vs coverage plot to', OUT_PLOT_ACC)
+    print('Saved accuracy vs coverage plot (test set) to', OUT_PLOT_ACC)
 
 if __name__=='__main__':
     main()
