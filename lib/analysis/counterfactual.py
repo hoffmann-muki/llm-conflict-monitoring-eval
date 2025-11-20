@@ -13,6 +13,7 @@ Usage:
 
 import os
 import argparse
+import math
 import pandas as pd
 import numpy as np
 import json
@@ -820,6 +821,7 @@ def main():
     parser = argparse.ArgumentParser(description='Counterfactual analysis for model disagreements')
     parser.add_argument('--models', required=True, help='Comma-separated list of models to analyze')
     parser.add_argument('--events', type=int, default=None, help='Number of top-N disagreements to analyze (default: all available)')
+    parser.add_argument('--top-percent', type=float, default=None, help='Use top X%% of available disagreements (mutually exclusive with --events)')
     parser.add_argument('--output', default=None, help='Output file path')
     
     args = parser.parse_args()
@@ -843,8 +845,17 @@ def main():
     if 'event_id' not in events_df.columns:
         raise ValueError(f"'event_id' column not found in {top_disagreements_path}")
     
-    # Limit to requested number of events if specified
-    if args.events:
+    # Validate mutually exclusive options
+    if args.events is not None and args.top_percent is not None:
+        parser.error('--events and --top-percent are mutually exclusive')
+
+    # Limit to requested number of events if specified or by top-percent
+    if args.top_percent is not None:
+        if args.top_percent <= 0 or args.top_percent > 100:
+            parser.error('--top-percent must be > 0 and <= 100')
+        n = max(1, int(math.ceil(len(events_df) * (args.top_percent / 100.0))))
+        events_df = events_df.head(n)
+    elif args.events:
         events_df = events_df.head(args.events)
     
     print(f"Loaded {len(events_df)} disagreement events from {top_disagreements_path}")

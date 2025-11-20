@@ -68,9 +68,14 @@ COUNTRY=cmr python -m lib.analysis.harm
 COUNTRY=cmr python -m lib.analysis.per_class_metrics
 
 # Counterfactual perturbation testing (requires top_disagreements.csv)
+# Generate disagreements first and then run counterfactual on the top-N or top-percent:
 COUNTRY=cmr python -m lib.analysis.per_class_metrics  # Generate disagreements first
 COUNTRY=cmr python -m lib.analysis.counterfactual \
   --models llama3.2,mistral:7b --events 20
+
+# Or use a percentage of available disagreements (e.g., top 10%):
+COUNTRY=cmr python -m lib.analysis.counterfactual \
+  --models llama3.2,mistral:7b --top-percent 10
 
 # Visualizations
 COUNTRY=cmr python -m lib.analysis.visualize_reports

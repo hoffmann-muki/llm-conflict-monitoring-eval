@@ -111,6 +111,11 @@ COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
 COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
   .venv/bin/python -m lib.analysis.counterfactual \
   --models llama3.2,mistral:7b --events 20
+
+# Or run on a percentage of disagreements (example: top 10% of disagreements):
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
+  .venv/bin/python -m lib.analysis.counterfactual \
+  --models llama3.2,mistral:7b --top-percent 10
 ```
 
 ## Prompting Strategies
