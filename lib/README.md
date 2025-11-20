@@ -67,9 +67,10 @@ COUNTRY=cmr python -m lib.analysis.harm
 # Per-class metrics and error sampling
 COUNTRY=cmr python -m lib.analysis.per_class_metrics
 
-# Counterfactual perturbation testing
+# Counterfactual perturbation testing (requires top_disagreements.csv)
+COUNTRY=cmr python -m lib.analysis.per_class_metrics  # Generate disagreements first
 COUNTRY=cmr python -m lib.analysis.counterfactual \
-  --models llama3.2,mistral:7b --events 50
+  --models llama3.2,mistral:7b --events 20
 
 # Visualizations
 COUNTRY=cmr python -m lib.analysis.visualize_reports

@@ -179,12 +179,12 @@ log_success "Bias and harm analysis completed"
 
 # Phase 4: Counterfactual Analysis
 if [ "$SKIP_COUNTERFACTUAL" = "true" ]; then
-    log_phase "PHASE 4: COUNTERFACTUAL ANALYSIS (SKIPPED)"
+    log_phase "PHASE 4: COUNTERFACTUAL PERTURBATION ANALYSIS (SKIPPED)"
     log_warn "Skipping counterfactual analysis"
 else
     log_phase "PHASE 4: COUNTERFACTUAL PERTURBATION ANALYSIS"
     
-    log_step "Running counterfactual perturbation testing..."
+    log_step "Running counterfactual perturbation testing on top-N disagreements..."
     COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
         "$VENV_PY" -m lib.analysis.counterfactual \
         --models "$CF_MODELS" --events "$CF_EVENTS"

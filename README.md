@@ -62,7 +62,7 @@ This generates complete quantitative analysis:
 - Calibration (Brier scores, reliability diagrams)
 - Harm metrics (False Legitimization/Illegitimization rates)
 - Error analysis and source correlations
-- Counterfactual robustness testing
+- Counterfactual robustness testing (on top-N disagreement cases)
 
 Results are saved to `results/<COUNTRY>/<STRATEGY>/`
 

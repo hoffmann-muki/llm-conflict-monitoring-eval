@@ -105,10 +105,12 @@ COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
 COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
   .venv/bin/python -m lib.analysis.harm
 
-# Counterfactual
+# Counterfactual (requires top_disagreements.csv from per_class_metrics)
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
+  .venv/bin/python -m lib.analysis.per_class_metrics  # Run first
 COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
   .venv/bin/python -m lib.analysis.counterfactual \
-  --models llama3.2,mistral:7b --events 50
+  --models llama3.2,mistral:7b --events 20
 ```
 
 ## Prompting Strategies

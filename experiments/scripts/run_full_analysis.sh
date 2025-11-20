@@ -154,7 +154,7 @@ run_counterfactual_analysis() {
     log_phase "[Phase 4/5] Counterfactual Perturbation Analysis"
     
     log_step "Running counterfactual analysis with models: ${CF_MODELS}"
-    log_step "Testing ${CF_EVENTS} events with hypothesis-driven perturbations..."
+    log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
     
     if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
         --models "${CF_MODELS}" \
