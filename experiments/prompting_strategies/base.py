@@ -20,11 +20,11 @@ class PromptingStrategy(ABC):
         self.config = config or {}
     
     @abstractmethod
-    def make_prompt(self, note: str) -> str:
+    def make_prompt(self, event_note: str) -> str:
         """Generate a prompt for the given event note.
         
         Args:
-            note: Event description text to classify
+            event_note: Event description text to classify
             
         Returns:
             Formatted prompt string

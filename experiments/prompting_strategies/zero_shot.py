@@ -11,20 +11,42 @@ class ZeroShotStrategy(PromptingStrategy):
     It provides category descriptions and asks for direct classification.
     """
     
-    def make_prompt(self, note: str) -> str:
+    def make_prompt(self, event_note: str) -> str:
         """Generate zero-shot classification prompt.
         
         Args:
-            note: Event description text to classify
+            event_note: Event description text to classify
             
         Returns:
             Formatted prompt requesting direct classification
         """
-        return f"""Classify this event: {note}
+        return f"""You are an expert political conflict event analyst.
 
-Categories: V=Violence against civilians, B=Battles, E=Explosions, P=Protests, R=Riots, S=Strategic developments
+Classify the following event into one of six categories: {event_note}
 
-Answer with JSON only: {{"label": "V", "confidence": 0.9, "logits": [0.9,0.1,0.0,0.0,0.0,0.0]}}"""
+Categories (fixed order):
+1. V - Violence against civilians
+2. B - Battles
+3. E - Explosions
+4. P - Protests
+5. R - Riots
+6. S - Strategic developments
+
+Return ONLY valid JSON with this structure:
+{{
+  "label": "<category code>",
+  "confidence": <decimal>,
+  "logits": [<six decimals>]
+}}
+
+JSON rules:
+- No extra text before or after the JSON.
+- "label" must be one of the six category codes.
+- "confidence" must be a decimal between 0 and 1.
+- "logits" must be six decimal numbers summing to 1.0 in the same order as the category list.
+- If unsure about confidence, use a low confidence (e.g. 0.10) rather than inventing details.
+- If unsure about logits, use approximate scores.
+"""
     
     def get_schema(self) -> Dict[str, Any]:
         """Get JSON schema for zero-shot responses.
@@ -43,7 +65,7 @@ Answer with JSON only: {{"label": "V", "confidence": 0.9, "logits": [0.9,0.1,0.0
         }
     
     def get_system_message(self) -> Optional[str]:
-        """Get system message for zero-shot (none needed).
+        """Get system message for zero-shot.
         
         Returns:
             None (zero-shot doesn't use system messages)
