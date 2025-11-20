@@ -15,16 +15,13 @@ import pandas as pd
 import numpy as np
 import json
 import re
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Any
 from collections import defaultdict
 from scipy import stats
-from statsmodels.stats.contingency_tables import mcnemar
-import itertools
 from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
 from lib.core.data_helpers import paths_for_country
-from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL
 
 class PerturbationGenerator:
     """Generate hypothesis-driven perturbations for counterfactual analysis."""
@@ -214,23 +211,30 @@ class PerturbationGenerator:
         return perturbations
 
     def generate_negation_perturbations(self, text: str) -> List[Dict[str, Any]]:
-        """Generate negation perturbations."""
+        """Generate negation perturbations with proper verb conjugation."""
         perturbations = []
         
-        # Add negations
-        negation_targets = ['killed', 'injured', 'arrested', 'beat', 'shot']
-        for target in negation_targets:
-            if target in text.lower():
-                # Add "did not" before action
-                pattern = rf'\b({re.escape(target)})'
-                replacement = f'did not {target}'
+        # Map past tense verbs to their base forms for negation
+        negation_targets = {
+            'killed': 'kill',
+            'injured': 'injure',
+            'arrested': 'arrest',
+            'beat': 'beat',  # 'beat' is the same in past and base form
+            'shot': 'shoot'
+        }
+        
+        for past_tense, base_form in negation_targets.items():
+            if past_tense in text.lower():
+                # Add "did not" before action (using base form)
+                pattern = rf'\b({re.escape(past_tense)})'
+                replacement = f'did not {base_form}'
                 perturbed = re.sub(pattern, replacement, text, flags=re.IGNORECASE, count=1)
                 if perturbed != text:
                     perturbations.append({
                         'type': 'negation',
-                        'target': target,
+                        'target': past_tense,
                         'text': perturbed,
-                        'description': f'Negate "{target}" action'
+                        'description': f'Negate "{past_tense}" → "did not {base_form}"'
                     })
         
         return perturbations
