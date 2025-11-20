@@ -52,7 +52,19 @@ def get_strategy(strategy_name: str):
             f"Unknown strategy: {strategy_name}. "
             f"Available: {list(STRATEGY_REGISTRY.keys())}"
         )
-    return STRATEGY_REGISTRY[strategy_name]()
+    
+    # Build config based on strategy and environment variables
+    config = {}
+    if strategy_name == 'few_shot':
+        # Support EXAMPLES_PER_CATEGORY environment variable for few-shot
+        examples_per_category = os.environ.get('EXAMPLES_PER_CATEGORY', '1')
+        try:
+            config['examples_per_category'] = int(examples_per_category)
+        except ValueError:
+            print(f"Warning: Invalid EXAMPLES_PER_CATEGORY value '{examples_per_category}', using default 1")
+            config['examples_per_category'] = 1
+    
+    return STRATEGY_REGISTRY[strategy_name](config=config if config else None)
 
 
 def run_model_on_rows_with_strategy(model_name: str, rows, strategy, 

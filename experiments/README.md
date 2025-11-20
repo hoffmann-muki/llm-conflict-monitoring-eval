@@ -19,8 +19,11 @@ experiments/
 # Run complete experiment with zero-shot strategy
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
 
-# Run with few-shot strategy
+# Run with few-shot strategy (1 example per category by default)
 STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
+
+# Run with few-shot strategy (3 examples per category)
+STRATEGY=few_shot EXAMPLES_PER_CATEGORY=3 COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
 
 # Run with explainable strategy
 STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_experiment.sh
@@ -31,6 +34,7 @@ STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_experiment.sh
 - `STRATEGY` - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 - `COUNTRY` - Country code (cmr, nga) [default: cmr]
 - `SAMPLE_SIZE` - Number of events [default: 500]
+- `EXAMPLES_PER_CATEGORY` - Few-shot examples per category (1-5) [default: 1]
 - `CF_MODELS` - Models for counterfactual [default: llama3.2,mistral:7b]
 - `CF_EVENTS` - Counterfactual event count [default: 50]
 - `SKIP_INFERENCE` - Skip inference phase [default: false]
