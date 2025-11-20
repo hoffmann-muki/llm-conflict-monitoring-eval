@@ -14,10 +14,10 @@ import os
 import argparse
 import pandas as pd
 from statsmodels.stats.contingency_tables import mcnemar
-from tools.data_helpers import paths_for_country
-from tools.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
-from tools.constants import LABEL_MAP
-from tools.ollama_helpers import run_model_on_rows
+from lib.tools.data_helpers import paths_for_country
+from lib.tools.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
+from lib.tools.constants import LABEL_MAP
+from lib.tools.ollama_helpers import run_model_on_rows
 
 COUNTRY = os.environ.get('COUNTRY', 'cmr')
 RESULTS_DIR = os.path.join('results', COUNTRY)
@@ -42,14 +42,21 @@ def fl_fi_for_model(df):
 
 def mcnemar_test(cont_table):
     """
-    Run McNemar test on contingency table.
-    McNemar tests whether two classifiers differ on the same items by comparing only the discordant pairs (cases where A is right & B wrong vs A wrong & B right).
-    If those counts are very different, p < 0.05 → significant difference.
+    Run McNemar test on 2x2 contingency table for paired binary classifications.
+    
+    McNemar tests whether two classifiers differ on the same items. 
+    While it focuses on discordant pairs (b and c), it requires the full 2x2 table:
+    - a: both models correct
+    - b: model A correct, model B wrong
+    - c: model A wrong, model B correct  
+    - d: both models wrong
+    
+    If b and c are significantly different, p < 0.05 → models differ significantly.
     """
-    # cont_table is dict {'b':count, 'c':count} where b = modelA correct & modelB incorrect, c = modelA incorrect & modelB correct
     try:
-        table = [[cont_table.get('a',0), cont_table.get('b',0)], [cont_table.get('c',0), cont_table.get('d',0)]]
-        res = mcnemar(table, exact=False)
+        table = [[cont_table.get('a',0), cont_table.get('b',0)], 
+                 [cont_table.get('c',0), cont_table.get('d',0)]]
+        res = mcnemar(table, exact=False, correction=True)
         return res.statistic, res.pvalue # type: ignore
     except Exception:
         return None, None
@@ -126,11 +133,14 @@ def main():
                 # compute contingency for correctness on relevant labels
                 merged['a_correct'] = merged.apply(lambda r: r['pred_a']==r['true_label'], axis=1)
                 merged['b_correct'] = merged.apply(lambda r: r['pred_b']==r['true_label'], axis=1)
-                # b: a_correct & not b_correct ; c: not a_correct & b_correct
+                # McNemar 2x2 contingency table:
+                # a: both correct, b: a correct & b wrong, c: a wrong & b correct, d: both wrong
+                a_count = int(((merged['a_correct']==True) & (merged['b_correct']==True)).sum())
                 b_count = int(((merged['a_correct']==True) & (merged['b_correct']==False)).sum())
                 c_count = int(((merged['a_correct']==False) & (merged['b_correct']==True)).sum())
-                stat, p = mcnemar_test({'a':0,'b':b_count,'c':c_count,'d':0})
-                comparisons.append({'model_a':a,'model_b':b,'n_common':len(merged),'b':b_count,'c':c_count,'mcnemar_stat':stat,'mcnemar_p':p})
+                d_count = int(((merged['a_correct']==False) & (merged['b_correct']==False)).sum())
+                stat, p = mcnemar_test({'a':a_count,'b':b_count,'c':c_count,'d':d_count})
+                comparisons.append({'model_a':a,'model_b':b,'n_common':len(merged),'both_correct':a_count,'a_correct_b_wrong':b_count,'a_wrong_b_correct':c_count,'both_wrong':d_count,'mcnemar_stat':stat,'mcnemar_p':p})
     else:
         comparisons.append({'note':'event_id not present; cannot do paired comparisons'})
 
