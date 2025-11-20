@@ -18,6 +18,7 @@ import re
 from typing import List, Dict, Any
 from collections import defaultdict
 from scipy import stats
+from scipy.stats import chi2
 from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
@@ -634,21 +635,39 @@ class CounterfactualAnalyzer:
                                 flips_m2.append(m2_res['label_flipped'])
                 
                 if len(flips_m1) > 5:  # Minimum sample size
-                    # McNemar test for label flips
+                    # McNemar test for paired binary data (label flips)
+                    # Contingency table: [[no_flip/no_flip, no_flip/flip],
+                    #                     [flip/no_flip, flip/flip]]
                     contingency = [[0, 0], [0, 0]]
                     for f1, f2 in zip(flips_m1, flips_m2):
                         contingency[int(f1)][int(f2)] += 1
                     
                     try:
-                        from scipy.stats import chi2_contingency
-                        chi2, p_val, _, _ = chi2_contingency(contingency)
-                        test_results[f'{pert_type}_chi2'] = {
-                            'statistic': chi2,
-                            'p_value': p_val,
-                            'contingency': contingency
-                        }
+                        # McNemar test using continuity correction
+                        # Focuses on discordant pairs: b (m1 no flip, m2 flip) and c (m1 flip, m2 no flip)
+                        b = contingency[0][1]
+                        c = contingency[1][0]
+                        
+                        if b + c > 0:
+                            # McNemar statistic with continuity correction
+                            mcnemar_stat = ((abs(b - c) - 1)**2) / (b + c)
+                            
+                            # P-value from chi-squared distribution with 1 dof
+                            p_val = 1 - chi2.cdf(mcnemar_stat, 1)
+                            
+                            test_results[f'{pert_type}_mcnemar'] = {
+                                'statistic': mcnemar_stat,
+                                'p_value': p_val,
+                                'contingency': contingency,
+                                'discordant_pairs': {'b': b, 'c': c}
+                            }
+                        else:
+                            test_results[f'{pert_type}_mcnemar'] = {
+                                'error': 'No discordant pairs',
+                                'contingency': contingency
+                            }
                     except Exception as e:
-                        test_results[f'{pert_type}_chi2'] = {'error': str(e)}
+                        test_results[f'{pert_type}_mcnemar'] = {'error': str(e)}
         
         return test_results
     
