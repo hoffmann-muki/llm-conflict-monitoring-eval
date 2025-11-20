@@ -578,9 +578,6 @@ class CounterfactualAnalyzer:
         These metrics assess the technical quality of perturbations:
         - Edit distance: How much the text changed (higher = more similar to original)
         - Fluency: Grammaticality and coherence of perturbed text (higher = better)
-        
-        Note: These are NOT counterfactual validity metrics (which would measure
-        whether perturbations cause expected model behavior changes).
         """
         quality_metrics = defaultdict(lambda: defaultdict(list))
         
@@ -656,17 +653,27 @@ class CounterfactualAnalyzer:
         return test_results
     
     def cluster_sensitivity_patterns(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Cluster events by sensitivity patterns."""
+        """Cluster events by sensitivity patterns based on average flip rates per perturbation type.
+        
+        For each event, computes the mean flip rate (proportion of models that flipped) for each
+        perturbation type, then assigns the event to the cluster of the most sensitive type.
+        
+        Returns:
+            Dict mapping perturbation types to lists of event IDs.
+            Special cluster 'robust' contains events with no flips.
+            Special cluster 'mixed' contains events with tied sensitivities.
+        """
         event_profiles = {}
         
         for event_result in results:
             event_id = event_result['event_id']
-            profile = defaultdict(float)  # Changed to float
+            # Track both sum and count to compute mean
+            pert_type_stats = defaultdict(lambda: {'sum': 0.0, 'count': 0})
             
             for pert_result in event_result['perturbations']:
                 pert_type = pert_result['perturbation']['type']
                 
-                # Count flips across models for this perturbation type
+                # Count flips across models for this perturbation
                 total_flips = 0
                 total_models = 0
                 
@@ -677,18 +684,39 @@ class CounterfactualAnalyzer:
                             total_flips += 1
                 
                 if total_models > 0:
-                    profile[pert_type] += total_flips / total_models
+                    flip_rate = total_flips / total_models
+                    pert_type_stats[pert_type]['sum'] += flip_rate
+                    pert_type_stats[pert_type]['count'] += 1
             
-            event_profiles[event_id] = dict(profile)
+            # Compute mean flip rate per perturbation type
+            profile = {}
+            for pert_type, stats in pert_type_stats.items():
+                if stats['count'] > 0:
+                    profile[pert_type] = stats['sum'] / stats['count']
+            
+            event_profiles[event_id] = profile
         
-        # Simple clustering by dominant sensitivity
+        # Cluster by dominant sensitivity
         clusters = defaultdict(list)
         for event_id, profile in event_profiles.items():
-            if profile:
-                dominant_type = max(profile, key=profile.get)
-                clusters[dominant_type].append(event_id)
-            else:
+            if not profile:
+                # No flips at all
                 clusters['robust'].append(event_id)
+            else:
+                # Find maximum flip rate
+                max_rate = max(profile.values())
+                
+                # Check for ties (within small tolerance)
+                tied_types = [ptype for ptype, rate in profile.items() 
+                             if abs(rate - max_rate) < 0.001]
+                
+                if len(tied_types) > 1:
+                    # Multiple perturbation types with equal sensitivity
+                    clusters['mixed'].append(event_id)
+                else:
+                    # Clear dominant type
+                    dominant_type = tied_types[0]
+                    clusters[dominant_type].append(event_id)
         
         return dict(clusters)
     
