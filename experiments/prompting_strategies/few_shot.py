@@ -1,6 +1,6 @@
 """Few-shot prompting strategy with example demonstrations.
 
-TODO: Implement few-shot learning with examples for each category.
+Provides example demonstrations for each category before asking for classification.
 """
 
 from typing import Dict, Any, Optional, List

@@ -2,7 +2,6 @@
 Usage: import `extract_country_rows` from this module to get country-specific dataframes.
 """
 from __future__ import annotations
-import os
 import pandas as pd
 
 def extract_country_rows(csv_path: str, country: str, country_col: str = "country") -> pd.DataFrame:

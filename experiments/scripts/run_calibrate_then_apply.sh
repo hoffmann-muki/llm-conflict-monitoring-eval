@@ -27,12 +27,13 @@ echo "Small sample=$SMALL_SAMPLE Large sample=$LARGE_SAMPLE MIN_COVERAGE=$MIN_CO
 cd "$REPO_ROOT"
 
 echo "--- Running small sample (SAMPLE_SIZE=$SMALL_SAMPLE) ---"
-# Run the generic pipeline
-SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" political_bias_of_llms_generic.py
+# Run the classification pipeline
+STRATEGY="zero_shot" SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY \
+    "$VENV_PY" experiments/pipelines/run_classification.py
 
 # Run calibration and evaluation
-COUNTRY=$COUNTRY "$VENV_PY" -m tools.apply_calibration_and_evaluate
-COUNTRY=$COUNTRY "$VENV_PY" -m tools.compute_thresholds_per_class
+COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
+COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.thresholds
 
 # Country-specific file paths
 METRICS_FILE="results/${COUNTRY}/metrics_thresholds_calibrated.csv"
@@ -67,11 +68,12 @@ print("Wrote thresholds to $THRESH_JSON")
 PY
 
 echo "--- Running large sample (SAMPLE_SIZE=$LARGE_SAMPLE) ---"
-# Run the large sample with the generic pipeline
-SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" political_bias_of_llms_generic.py
+# Run the large sample with the classification pipeline
+STRATEGY="zero_shot" SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY \
+    "$VENV_PY" experiments/pipelines/run_classification.py
 
 # Run calibration and evaluation
-COUNTRY=$COUNTRY "$VENV_PY" -m tools.apply_calibration_and_evaluate
+COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
 
 CALIBRATED_CSV="results/${COUNTRY}/ollama_results_calibrated.csv"
 
@@ -130,7 +132,7 @@ print(final_df.to_string(index=False))
 PY
 
 echo "--- Generating reports ---"
-COUNTRY=$COUNTRY "$VENV_PY" -m tools.per_class_metrics_and_disagreements
-COUNTRY=$COUNTRY "$VENV_PY" -m tools.visualize_reports
+COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.per_class_metrics
+COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.visualize_reports
 
 echo "Done! Check results/$COUNTRY/ for outputs."

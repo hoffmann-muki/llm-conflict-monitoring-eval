@@ -17,16 +17,20 @@ experiments/
 
 ```bash
 # Run complete experiment with zero-shot strategy
-STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_experiment.sh
 
 # Run with few-shot strategy (1 example per category by default)
-STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
+STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_experiment.sh
 
 # Run with few-shot strategy (3 examples per category)
-STRATEGY=few_shot EXAMPLES_PER_CATEGORY=3 COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_experiment.sh
+STRATEGY=few_shot EXAMPLES_PER_CATEGORY=3 COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_experiment.sh
 
 # Run with explainable strategy
-STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_experiment.sh
+STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 \
+  ./experiments/scripts/run_experiment.sh
 ```
 
 ### Environment Variables
@@ -67,10 +71,24 @@ Each strategy folder contains complete quantitative analysis:
 ### Classification Pipeline
 
 ```bash
-# Run classification with specific strategy
+# Run classification with proportional sampling (default)
+python experiments/pipelines/run_classification.py cmr \
+  --sample-size 300 --strategy zero_shot
+
+# Run with targeted sampling (e.g., 60% Violence against civilians)
+python experiments/pipelines/run_classification.py cmr \
+  --sample-size 300 \
+  --primary-group "Violence against civilians" --primary-share 0.6
+
+# Using environment variables
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=100 \
-  .venv/bin/python pipelines/run_classification.py
+  python experiments/pipelines/run_classification.py
 ```
+
+**Sampling Options:**
+- By default, samples are drawn **proportionally** to reflect natural class distributions
+- Use `--primary-group` and `--primary-share` to oversample specific event types
+- Proportional sampling recommended for cross-country comparative analysis
 
 ### Analysis Scripts
 
@@ -96,3 +114,5 @@ COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
 ## Prompting Strategies
 
 See [prompting_strategies/README.md](prompting_strategies/README.md) for details on implementing new strategies.
+
+**Note:** All prompting strategies generate prompts that are passed explicitly to `run_ollama_structured()`. There are no hardcoded prompts in the inference layer - the strategy pattern ensures complete separation of concerns.

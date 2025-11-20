@@ -1,6 +1,6 @@
 """Explainable prompting strategy with chain-of-thought reasoning.
 
-TODO: Implement chain-of-thought prompting for transparent reasoning.
+Uses chain-of-thought prompting to encourage transparent step-by-step reasoning.
 """
 
 from typing import Dict, Any, Optional

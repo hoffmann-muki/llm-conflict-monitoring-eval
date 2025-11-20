@@ -35,44 +35,53 @@ from lib.data_preparation import (
 
 ### Inference
 
-Ollama model inference with structured JSON output:
+Ollama model inference with structured JSON output.
+
+**Important:** `run_ollama_structured()` requires an explicit `prompt` parameter. Always use prompting strategies to generate prompts - there are no hardcoded prompts.
 
 ```python
 from lib.inference.ollama_client import run_ollama_structured
+from experiments.prompting_strategies import ZeroShotStrategy
 
-result = run_ollama_structured('gemma:2b', 'Event description')
+strategy = ZeroShotStrategy()
+prompt = strategy.make_prompt('Event description')
+system_msg = strategy.get_system_message()
+result = run_ollama_structured('gemma:2b', prompt, system_msg)
 # Returns: {"label": "V", "confidence": 0.9}
 ```
 
 ### Analysis
 
-All analysis modules are runnable:
+All analysis modules are runnable as Python modules:
 
 ```bash
 # Classification metrics and fairness
-python -m lib.analysis.metrics
+COUNTRY=cmr python -m lib.analysis.metrics
 
 # Calibration (isotonic + temperature scaling)
-python -m lib.analysis.calibration
+COUNTRY=cmr python -m lib.analysis.calibration
 
 # Harm analysis (FL/FI rates)
-python -m lib.analysis.harm
+COUNTRY=cmr python -m lib.analysis.harm
 
 # Per-class metrics and error sampling
-python -m lib.analysis.per_class_metrics
+COUNTRY=cmr python -m lib.analysis.per_class_metrics
 
 # Counterfactual perturbation testing
-python -m lib.analysis.counterfactual --models llama3.2,mistral:7b --events 50
+COUNTRY=cmr python -m lib.analysis.counterfactual \
+  --models llama3.2,mistral:7b --events 50
 
 # Visualizations
-python -m lib.analysis.visualize_reports
-python -m lib.analysis.visualize_counterfactual
+COUNTRY=cmr python -m lib.analysis.visualize_reports
+COUNTRY=cmr python -m lib.analysis.visualize_counterfactual \
+  --input results/cmr/zero_shot/counterfactual_analysis_*.json
 
 # Model size comparisons
-python -m lib.analysis.compare_models --family gemma --sizes 2b,7b
+COUNTRY=cmr python -m lib.analysis.compare_models \
+  --family gemma --sizes 2b,7b
 
 # Decision thresholds
-python -m lib.analysis.thresholds
+COUNTRY=cmr python -m lib.analysis.thresholds
 ```
 
 ### Core

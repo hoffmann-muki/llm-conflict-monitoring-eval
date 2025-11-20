@@ -36,8 +36,24 @@ source .venv/bin/activate
 Run a complete experiment with a prompting strategy:
 
 ```bash
-# Zero-shot experiment
-STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_experiment.sh
+# Zero-shot experiment with proportional sampling
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_experiment.sh
+
+# Or run classification directly with custom sampling
+python experiments/pipelines/run_classification.py cmr \
+  --sample-size 300 --strategy zero_shot
+```
+
+**Sampling Configuration:**
+
+By default, the pipeline uses **proportional stratified sampling** where samples reflect the natural distribution of event types in your data. This is recommended for cross-country comparative analysis.
+
+To oversample specific event types (e.g., for focused analysis on rare events):
+
+```bash
+python experiments/pipelines/run_classification.py cmr --sample-size 300 \
+  --primary-group "Violence against civilians" --primary-share 0.6
 ```
 
 This generates complete quantitative analysis:

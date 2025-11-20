@@ -6,7 +6,7 @@ This script implements a systematic approach to understand why models make diffe
 classifications on the same events through hypothesis-driven perturbations.
 
 Usage:
-    COUNTRY=nga python -m tools.counterfactual_analysis --models llama3.2,mistral:7b --events 5
+    COUNTRY=nga python -m lib.analysis.counterfactual --models llama3.2,mistral:7b --events 5
 """
 
 import os
@@ -421,7 +421,16 @@ class CounterfactualAnalyzer:
     def run_model_on_perturbation(self, model: str, text: str) -> Dict[str, Any]:
         """Run a single model on perturbed text."""
         try:
-            result = run_ollama_structured(model, text)
+            # Import strategy for prompt generation
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+            from experiments.prompting_strategies import ZeroShotStrategy
+            
+            strategy = ZeroShotStrategy()
+            prompt = strategy.make_prompt(text)
+            system_msg = strategy.get_system_message()
+            result = run_ollama_structured(model, prompt, system_msg)
             return {
                 'label': result.get('label', 'ERROR'),
                 'confidence': result.get('confidence', 0.0),

@@ -177,7 +177,7 @@ COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
 
 log_success "Bias and harm analysis completed"
 
-# Phase 4: Counterfactual Analysis (Optional)
+# Phase 4: Counterfactual Analysis
 if [ "$SKIP_COUNTERFACTUAL" = "true" ]; then
     log_phase "PHASE 4: COUNTERFACTUAL ANALYSIS (SKIPPED)"
     log_warn "Skipping counterfactual analysis"

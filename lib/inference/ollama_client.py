@@ -1,5 +1,6 @@
-import json, time, re, subprocess, shlex
+import json, time, re, subprocess, shlex, sys, os
 from typing import Iterable, List
+from experiments.prompting_strategies import ZeroShotStrategy
 
 # Shared JSON schema for structured classification responses
 SCHEMA = {
@@ -12,30 +13,34 @@ SCHEMA = {
     "required": ["label", "confidence"]
 }
 
-def make_prompt(note: str) -> str:
-     return f"""Classify this event: {note}
-
-Categories: V=Violence against civilians, B=Battles, E=Explosions, P=Protests, R=Riots, S=Strategic developments
-
-Answer with JSON only: {{"label": "V", "confidence": 0.9, "logits": [0.9,0.1,0.0,0.0,0.0,0.0]}}"""
-
-def run_ollama_structured(model: str, note: str, system_msg: str | None = None, schema=None, timeout: int = 120):
+def run_ollama_structured(model: str, prompt: str, system_msg: str | None = None, schema=None, timeout: int = 120):
     """Run a single structured request against local Ollama and return parsed JSON.
 
     Parameters
     - model: model name (e.g., 'gemma:7b')
-    - note: short text to classify
+    - prompt: pre-formatted prompt string (required - use strategy.make_prompt())
     - system_msg: optional system message to include for context
     - schema: optional JSON schema dict; defaults to SCHEMA
     - timeout: seconds for the curl call
+    
+    Note: This function requires a prompt parameter. Use prompting strategies to generate prompts:
+        from experiments.prompting_strategies import ZeroShotStrategy
+        strategy = ZeroShotStrategy()
+        prompt = strategy.make_prompt(event_note)
+        result = run_ollama_structured(model, prompt)
     """
+    
+    # Build messages array
+    messages = []
+    if system_msg:
+        messages.append({"role": "system", "content": system_msg})
+    messages.append({"role": "user", "content": prompt})
+    
     payload = {
         "model": model,
         "stream": False,
         "options": {"temperature": 0.0},
-        "messages": [
-            {"role": "user", "content": make_prompt(note)}
-        ]
+        "messages": messages
     }
     cmd = (
         'curl -sS -X POST http://localhost:11434/api/chat '
@@ -100,14 +105,18 @@ def run_model_on_rows(model_name: str, rows, note_col: str = 'notes', event_id_c
                       true_label_cols: Iterable[str] = ('gold_label', 'true_label'), actor_norm_col: str = 'actor_norm') -> List[dict]:
     """Run `model_name` on a pandas rows object (DataFrame) and return list of result dicts.
 
+    Uses ZeroShotStrategy by default for prompt generation.
     The function will try to pull event id and true label from common column names if present.
     """
+    strategy = ZeroShotStrategy()
     out = []
     for r in rows.itertuples(index=False):
         t0 = time.time()
         try:
             note = getattr(r, note_col)
-            resp = run_ollama_structured(model_name, note)
+            prompt = strategy.make_prompt(note)
+            system_msg = strategy.get_system_message()
+            resp = run_ollama_structured(model_name, prompt, system_msg)
             label = str(resp.get("label", "FAIL")).strip()
             conf = float(resp.get("confidence", 0))
             logits = None

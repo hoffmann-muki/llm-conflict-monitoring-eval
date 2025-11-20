@@ -3,7 +3,7 @@
 Visualization script for counterfactual analysis results.
 
 Usage:
-    COUNTRY=nga python -m tools.visualize_counterfactual --input results/nga/counterfactual_analysis.json
+    COUNTRY=nga python -m lib.analysis.visualize_counterfactual --input results/nga/counterfactual_analysis.json
 """
 
 import os
@@ -12,6 +12,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 from typing import Dict, Any
+from cycler import cycler
 import numpy as np
 
 def plot_flip_rates(flip_metrics: Dict[str, Any], output_dir: str):
@@ -333,7 +334,6 @@ def main():
     # Configure plotting  
     plt.style.use('default')
     # Set color cycle for consistent colors across plots
-    from cycler import cycler
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
               '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     plt.rcParams['axes.prop_cycle'] = cycler(color=colors)

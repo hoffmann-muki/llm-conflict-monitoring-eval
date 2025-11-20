@@ -4,8 +4,8 @@ Modular prompting strategies for classification experiments.
 
 ## Available Strategies
 
-### Zero-Shot (Implemented)
-Direct classification without examples. Current default approach.
+### Zero-Shot
+Direct classification without examples. Default strategy for experiments.
 
 ```python
 from experiments.prompting_strategies import ZeroShotStrategy
@@ -14,10 +14,10 @@ strategy = ZeroShotStrategy()
 prompt = strategy.make_prompt("Military forces attacked civilians")
 ```
 
-### Few-Shot (Implemented)
+### Few-Shot
 Classification with example demonstrations (1-5 examples per category).
 
-### Explainable (Implemented)
+### Explainable
 Chain-of-thought reasoning prompts for transparent decision-making.
 
 ## Creating New Strategies
@@ -76,4 +76,10 @@ All strategies should support these ACLED event types:
 1. Create your strategy file in this directory
 2. Add import to `__init__.py`
 3. Register in `experiments/pipelines/run_classification.py` STRATEGY_REGISTRY
-4. Run experiments: `STRATEGY=my_strategy COUNTRY=cmr ./experiments/scripts/run_experiment.sh`
+4. Run experiments:
+   ```bash
+   STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
+     ./experiments/scripts/run_experiment.sh
+   ```
+
+**Architecture Note:** The inference layer (`lib.inference.ollama_client`) requires explicit prompts - it contains no hardcoded prompts. This ensures complete separation: strategies generate prompts, the inference client handles API communication.

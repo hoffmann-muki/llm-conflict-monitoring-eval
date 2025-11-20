@@ -9,6 +9,9 @@ counterfactual, harm metrics).
 import pandas as pd
 import os
 import sys
+import time
+import json
+import argparse
 
 # Import strategy classes
 from experiments.prompting_strategies import ZeroShotStrategy
@@ -19,6 +22,7 @@ from experiments.prompting_strategies.explainable import ExplainableStrategy
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from lib.data_preparation import extract_country_rows, get_actor_norm_series, extract_state_actor, build_stratified_sample
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_MODELS
+from lib.inference.ollama_client import run_ollama_structured
 from lib.core.data_helpers import paths_for_country, resolve_columns, write_sample, setup_country_environment
 
 # Country name mapping
@@ -89,20 +93,20 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
     Returns:
         List of result dictionaries
     """
-    import time
-    import json
-    from lib.inference.ollama_client import run_ollama_structured
-    
     results = []
     for r in rows.itertuples(index=False):
         t0 = time.time()
         try:
             note = getattr(r, note_col)
-            # Use strategy-specific prompt
+            # Generate strategy-specific prompt
             prompt = strategy.make_prompt(note)
-            # TODO: Refactor run_ollama_structured to accept prompt directly
-            # For now, we'll use the existing function which calls make_prompt internally
-            resp = run_ollama_structured(model_name, note)
+            system_msg = strategy.get_system_message()
+            # Run with strategy prompt and system message
+            resp = run_ollama_structured(
+                model_name, 
+                prompt=prompt,
+                system_msg=system_msg
+            )
             label = str(resp.get("label", "FAIL")).strip()
             conf = float(resp.get("confidence", 0))
             logits = None
@@ -133,13 +137,17 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
 
 def run_classification_experiment(country_code: str, 
                                   sample_size: int = 100,
-                                  strategy_name: str = 'zero_shot'):
+                                  strategy_name: str = 'zero_shot',
+                                  primary_group: str | None = None,
+                                  primary_share: float = 0.0):
     """Run classification experiment with specified prompting strategy.
     
     Args:
         country_code: Country code (e.g., 'cmr', 'nga')
         sample_size: Number of samples to generate
         strategy_name: Prompting strategy to use
+        primary_group: Optional event type to oversample (default: None for proportional sampling)
+        primary_share: Fraction of sample reserved for primary_group (0-1, default: 0.0)
     """
     if country_code not in COUNTRY_NAMES:
         raise ValueError(
@@ -220,12 +228,20 @@ def run_classification_experiment(country_code: str,
     
     # Build stratified sample
     n_total = min(sample_size, len(usable))
+    
+    # Log sampling configuration
+    if primary_group:
+        print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
+              f"{(1-primary_share)*100:.0f}% proportional to other classes")
+    else:
+        print("Using proportional sampling: sample reflects natural class distribution")
+    
     df_test = build_stratified_sample(
         usable,
         stratify_col='event_type',
         n_total=n_total,
-        primary_group='Violence against civilians',
-        primary_share=0.6,
+        primary_group=primary_group,
+        primary_share=primary_share,
         label_map=LABEL_MAP,
         random_state=42,
         replace=False
@@ -277,16 +293,40 @@ def run_classification_experiment(country_code: str,
 
 def main():
     """Main entry point - accepts country, strategy from command line or environment."""
-    if len(sys.argv) > 1:
-        country_code = sys.argv[1]
-    else:
-        country_code = os.environ.get('COUNTRY', 'cmr')
+    parser = argparse.ArgumentParser(
+        description='Run classification experiment with configurable sampling'
+    )
+    parser.add_argument('country', nargs='?', default=os.environ.get('COUNTRY', 'cmr'),
+                       help='Country code (e.g., cmr, nga)')
+    parser.add_argument('--sample-size', type=int, 
+                       default=int(os.environ.get('SAMPLE_SIZE', '100')),
+                       help='Number of events to sample (default: 100)')
+    parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'),
+                       help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
+    parser.add_argument('--primary-group', default=None,
+                       help='Event type to oversample (e.g., "Violence against civilians"). '
+                            'Default: None (proportional sampling)')
+    parser.add_argument('--primary-share', type=float, default=0.0,
+                       help='Fraction for primary group (0-1). Only used if --primary-group is set. '
+                            'Default: 0.0')
     
-    sample_size = int(os.environ.get('SAMPLE_SIZE', '100'))
-    strategy_name = os.environ.get('STRATEGY', 'zero_shot')
+    args = parser.parse_args()
+    
+    # Validate primary_share
+    if args.primary_share < 0 or args.primary_share > 1:
+        parser.error('--primary-share must be between 0 and 1')
+    
+    if args.primary_group and args.primary_share == 0:
+        parser.error('--primary-share must be > 0 when --primary-group is specified')
     
     # Run the experiment
-    run_classification_experiment(country_code, sample_size, strategy_name)
+    run_classification_experiment(
+        country_code=args.country,
+        sample_size=args.sample_size,
+        strategy_name=args.strategy,
+        primary_group=args.primary_group,
+        primary_share=args.primary_share
+    )
 
 
 if __name__ == "__main__":

@@ -73,7 +73,7 @@ check_prerequisites() {
     fi
     
     # Check if we're in the right directory
-    if [ ! -f "political_bias_of_llms_generic.py" ]; then
+    if [ ! -f "experiments/pipelines/run_classification.py" ]; then
         log_error "Must be run from repository root directory"
         exit 1
     fi
@@ -98,9 +98,10 @@ run_inference() {
     fi
     
     log_phase "[Phase 1/5] Model Inference - Generating Predictions"
-    log_step "Running generic pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}"
+    log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}"
     
-    COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" python political_bias_of_llms_generic.py
+    STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+        "${VENV_PY:-python}" experiments/pipelines/run_classification.py
     
     log_success "Phase 1 complete: Predictions generated"
 }
@@ -110,15 +111,15 @@ run_calibration_and_metrics() {
     log_phase "[Phase 2/5] Calibration & Core Metrics"
     
     log_step "Applying calibration and computing Brier scores..."
-    COUNTRY="${COUNTRY}" python -m tools.apply_calibration_and_evaluate
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.calibration
     log_success "Calibration complete"
     
     log_step "Computing classification metrics, fairness metrics, and error correlations..."
-    COUNTRY="${COUNTRY}" python -m tools.compute_metrics
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.metrics
     log_success "Core metrics computed"
     
     log_step "Computing per-class decision thresholds..."
-    COUNTRY="${COUNTRY}" python -m tools.compute_thresholds_per_class
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.thresholds
     log_success "Thresholds computed"
     
     log_success "Phase 2 complete: Calibration and core metrics"
@@ -129,15 +130,15 @@ run_bias_and_harm_analysis() {
     log_phase "[Phase 3/5] Bias & Harm Analysis"
     
     log_step "Computing False Legitimization/Illegitimization rates..."
-    COUNTRY="${COUNTRY}" python -m tools.compute_fl_fi
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.harm
     log_success "Harm metrics computed"
     
     log_step "Generating per-class reports and sampling error cases..."
-    COUNTRY="${COUNTRY}" python -m tools.per_class_metrics_and_disagreements
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
     log_success "Error case sampling complete"
     
     log_step "Creating visualization plots..."
-    COUNTRY="${COUNTRY}" python -m tools.visualize_reports
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.visualize_reports
     log_success "Visualizations generated"
     
     log_success "Phase 3 complete: Bias and harm analysis"
@@ -155,7 +156,7 @@ run_counterfactual_analysis() {
     log_step "Running counterfactual analysis with models: ${CF_MODELS}"
     log_step "Testing ${CF_EVENTS} events with hypothesis-driven perturbations..."
     
-    if COUNTRY="${COUNTRY}" python -m tools.counterfactual_analysis \
+    if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
         --models "${CF_MODELS}" \
         --events "${CF_EVENTS}"; then
         
@@ -168,7 +169,7 @@ run_counterfactual_analysis() {
         if [ -n "$CF_FILE" ] && [ -f "$CF_FILE" ]; then
             log_step "Visualizing counterfactual results..."
             
-            if COUNTRY="${COUNTRY}" python -m tools.visualize_counterfactual --input "$CF_FILE"; then
+            if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.visualize_counterfactual --input "$CF_FILE"; then
                 log_success "Counterfactual visualizations generated"
             else
                 log_warn "Counterfactual visualization failed (non-critical)"
