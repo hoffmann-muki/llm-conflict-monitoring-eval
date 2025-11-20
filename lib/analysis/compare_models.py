@@ -14,10 +14,10 @@ import os
 import argparse
 import pandas as pd
 from statsmodels.stats.contingency_tables import mcnemar
-from lib.tools.data_helpers import paths_for_country
-from lib.tools.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
-from lib.tools.constants import LABEL_MAP
-from lib.tools.ollama_helpers import run_model_on_rows
+from lib.core.data_helpers import paths_for_country
+from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
+from lib.core.constants import LABEL_MAP
+from lib.inference.ollama_client import run_model_on_rows
 
 COUNTRY = os.environ.get('COUNTRY', 'cmr')
 RESULTS_DIR = os.path.join('results', COUNTRY)
