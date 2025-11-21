@@ -17,15 +17,17 @@ from tqdm import tqdm
 import numpy as np
 import json
 import os
-import sys
 import time
 
-# Add project root to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-
-from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, COUNTRY_NAMES
+from lib.core.constants import LABEL_MAP, COUNTRY_NAMES, EVENT_CLASSES_FULL, CSV_SRC
 from lib.core.strategy_helpers import get_strategy
-from lib.core.data_helpers import paths_for_country, setup_country_environment
+from lib.core.data_helpers import paths_for_country, setup_country_environment, resolve_columns
+from lib.data_preparation import (
+    extract_country_rows,
+    get_actor_norm_series,
+    extract_state_actor,
+    build_stratified_sample
+)
 
 # We'll produce a stable ID mapping for the model classes
 CODE_TO_ID = {c: i for i, c in enumerate(sorted(set(LABEL_MAP.values())))}
@@ -80,22 +82,25 @@ def parse_args():
 
 def run_conflibert_classification(country_code: str, strategy_name: str, 
                                  sample_size: int, model_name: str,
-                                 batch_size: int, max_length: int, device: str):
-    """Run ConfliBERT classification matching the Ollama pipeline interface.
+                                 batch_size: int, max_length: int, device: str,
+                                 primary_group: str | None = None, primary_share: float = 0.0):
+    """Run ConfliBERT classification with independent stratified sampling.
     
     This function:
-    1. Loads the stratified sample created by the sampling pipeline.
-    2. Runs ConfliBERT inference.
+    1. Creates a stratified sample from the source data.
+    2. Runs ConfliBERT inference with strategy-aware prompting.
     3. Writes results in the repository-standard format for downstream analysis.
     
     Args:
         country_code: Country code (e.g., 'cmr', 'nga')
         strategy_name: Strategy name (for output organization)
-        sample_size: Expected sample size
+        sample_size: Number of samples to generate
         model_name: HuggingFace model ID
         batch_size: Batch size for inference
         max_length: Max sequence length
         device: Device for inference
+        primary_group: Optional event type to oversample (default: None)
+        primary_share: Fraction of sample reserved for primary_group (0-1)
     """
     if country_code not in COUNTRY_NAMES:
         raise ValueError(
@@ -106,36 +111,99 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     country_name = COUNTRY_NAMES[country_code]
     strategy = get_strategy(strategy_name)
     
+    if not os.path.exists(CSV_SRC):
+        raise SystemExit(f"Source CSV not found: {CSV_SRC}")
+    
     print(f"\n{'='*70}")
     print(f"ConfliBERT Classification: {country_name} ({country_code})")
     print(f"Strategy: {strategy_name}")
     print(f"Model: {model_name}")
+    print(f"Sample size: {sample_size}")
     print(f"{'='*70}\n")
     
-    # Load the stratified sample (created by run_classification.py or similar)
+    # Data preparation - create stratified sample
+    df_all = pd.read_csv(CSV_SRC)
+    df_country = extract_country_rows(CSV_SRC, country_name)
+    
+    # Persist extracted country-specific CSV
     paths = paths_for_country(country_code)
-    sample_path = os.path.join(
+    os.makedirs(paths['datasets_dir'], exist_ok=True)
+    out_country = os.path.join(
         paths['datasets_dir'],
-        f"sample_{country_code}_state_actors.csv"
+        f"{country_name}_lagged_data_up_to-2024-10-24.csv"
+    )
+    df_country.to_csv(out_country, index=False)
+    print(f"Wrote extracted {country_name} data to {out_country}")
+    
+    # Resolve column names case-insensitively
+    cols = resolve_columns(
+        df_country,
+        ['actor1', 'notes', 'event_type', 'event_id_cnty']
+    )
+    col_actor = cols.get('actor1') or 'actor1'
+    col_notes = cols.get('notes') or 'notes'
+    col_event_type = cols.get('event_type') or 'event_type'
+    col_event_id = cols.get('event_id_cnty') or 'event_id_cnty'
+    
+    # Create normalized actor column
+    df_country["actor_norm"] = get_actor_norm_series(
+        df_country,
+        actor_col=col_actor
     )
     
-    if not os.path.exists(sample_path):
-        raise SystemExit(
-            f"Sample file not found: {sample_path}\n"
-            f"Please run the Ollama pipeline first to create the stratified sample:\n"
-            f"  python -m experiments.pipelines.run_classification {country_code} "
-            f"--sample-size {sample_size} --strategy {strategy_name}"
-        )
+    # Create state_actor boolean
+    df_country["state_actor"] = extract_state_actor(
+        df_country,
+        country=country_name.lower(),
+        actor_col=col_actor
+    )
     
-    df = pd.read_csv(sample_path)
-    print(f"Loaded sample from {sample_path}")
-    print(f"Sample size: {len(df)}")
+    # Keep only state-actor rows with valid event types and notes
+    usable = (
+        df_country.loc[
+            df_country["state_actor"]
+            & df_country[col_notes].notna()
+            & df_country[col_event_type].isin(EVENT_CLASSES_FULL),
+            [col_event_id, col_notes, col_event_type, "actor_norm"]
+        ]
+        .rename(columns={
+            col_event_id: "event_id_cnty",
+            col_notes: "notes",
+            col_event_type: "event_type"
+        })
+        .assign(notes=lambda x: x["notes"].str.replace(
+            r"\s+", " ", regex=True
+        ).str.slice(0, 400))
+        .drop_duplicates(subset=["event_id_cnty"])
+    )
     
-    # Verify required columns exist
-    required_cols = ['event_id_cnty', 'notes', 'event_type', 'actor_norm']
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-        raise SystemExit(f"Missing required columns: {missing}")
+    print(f"Usable state-actor rows found ({country_name}): {len(usable):,}")
+    
+    # Build stratified sample
+    n_total = min(sample_size, len(usable))
+    
+    if primary_group:
+        print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
+              f"{(1-primary_share)*100:.0f}% proportional to other classes")
+    else:
+        print("Using proportional sampling: sample reflects natural class distribution")
+    
+    df = build_stratified_sample(
+        usable,
+        stratify_col='event_type',
+        n_total=n_total,
+        primary_group=primary_group,
+        primary_share=primary_share,
+        label_map=LABEL_MAP,
+        random_state=42,
+        replace=False
+    )
+    
+    # Save sample for reproducibility
+    sample_path = os.path.join(paths['datasets_dir'], f"conflibert_sample_{country_code}_state_actors.csv")
+    df.to_csv(sample_path, index=False)
+    print(f"Wrote stratified sample to {sample_path}")
+    print(f"Loaded sample size: {len(df)} events")
     
     # Extract data
     texts = df['notes'].astype(str).tolist()
