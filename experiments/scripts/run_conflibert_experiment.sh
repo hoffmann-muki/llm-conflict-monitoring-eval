@@ -153,7 +153,7 @@ else
         DEVICE_ARG="--device $DEVICE"
     fi
     
-    "$VENV_PY" -m lib.conflibert.classify "$COUNTRY" \
+    "$VENV_PY" experiments/pipelines/conflibert/run_conflibert_classification.py "$COUNTRY" \
         --strategy "$STRATEGY" \
         --sample-size "$SAMPLE_SIZE" \
         --batch-size "$BATCH_SIZE" \

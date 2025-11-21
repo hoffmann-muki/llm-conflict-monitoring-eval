@@ -134,7 +134,7 @@ else
     
     log_step "Running classification with $STRATEGY prompting..."
     STRATEGY="$STRATEGY" COUNTRY="$COUNTRY" SAMPLE_SIZE="$SAMPLE_SIZE" \
-        "$VENV_PY" experiments/pipelines/run_classification.py
+        "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py
     
     log_success "Inference completed with $STRATEGY strategy"
 fi

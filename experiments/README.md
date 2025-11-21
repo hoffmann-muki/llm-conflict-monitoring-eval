@@ -72,17 +72,17 @@ Each strategy folder contains complete quantitative analysis:
 
 ```bash
 # Run classification with proportional sampling (default)
-python experiments/pipelines/run_classification.py cmr \
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 --strategy zero_shot
 
 # Run with targeted sampling (e.g., 60% Violence against civilians)
-python experiments/pipelines/run_classification.py cmr \
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 \
   --primary-group "Violence against civilians" --primary-share 0.6
 
 # Using environment variables
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=100 \
-  python experiments/pipelines/run_classification.py
+  python experiments/pipelines/ollama/run_ollama_classification.py
 ```
 
 **Sampling Options:**

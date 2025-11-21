@@ -73,7 +73,7 @@ check_prerequisites() {
     fi
     
     # Check if we're in the right directory
-    if [ ! -f "experiments/pipelines/run_classification.py" ]; then
+    if [ ! -f "experiments/pipelines/ollama/run_ollama_classification.py" ]; then
         log_error "Must be run from repository root directory"
         exit 1
     fi
@@ -101,7 +101,7 @@ run_inference() {
     log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}"
     
     STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
-        "${VENV_PY:-python}" experiments/pipelines/run_classification.py
+        "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     
     log_success "Phase 1 complete: Predictions generated"
 }

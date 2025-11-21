@@ -59,7 +59,7 @@ ConfliBERT classification integrated with the same prompting strategy framework:
 
 ```bash
 # Run ConfliBERT classification
-python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 100
 
 # Compare with Ollama models
 python -m lib.analysis.per_class_metrics cmr zero_shot

@@ -57,7 +57,7 @@ def test_generic_pipeline():
 
     print("\nAll basic tests passed!")
     print("\nTo run a full pipeline test:")
-    print("  STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=5 python experiments/pipelines/run_classification.py")
+    print("  STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=5 python experiments/pipelines/ollama/run_ollama_classification.py")
     return True
 
 if __name__ == "__main__":

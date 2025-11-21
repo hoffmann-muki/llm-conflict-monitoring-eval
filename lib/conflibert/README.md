@@ -18,13 +18,13 @@ Run ConfliBERT on a stratified sample with a specific strategy:
 
 ```bash
 # Run ConfliBERT with zero-shot strategy
-python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 100
 
 # Run with few-shot strategy
-python -m lib.conflibert.classify --country nga --strategy few_shot --sample-size 200
+python experiments/pipelines/conflibert/run_conflibert_classification.py nga --strategy few_shot --sample-size 200
 
 # Run with explainable strategy
-python -m lib.conflibert.classify --country cmr --strategy explainable --sample-size 150
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy explainable --sample-size 150
 ```
 
 ### Full Pipeline Integration
@@ -32,12 +32,12 @@ python -m lib.conflibert.classify --country cmr --strategy explainable --sample-
 To run a complete comparison between Ollama models and ConfliBERT:
 
 ```bash
-# 1. First, run Ollama classification to create the stratified sample
+# 1. Run Ollama classification (optional - ConfliBERT is now independent)
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=100 \
-  python -m experiments.pipelines.run_classification
+  python experiments/pipelines/ollama/run_ollama_classification.py
 
-# 2. Then run ConfliBERT on the same sample
-python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
+# 2. Run ConfliBERT with its own independent sampling
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 100
 
 # 3. Analyze results together
 python -m lib.analysis.per_class_metrics cmr zero_shot
@@ -137,8 +137,7 @@ python -m lib.analysis.counterfactual \
 You can use any HuggingFace sequence classification model:
 
 ```bash
-python -m lib.conflibert.classify \
-  --country cmr \
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
   --strategy zero_shot \
   --model your-org/your-conflict-model
 ```
@@ -162,7 +161,7 @@ Error: Sample file not found: datasets/cmr/sample_cmr_state_actors.csv
 
 **Solution:** Run the Ollama pipeline first to create the stratified sample:
 ```bash
-python -m experiments.pipelines.run_classification cmr --sample-size 100 --strategy zero_shot
+python experiments/pipelines/ollama/run_ollama_classification.py cmr --sample-size 100 --strategy zero_shot
 ```
 
 ### Model Download Issues
@@ -183,7 +182,7 @@ curl -I https://huggingface.co
 
 ```bash
 # Force CPU inference
-python -m lib.conflibert.classify --country cmr --strategy zero_shot --device cpu
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --device cpu
 
 # Check CUDA availability
 .venv/bin/python -c "import torch; print(torch.cuda.is_available())"
@@ -208,10 +207,10 @@ Run on a small sample to verify integration:
 
 ```bash
 # Create a small test sample
-python -m experiments.pipelines.run_classification cmr --sample-size 10 --strategy zero_shot
+python experiments/pipelines/ollama/run_ollama_classification.py cmr --sample-size 10 --strategy zero_shot
 
 # Run ConfliBERT
-python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 10
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 10
 
 # Verify output format
 head -n 5 results/cmr/zero_shot/conflibert_results_acled_cmr_state_actors.csv

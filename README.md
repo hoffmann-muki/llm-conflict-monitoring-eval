@@ -41,7 +41,7 @@ STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_experiment.sh
 
 # Or run classification directly with custom sampling
-python experiments/pipelines/run_classification.py cmr \
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 --strategy zero_shot
 ```
 
@@ -52,7 +52,7 @@ By default, the pipeline uses **proportional stratified sampling** where samples
 To oversample specific event types (e.g., for focused analysis on rare events):
 
 ```bash
-python experiments/pipelines/run_classification.py cmr --sample-size 300 \
+python experiments/pipelines/ollama/run_ollama_classification.py cmr --sample-size 300 \
   --primary-group "Violence against civilians" --primary-share 0.6
 ```
 

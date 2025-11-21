@@ -5,8 +5,8 @@ Produces results compatible with the repository's analysis tooling
 (`per_class_metrics`, `counterfactual`, etc.).
 
 Usage examples:
-    python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
-    python -m lib.conflibert.classify --country nga --strategy few_shot --sample-size 200
+    python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 100
+    python experiments/pipelines/conflibert/run_conflibert_classification.py nga --strategy few_shot --sample-size 200
 """
 import argparse
 import pandas as pd
@@ -58,7 +58,7 @@ class TextDataset(Dataset):
 
 
 def parse_args():
-    """Parse command-line arguments matching run_classification.py interface."""
+    """Parse command-line arguments matching Ollama classification interface."""
     parser = argparse.ArgumentParser(
         description='ConfliBERT classification with prompting strategies'
     )
@@ -302,7 +302,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
 
 
 def main():
-    """Main entry point matching run_classification.py interface."""
+    """Main entry point matching Ollama classification interface."""
     args = parse_args()
     
     run_conflibert_classification(
