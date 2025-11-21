@@ -23,48 +23,12 @@ import time
 # Add project root to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
-from experiments.prompting_strategies import ZeroShotStrategy
-from experiments.prompting_strategies.few_shot import FewShotStrategy
-from experiments.prompting_strategies.explainable import ExplainableStrategy
-from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL
+from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, get_strategy, COUNTRY_NAMES
 from lib.core.data_helpers import paths_for_country, setup_country_environment
-
-# Strategy registry (same as run_classification.py)
-STRATEGY_REGISTRY = {
-    'zero_shot': ZeroShotStrategy,
-    'few_shot': FewShotStrategy,
-    'explainable': ExplainableStrategy
-}
-
-# Country name mapping
-COUNTRY_NAMES = {
-    'cmr': 'Cameroon',
-    'nga': 'Nigeria'
-}
 
 # We'll produce a stable ID mapping for the model classes
 CODE_TO_ID = {c: i for i, c in enumerate(sorted(set(LABEL_MAP.values())))}
 ID_TO_CODE = {v: k for k, v in CODE_TO_ID.items()}
-
-
-def get_strategy(strategy_name: str):
-    """Get strategy instance by name (same interface as run_classification.py)."""
-    if strategy_name not in STRATEGY_REGISTRY:
-        raise ValueError(
-            f"Unknown strategy: {strategy_name}. "
-            f"Available: {list(STRATEGY_REGISTRY.keys())}"
-        )
-    
-    config = {}
-    if strategy_name == 'few_shot':
-        examples_per_category = os.environ.get('EXAMPLES_PER_CATEGORY', '1')
-        try:
-            config['examples_per_category'] = int(examples_per_category)
-        except ValueError:
-            print(f"Warning: Invalid EXAMPLES_PER_CATEGORY value '{examples_per_category}', using default 1")
-            config['examples_per_category'] = 1
-    
-    return STRATEGY_REGISTRY[strategy_name](config=config if config else None)
 
 
 class TextDataset(Dataset):

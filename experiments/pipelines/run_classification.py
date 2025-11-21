@@ -13,10 +13,8 @@ import time
 import json
 import argparse
 
-# Import strategy classes
-from experiments.prompting_strategies import ZeroShotStrategy
-from experiments.prompting_strategies.few_shot import FewShotStrategy
-from experiments.prompting_strategies.explainable import ExplainableStrategy
+# Strategy helper imported from shared constants
+from lib.core.constants import get_strategy, COUNTRY_NAMES
 
 # Import from lib structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
@@ -25,50 +23,7 @@ from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_M
 from lib.inference.ollama_client import run_ollama_structured
 from lib.core.data_helpers import paths_for_country, resolve_columns, write_sample, setup_country_environment
 
-# Country name mapping
-COUNTRY_NAMES = {
-    'cmr': 'Cameroon',
-    'nga': 'Nigeria'
-}
-
-# Strategy registry
-STRATEGY_REGISTRY = {
-    'zero_shot': ZeroShotStrategy,
-    'few_shot': FewShotStrategy,
-    'explainable': ExplainableStrategy
-}
-
-
-def get_strategy(strategy_name: str):
-    """Get strategy instance by name.
-    
-    Args:
-        strategy_name: Name of the strategy (e.g., 'zero_shot', 'few_shot')
-        
-    Returns:
-        Strategy instance
-        
-    Raises:
-        ValueError: If strategy name is not recognized
-    """
-    if strategy_name not in STRATEGY_REGISTRY:
-        raise ValueError(
-            f"Unknown strategy: {strategy_name}. "
-            f"Available: {list(STRATEGY_REGISTRY.keys())}"
-        )
-    
-    # Build config based on strategy and environment variables
-    config = {}
-    if strategy_name == 'few_shot':
-        # Support EXAMPLES_PER_CATEGORY environment variable for few-shot
-        examples_per_category = os.environ.get('EXAMPLES_PER_CATEGORY', '1')
-        try:
-            config['examples_per_category'] = int(examples_per_category)
-        except ValueError:
-            print(f"Warning: Invalid EXAMPLES_PER_CATEGORY value '{examples_per_category}', using default 1")
-            config['examples_per_category'] = 1
-    
-    return STRATEGY_REGISTRY[strategy_name](config=config if config else None)
+# get_strategy and COUNTRY_NAMES are provided by lib.core.constants
 
 
 def run_model_on_rows_with_strategy(model_name: str, rows, strategy, 
