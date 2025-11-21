@@ -8,6 +8,7 @@ Reusable library components for LLM state actor bias analysis.
 lib/
 ├── data_preparation/  # Data extraction, normalization, sampling
 ├── inference/         # Ollama model inference
+├── conflibert/        # ConfliBERT classification (HuggingFace models)
 ├── analysis/          # Metrics, calibration, fairness, counterfactual
 └── core/              # Constants, helpers, utilities
 ```
@@ -35,6 +36,8 @@ from lib.data_preparation import (
 
 ### Inference
 
+#### Ollama Models
+
 Ollama model inference with structured JSON output.
 
 **Important:** `run_ollama_structured()` requires an explicit `prompt` parameter. Always use prompting strategies to generate prompts - there are no hardcoded prompts.
@@ -49,6 +52,26 @@ system_msg = strategy.get_system_message()
 result = run_ollama_structured('gemma:2b', prompt, system_msg)
 # Returns: {"label": "V", "confidence": 0.9}
 ```
+
+#### ConfliBERT (HuggingFace)
+
+ConfliBERT classification integrated with the same prompting strategy framework:
+
+```bash
+# Run ConfliBERT classification
+python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
+
+# Compare with Ollama models
+python -m lib.analysis.per_class_metrics cmr zero_shot
+```
+
+**Key Points:**
+- Uses same strategy interface (zero_shot, few_shot, explainable) for organization
+- Outputs results in identical format to Ollama pipeline
+- Works with all downstream analysis tools (per_class_metrics, counterfactual, etc.)
+- Note: Strategy prompts are organizational only (ConfliBERT uses its own encoding)
+
+See [lib/conflibert/README.md](conflibert/README.md) for detailed usage.
 
 ### Analysis
 

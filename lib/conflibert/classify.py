@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-classify.py
+ConfliBERT Classification Pipeline
+
+Integrates ConfliBERT model with the repository's prompting strategy framework.
+Outputs results in the same format as the Ollama pipeline for downstream analysis.
 
 Usage:
-    python classify.py --csv acled_notes.csv --text-col notes --label-col event_type \
-        --output predictions.csv --batch-size 32 --max-length 256
-
-Notes:
-- By default this script uses the Hugging Face model `snowood1/ConfliBERT-scr-uncased`.
-- You may override the model with `--model <model_id_or_path>` to point to a different HF model or local path.
+    python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
+    python -m lib.conflibert.classify --country nga --strategy few_shot --sample-size 200
 """
 import argparse
 import pandas as pd
@@ -16,12 +15,61 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
-from sklearn.metrics import classification_report, confusion_matrix
 import numpy as np
 import json
 import os
+import sys
+import time
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+from experiments.prompting_strategies import ZeroShotStrategy
+from experiments.prompting_strategies.few_shot import FewShotStrategy
+from experiments.prompting_strategies.explainable import ExplainableStrategy
+from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL
+from lib.core.data_helpers import paths_for_country, setup_country_environment
+
+# Strategy registry (same as run_classification.py)
+STRATEGY_REGISTRY = {
+    'zero_shot': ZeroShotStrategy,
+    'few_shot': FewShotStrategy,
+    'explainable': ExplainableStrategy
+}
+
+# Country name mapping
+COUNTRY_NAMES = {
+    'cmr': 'Cameroon',
+    'nga': 'Nigeria'
+}
+
+# We'll produce a stable ID mapping for the model classes
+CODE_TO_ID = {c: i for i, c in enumerate(sorted(set(LABEL_MAP.values())))}
+ID_TO_CODE = {v: k for k, v in CODE_TO_ID.items()}
+
+
+def get_strategy(strategy_name: str):
+    """Get strategy instance by name (same interface as run_classification.py)."""
+    if strategy_name not in STRATEGY_REGISTRY:
+        raise ValueError(
+            f"Unknown strategy: {strategy_name}. "
+            f"Available: {list(STRATEGY_REGISTRY.keys())}"
+        )
+    
+    config = {}
+    if strategy_name == 'few_shot':
+        examples_per_category = os.environ.get('EXAMPLES_PER_CATEGORY', '1')
+        try:
+            config['examples_per_category'] = int(examples_per_category)
+        except ValueError:
+            print(f"Warning: Invalid EXAMPLES_PER_CATEGORY value '{examples_per_category}', using default 1")
+            config['examples_per_category'] = 1
+    
+    return STRATEGY_REGISTRY[strategy_name](config=config if config else None)
+
 
 class TextDataset(Dataset):
+    """Dataset for batched inference."""
     def __init__(self, texts, tokenizer, max_length):
         self.texts = texts
         self.tokenizer = tokenizer
@@ -39,131 +87,202 @@ class TextDataset(Dataset):
             max_length=self.max_length,
             return_tensors='pt'
         )
-        # squeeze to remove batch dim
         item = {k: v.squeeze(0) for k, v in enc.items()}
         return item
 
+
 def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument('--csv', required=True, help='CSV with ACLED rows')
-    p.add_argument('--text-col', default='notes', help='column with notes text')
-    p.add_argument('--label-col', default='event_type', help='column with human label')
-    p.add_argument('--model', default='snowood1/ConfliBERT-scr-uncased', help='model id or path (default: snowood1/ConfliBERT-scr-uncased)')
-    p.add_argument('--batch-size', type=int, default=16)
-    p.add_argument('--max-length', type=int, default=256)
-    p.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
-    p.add_argument('--output', default='predictions.csv')
-    p.add_argument('--skip-unmapped', action='store_true', help='skip rows whose label cannot be mapped')
-    return p.parse_args()
+    """Parse command-line arguments matching run_classification.py interface."""
+    parser = argparse.ArgumentParser(
+        description='ConfliBERT classification with prompting strategies'
+    )
+    parser.add_argument('country', nargs='?', default=os.environ.get('COUNTRY', 'cmr'),
+                       help='Country code (e.g., cmr, nga)')
+    parser.add_argument('--sample-size', type=int,
+                       default=int(os.environ.get('SAMPLE_SIZE', '100')),
+                       help='Number of events to sample (default: 100)')
+    parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'),
+                       help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
+    parser.add_argument('--model', default='snowood1/ConfliBERT-scr-uncased',
+                       help='HuggingFace model ID or path (default: snowood1/ConfliBERT-scr-uncased)')
+    parser.add_argument('--batch-size', type=int, default=16,
+                       help='Batch size for inference (default: 16)')
+    parser.add_argument('--max-length', type=int, default=256,
+                       help='Maximum sequence length (default: 256)')
+    parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu',
+                       help='Device for inference (default: cuda if available, else cpu)')
+    
+    return parser.parse_args()
 
-# Edit this mapping to match your dataset strings
-LABEL_TEXT_TO_CODE = {
-    "Violence against civilians": "V",
-    "Battles": "B",
-    "Explosions/Remote violence": "E",
-    "Protests": "P",
-    "Riots": "R",
-    "Strategic developments": "S"
-}
-
-# We'll produce a stable ID mapping for the model classes
-CODE_TO_ID = {c: i for i, c in enumerate(sorted(set(LABEL_TEXT_TO_CODE.values())))}
-ID_TO_CODE = {v: k for k, v in CODE_TO_ID.items()}
-
-def main():
-    args = parse_args()
-    df = pd.read_csv(args.csv, dtype=str).fillna('')
-    texts = df[args.text_col].astype(str).tolist()
-    human_label_texts = df[args.label_col].astype(str).tolist()
-
-    # Map human labels to codes (V/B/E/P/R/S)
-    mapped_codes = []
-    mapped_ids = []
-    unmapped_idx = []
-    for i, lab in enumerate(human_label_texts):
-        code = LABEL_TEXT_TO_CODE.get(lab)
-        if code is None:
-            mapped_codes.append(None)
-            mapped_ids.append(None)
-            unmapped_idx.append(i)
-        else:
-            mapped_codes.append(code)
-            mapped_ids.append(CODE_TO_ID[code])
-
-    # Optionally drop unmapped rows
-    if args.skip_unmapped and len(unmapped_idx) > 0:
-        keep_mask = [i not in unmapped_idx for i in range(len(texts))]
-        texts = [t for k, t in enumerate(texts) if keep_mask[k]]
-        human_label_texts = [t for k, t in enumerate(human_label_texts) if keep_mask[k]]
-        mapped_codes = [t for k, t in enumerate(mapped_codes) if keep_mask[k]]
-        mapped_ids = [t for k, t in enumerate(mapped_ids) if keep_mask[k]]
-
-    # Load tokenizer and model
-    print("Loading model/tokenizer:", args.model)
-    tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=True)
-    model = AutoModelForSequenceClassification.from_pretrained(args.model)
-    model.to(args.device)
+def run_conflibert_classification(country_code: str, strategy_name: str, 
+                                 sample_size: int, model_name: str,
+                                 batch_size: int, max_length: int, device: str):
+    """Run ConfliBERT classification matching the Ollama pipeline interface.
+    
+    This function:
+    1. Loads the stratified sample created by run_classification.py
+    2. Runs ConfliBERT inference (strategy prompts are informational only - not used by model)
+    3. Outputs results in the same format as Ollama pipeline for downstream analysis
+    
+    Args:
+        country_code: Country code (e.g., 'cmr', 'nga')
+        strategy_name: Strategy name (for output organization)
+        sample_size: Expected sample size
+        model_name: HuggingFace model ID
+        batch_size: Batch size for inference
+        max_length: Max sequence length
+        device: Device for inference
+    """
+    if country_code not in COUNTRY_NAMES:
+        raise ValueError(
+            f"Unsupported country code: {country_code}. "
+            f"Supported: {list(COUNTRY_NAMES.keys())}"
+        )
+    
+    country_name = COUNTRY_NAMES[country_code]
+    strategy = get_strategy(strategy_name)
+    
+    print(f"\n{'='*70}")
+    print(f"ConfliBERT Classification: {country_name} ({country_code})")
+    print(f"Strategy: {strategy_name} (informational - ConfliBERT uses its own encoding)")
+    print(f"Model: {model_name}")
+    print(f"{'='*70}\n")
+    
+    # Load the stratified sample (created by run_classification.py or similar)
+    paths = paths_for_country(country_code)
+    sample_path = os.path.join(
+        paths['datasets_dir'],
+        f"sample_{country_code}_state_actors.csv"
+    )
+    
+    if not os.path.exists(sample_path):
+        raise SystemExit(
+            f"Sample file not found: {sample_path}\n"
+            f"Please run the Ollama pipeline first to create the stratified sample:\n"
+            f"  python -m experiments.pipelines.run_classification {country_code} "
+            f"--sample-size {sample_size} --strategy {strategy_name}"
+        )
+    
+    df = pd.read_csv(sample_path)
+    print(f"Loaded sample from {sample_path}")
+    print(f"Sample size: {len(df)}")
+    
+    # Verify required columns exist
+    required_cols = ['event_id_cnty', 'notes', 'event_type', 'actor_norm']
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise SystemExit(f"Missing required columns: {missing}")
+    
+    # Extract data
+    texts = df['notes'].astype(str).tolist()
+    event_ids = df['event_id_cnty'].tolist()
+    true_labels = df['event_type'].tolist()
+    actor_norms = df['actor_norm'].tolist()
+    
+    # Map labels to codes
+    true_label_codes = [LABEL_MAP.get(lab) for lab in true_labels]
+    
+    # Load model and tokenizer
+    print(f"Loading model/tokenizer: {model_name}")
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    model.to(device)
     model.eval()
-
-    # If model label space differs from our CODE_TO_ID, warn (we assume model.num_labels matches).
+    
+    # Verify model outputs match expected labels
     expected_num_labels = len(CODE_TO_ID)
     if model.config.num_labels != expected_num_labels:
-        print(f"Warning: model.num_labels={model.config.num_labels} but your mapping has {expected_num_labels}.")
-        # If model has more labels, we'll still run inference but remap predictions to nearest if needed.
-
-    dataset = TextDataset(texts, tokenizer, args.max_length)
-    loader = DataLoader(dataset, batch_size=args.batch_size)
-
-    preds = []
-    probs = []
-
+        print(f"Warning: model.num_labels={model.config.num_labels} "
+              f"but label mapping has {expected_num_labels} classes.")
+    
+    # Create dataset and loader
+    dataset = TextDataset(texts, tokenizer, max_length)
+    loader = DataLoader(dataset, batch_size=batch_size)
+    
+    # Run inference
+    results = []
+    idx = 0
+    
+    print(f"\nRunning inference on {len(df)} events...")
     with torch.no_grad():
-        for batch in tqdm(loader, desc="Predicting"):
-            batch = {k: v.to(args.device) for k, v in batch.items()}
-            outputs = model(**batch)
+        for batch in tqdm(loader, desc="ConfliBERT inference"):
+            t0 = time.time()
+            batch_inputs = {k: v.to(device) for k, v in batch.items()}
+            outputs = model(**batch_inputs)
             logits = outputs.logits.detach().cpu().numpy()
-            # softmax
+            
+            # Softmax for probabilities
             exp = np.exp(logits - logits.max(axis=1, keepdims=True))
-            p = exp / exp.sum(axis=1, keepdims=True)
+            probs = exp / exp.sum(axis=1, keepdims=True)
             pred_ids = logits.argmax(axis=1)
-            preds.extend(pred_ids.tolist())
-            probs.extend(p.tolist())
+            
+            elapsed = time.time() - t0
+            batch_latency = elapsed / len(pred_ids)
+            
+            # Build results matching Ollama pipeline format
+            for i, (pred_id, prob_vec) in enumerate(zip(pred_ids, probs)):
+                if idx >= len(event_ids):
+                    break
+                
+                pred_code = ID_TO_CODE.get(pred_id, "UNKNOWN")
+                confidence = float(prob_vec[pred_id])
+                
+                results.append({
+                    "model": f"conflibert_{model_name.split('/')[-1]}",
+                    "event_id": event_ids[idx],
+                    "true_label": true_label_codes[idx],
+                    "pred_label": pred_code,
+                    "pred_conf": confidence,
+                    "logits": json.dumps([float(x) for x in prob_vec]),
+                    "latency_sec": round(batch_latency, 3),
+                    "actor_norm": actor_norms[idx]
+                })
+                idx += 1
+    
+    # Create results DataFrame
+    res_df = pd.DataFrame(results)
+    
+    # Setup results directory with strategy subfolder (matching Ollama pipeline)
+    _, results_dir = setup_country_environment(country_code)
+    strategy_results_dir = os.path.join(results_dir, strategy_name)
+    os.makedirs(strategy_results_dir, exist_ok=True)
+    
+    # Save results
+    out_path = os.path.join(
+        strategy_results_dir,
+        f"conflibert_results_acled_{country_code}_state_actors.csv"
+    )
+    res_df.to_csv(out_path, index=False)
+    
+    print(f"\n{'='*70}")
+    print(f"ConfliBERT classification completed!")
+    print(f"Results saved to: {out_path}")
+    print(f"{'='*70}\n")
+    print(res_df.head(5))
+    
+    # Basic accuracy report
+    correct = (res_df['true_label'] == res_df['pred_label']).sum()
+    total = len(res_df)
+    accuracy = correct / total if total > 0 else 0
+    print(f"\nAccuracy: {correct}/{total} ({accuracy:.1%})")
+    
+    return out_path
 
-    # Map model prediction ids to your codes. If model.num_labels == expected_num_labels we assume same ordering.
-    if model.config.num_labels == expected_num_labels:
-        pred_codes = [ID_TO_CODE.get(i, None) for i in preds]
-    else:
-        # fallback: map model id -> code by index order if you know it; otherwise save raw ids
-        pred_codes = [str(i) for i in preds]
 
-    # Build output dataframe
-    out = df.copy()
-    out['_pred_id'] = preds
-    out['_pred_code'] = pred_codes
-    out['_pred_probs'] = [json.dumps(list(map(float, p))) for p in probs]
-    out['_gold_code'] = mapped_codes
-    out['_gold_id'] = mapped_ids
+def main():
+    """Main entry point matching run_classification.py interface."""
+    args = parse_args()
+    
+    run_conflibert_classification(
+        country_code=args.country,
+        strategy_name=args.strategy,
+        sample_size=args.sample_size,
+        model_name=args.model,
+        batch_size=args.batch_size,
+        max_length=args.max_length,
+        device=args.device
+    )
 
-    out.to_csv(args.output, index=False)
-    print("Wrote predictions to", args.output)
-
-    # If gold is available for rows, compute metrics
-    have_gold = any([g is not None for g in mapped_ids])
-    if have_gold:
-        # filter rows where gold exists
-        eval_indices = [i for i, g in enumerate(mapped_ids) if g is not None]
-        y_true = [mapped_ids[i] for i in eval_indices]
-        y_pred = [preds[i] for i in eval_indices]
-
-        # If model ids don't align with our ids, map pred ids to our ids only when equal number of labels
-        if model.config.num_labels != expected_num_labels:
-            print("Model label count doesn't match your label count; classification_report below will use raw model ids.")
-        print("\nClassification report:")
-        print(classification_report(y_true, y_pred, target_names=[ID_TO_CODE[i] for i in sorted(ID_TO_CODE.keys())], zero_division=0))
-        print("Confusion matrix:")
-        print(confusion_matrix(y_true, y_pred))
-    else:
-        print("No gold labels available / mapped for evaluation.")
 
 if __name__ == '__main__':
     main()
