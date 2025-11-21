@@ -29,7 +29,7 @@ cd "$REPO_ROOT"
 echo "--- Running small sample (SAMPLE_SIZE=$SMALL_SAMPLE) ---"
 # Run the classification pipeline
 STRATEGY="zero_shot" SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY \
-    "$VENV_PY" experiments/pipelines/run_classification.py
+    "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py
 
 # Run calibration and evaluation
 COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
@@ -70,7 +70,7 @@ PY
 echo "--- Running large sample (SAMPLE_SIZE=$LARGE_SAMPLE) ---"
 # Run the large sample with the classification pipeline
 STRATEGY="zero_shot" SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY \
-    "$VENV_PY" experiments/pipelines/run_classification.py
+    "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py
 
 # Run calibration and evaluation
 COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
