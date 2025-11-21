@@ -69,7 +69,9 @@ python -m lib.analysis.per_class_metrics cmr zero_shot
 - Uses same strategy interface (zero_shot, few_shot, explainable) for organization
 - Outputs results in identical format to Ollama pipeline
 - Works with all downstream analysis tools (per_class_metrics, counterfactual, etc.)
-- Note: Strategy prompts are organizational only (ConfliBERT uses its own encoding)
+ - Uses same strategy interface (zero_shot, few_shot, explainable) for organization
+ - Outputs results in identical format to Ollama pipeline
+ - Works with all downstream analysis tools (per_class_metrics, counterfactual, etc.)
 
 See [lib/conflibert/README.md](conflibert/README.md) for detailed usage.
 

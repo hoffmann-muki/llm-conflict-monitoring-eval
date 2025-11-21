@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""
-ConfliBERT Classification Pipeline
+"""ConfliBERT classification pipeline.
 
-Integrates ConfliBERT model with the repository's prompting strategy framework.
-Outputs results in the same format as the Ollama pipeline for downstream analysis.
+Produces results compatible with the repository's analysis tooling
+(`per_class_metrics`, `counterfactual`, etc.).
 
-Usage:
+Usage examples:
     python -m lib.conflibert.classify --country cmr --strategy zero_shot --sample-size 100
     python -m lib.conflibert.classify --country nga --strategy few_shot --sample-size 200
 """
@@ -120,9 +119,9 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     """Run ConfliBERT classification matching the Ollama pipeline interface.
     
     This function:
-    1. Loads the stratified sample created by run_classification.py
-    2. Runs ConfliBERT inference (strategy prompts are informational only - not used by model)
-    3. Outputs results in the same format as Ollama pipeline for downstream analysis
+    1. Loads the stratified sample created by the sampling pipeline.
+    2. Runs ConfliBERT inference.
+    3. Writes results in the repository-standard format for downstream analysis.
     
     Args:
         country_code: Country code (e.g., 'cmr', 'nga')
@@ -144,7 +143,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     
     print(f"\n{'='*70}")
     print(f"ConfliBERT Classification: {country_name} ({country_code})")
-    print(f"Strategy: {strategy_name} (informational - ConfliBERT uses its own encoding)")
+    print(f"Strategy: {strategy_name}")
     print(f"Model: {model_name}")
     print(f"{'='*70}\n")
     

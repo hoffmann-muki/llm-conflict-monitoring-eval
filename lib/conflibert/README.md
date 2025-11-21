@@ -5,12 +5,10 @@ ConfliBERT classification integrated with the repository's prompting strategy fr
 ## Overview
 
 This module provides ConfliBERT-based classification that:
-- Uses the same prompting strategy interface as Ollama models (zero_shot, few_shot, explainable)
-- Outputs results in the same format as the Ollama pipeline
-- Works with downstream analysis tools (per_class_metrics, counterfactual analysis)
+- Integrates with the repository's prompting strategy interface (for experiment organization)
+- Produces results in the standard repository format
+- Is compatible with downstream analysis tools (per_class_metrics, counterfactual)
 - Organizes results in strategy-specific subdirectories
-
-**Note:** ConfliBERT uses its own internal text encoding, so the prompting strategies serve an organizational/documentation purpose rather than directly influencing the model's behavior.
 
 ## Usage
 
@@ -117,7 +115,7 @@ This will produce:
 
 ### Counterfactual Analysis
 
-Run counterfactual analysis comparing Ollama and ConfliBERT:
+Run counterfactual analysis across models (including ConfliBERT) to investigate top disagreements:
 
 ```bash
 # Analyze top 10% disagreements across models
@@ -127,8 +125,6 @@ python -m lib.analysis.counterfactual \
   --models llama3.1:8b,qwen3:8b,conflibert_ConfliBERT-scr-uncased \
   --top-percent 10
 ```
-
-**Note:** ConfliBERT cannot generate counterfactual predictions (it's not generative). The counterfactual tool will skip ConfliBERT for perturbation testing but include it in the initial disagreement analysis.
 
 ## Model Details
 
@@ -151,16 +147,10 @@ python -m lib.conflibert.classify \
 - Model must be a sequence classification model with 6 output labels
 - Labels must map to: V, B, E, P, R, S (in alphabetical order by code)
 
-## Limitations
+## Notes
 
-1. **Strategy Prompts Not Used**: Unlike Ollama models, ConfliBERT doesn't process the strategy prompts directly. The strategy parameter is used for:
-   - Organizing results in the same directory structure
-   - Documentation/comparison purposes
-   - Maintaining consistent experiment tracking
-
-2. **No Counterfactual Generation**: ConfliBERT cannot generate perturbed text for counterfactual analysis. Use it for initial classification and disagreement identification only.
-
-3. **Fixed Label Space**: ConfliBERT is trained on a specific 6-class taxonomy. It cannot be adapted to different classification schemes without retraining.
+- Use the `--strategy` argument to organize results and correlate them with other model outputs.
+- Ensure the model you supply exposes six output labels corresponding to the repository taxonomy: V, B, E, P, R, S.
 
 ## Troubleshooting
 
