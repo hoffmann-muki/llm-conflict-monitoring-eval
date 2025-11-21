@@ -33,16 +33,28 @@ source .venv/bin/activate
 
 ## Quick Start
 
-Run a complete experiment with a prompting strategy:
+Run a complete experiment with a prompting strategy (Ollama-based models):
 
 ```bash
-# Zero-shot experiment with proportional sampling
+# Zero-shot experiment with proportional sampling (Ollama pipeline)
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_experiment.sh
+  ./experiments/scripts/run_ollama_experiment.sh
 
-# Or run classification directly with custom sampling
+# Or run Ollama classification directly with custom sampling
 python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 --strategy zero_shot
+```
+
+Run the ConfliBERT pipeline independently:
+
+```bash
+# ConfliBERT experiment with strategy
+STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_conflibert_experiment.sh
+
+# Or run the ConfliBERT classification directly
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
+  --strategy zero_shot --sample-size 300
 ```
 
 **Sampling Configuration:**
@@ -68,8 +80,9 @@ Results are saved to `results/<COUNTRY>/<STRATEGY>/`
 
 ## Analysis Outputs
 
-Each experiment produces:
-- `ollama_results_calibrated.csv` - Calibrated predictions
+- Each experiment produces:
+- `ollama_results_calibrated.csv` - Calibrated predictions for Ollama models
+- `conflibert_results_acled_<country>_state_actors.csv` - ConfliBERT predictions
 - `metrics_acled_<country>_state_actors.csv` - Classification metrics
 - `fairness_metrics_acled_<country>_state_actors.csv` - Fairness analysis
 - `harm_metrics_detailed.csv` - FL/FIR rates
@@ -81,6 +94,7 @@ See [experiments/README.md](experiments/README.md) for detailed usage and option
 
 ## Requirements
 
-- Ollama daemon running locally with required models
-- Python 3.7+ with pandas, scikit-learn, matplotlib
+- For Ollama pipelines: Ollama daemon running locally with required models (see experiments/scripts for expected model names)
+- For ConfliBERT: PyTorch and HuggingFace `transformers` to load `snowood1/ConfliBERT-scr-uncased`
+- Python 3.7+ with `pandas`, `scikit-learn`, `matplotlib`, `tqdm`
 - ACLED dataset files in `datasets/<country>/`
