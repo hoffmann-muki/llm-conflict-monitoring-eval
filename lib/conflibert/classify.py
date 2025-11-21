@@ -23,7 +23,8 @@ import time
 # Add project root to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
-from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, get_strategy, COUNTRY_NAMES
+from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, COUNTRY_NAMES
+from lib.core.strategy_helpers import get_strategy
 from lib.core.data_helpers import paths_for_country, setup_country_environment
 
 # We'll produce a stable ID mapping for the model classes
