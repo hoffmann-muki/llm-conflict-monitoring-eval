@@ -75,11 +75,12 @@ All strategies should support these ACLED event types:
 
 1. Create your strategy file in this directory
 2. Add import to `__init__.py`
-3. Register in `experiments/pipelines/run_classification.py` STRATEGY_REGISTRY
+3. Register your strategy in `lib.core.strategy_helpers` by adding it
+    to the `STRATEGY_REGISTRY` (see `lib/core/strategy_helpers.py`).
 4. Run experiments:
-   ```bash
-   STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
-     ./experiments/scripts/run_experiment.sh
-   ```
+    ```bash
+    STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
+      ./experiments/scripts/run_ollama_experiment.sh
+    ```
 
-**Architecture Note:** The inference layer (`lib.inference.ollama_client`) requires explicit prompts - it contains no hardcoded prompts. This ensures complete separation: strategies generate prompts, the inference client handles API communication.
+**Architecture Note:** The inference layer (`lib.inference.ollama_client`) requires explicit prompts - it contains no hardcoded prompts. Strategies generate prompts; the `lib.core.strategy_helpers` module provides the central registry and factory for strategies, and the inference client handles API communication.
