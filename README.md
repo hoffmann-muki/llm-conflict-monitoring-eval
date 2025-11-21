@@ -33,10 +33,10 @@ source .venv/bin/activate
 
 ## Quick Start
 
-Run a complete experiment with a prompting strategy (Ollama-based models):
+Run the Ollama pipeline:
 
 ```bash
-# Zero-shot experiment with proportional sampling (Ollama pipeline)
+# Zero-shot experiment with proportional sampling
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_experiment.sh
 
@@ -45,10 +45,10 @@ python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 --strategy zero_shot
 ```
 
-Run the ConfliBERT pipeline independently:
+Run the ConfliBERT pipeline:
 
 ```bash
-# ConfliBERT experiment with strategy
+# ConfliBERT experiment with proportional sampling
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_conflibert_experiment.sh
 
