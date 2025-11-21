@@ -9,18 +9,16 @@ API
 - `STRATEGY_REGISTRY`: mapping from strategy name to strategy class
 - `get_strategy(name)`: instantiate a strategy by name
 """
+import os
 from typing import Any, Dict
+
+# Import strategy classes at module import time. These modules are lightweight
+# and do not create an import cycle in the current package layout.
+from experiments.prompting_strategies import ZeroShotStrategy, FewShotStrategy, ExplainableStrategy
 
 
 def _build_strategy_registry() -> Dict[str, type]:
-    """Return the mapping of canonical strategy names to classes.
-
-    The import is performed here to keep module import lightweight and
-    to avoid circular import issues when other modules import constants.
-    """
-    # Import strategy classes lazily to avoid import-time cycles
-    from experiments.prompting_strategies import ZeroShotStrategy, FewShotStrategy, ExplainableStrategy
-
+    """Return the mapping of canonical strategy names to classes."""
     return {
         'zero_shot': ZeroShotStrategy,
         'few_shot': FewShotStrategy,
@@ -39,8 +37,6 @@ def get_strategy(strategy_name: str) -> Any:
 
     Returns an instance of the selected strategy class.
     """
-    import os
-
     if strategy_name not in STRATEGY_REGISTRY:
         raise ValueError(f"Unknown strategy: {strategy_name}")
 

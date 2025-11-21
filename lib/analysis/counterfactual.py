@@ -26,6 +26,8 @@ from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
 from lib.core.data_helpers import paths_for_country
+from experiments.prompting_strategies import ZeroShotStrategy
+import sys
 
 class PerturbationGenerator:
     """Generate hypothesis-driven perturbations for counterfactual analysis."""
@@ -424,12 +426,6 @@ class CounterfactualAnalyzer:
     def run_model_on_perturbation(self, model: str, text: str) -> Dict[str, Any]:
         """Run a single model on perturbed text."""
         try:
-            # Import strategy for prompt generation
-            import sys
-            import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-            from experiments.prompting_strategies import ZeroShotStrategy
-            
             strategy = ZeroShotStrategy()
             prompt = strategy.make_prompt(text)
             system_msg = strategy.get_system_message()
