@@ -28,7 +28,6 @@ def test_generic_pipeline():
         return False
 
     # Test country name mapping
-    # Test country name mapping
     try:
         # Skip country mapping test since run_classification module is not available
         print("SKIP: Country mapping test (module not found)")
