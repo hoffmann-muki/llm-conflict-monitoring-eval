@@ -131,7 +131,8 @@ def run_classification_experiment(country_code: str,
     df_country = extract_country_rows(CSV_SRC, country_name)
     
     # Persist extracted country-specific CSV for auditing and reuse
-    paths = paths_for_country(country_code)
+    # Note: paths_for_country now takes sample_size as string
+    paths = paths_for_country(country_code, strategy_name, str(sample_size))
     os.makedirs(paths['datasets_dir'], exist_ok=True)
     out_country = os.path.join(
         paths['datasets_dir'], 
@@ -232,8 +233,8 @@ def run_classification_experiment(country_code: str,
     print(f"  - {len(subset)} events")
     print(f"  - {len(models)} models\n")
     
-    # Setup results directory (includes strategy subdirectory)
-    _, results_dir = setup_country_environment(country_code, strategy_name)
+    # Setup results directory (includes strategy and sample_size subdirectory)
+    _, results_dir = setup_country_environment(country_code, strategy_name, str(sample_size))
     
     for m in models:
         print(f"Starting model: {m}")
@@ -243,7 +244,11 @@ def run_classification_experiment(country_code: str,
         
         # Save per-model results immediately (allows incremental runs)
         model_df = pd.DataFrame(model_results)
-        model_out_path = get_per_model_result_path(country_code, m, results_dir, strategy=strategy_name)
+        model_out_path = get_per_model_result_path(
+            country_code, m, results_dir, 
+            strategy=strategy_name, 
+            sample_size=str(sample_size)
+        )
         model_df.to_csv(model_out_path, index=False)
         print(f"Saved {m} results to: {model_out_path}")
     

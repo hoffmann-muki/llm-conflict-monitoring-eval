@@ -4,7 +4,7 @@
 This module scans for per-model result files and aggregates them into a single
 combined file for cross-model analysis (calibration, metrics, harm, disagreements).
 
-Directory structure: results/{country}/{strategy}/
+Directory structure: results/{country}/{strategy}/{sample_size}/
 Per-model files follow the pattern:
     ollama_results_{model_slug}_acled_{country}_state_actors.csv
 
@@ -16,7 +16,7 @@ import os
 import glob
 import re
 import pandas as pd
-from lib.core.data_helpers import setup_country_environment, get_strategy
+from lib.core.data_helpers import setup_country_environment, get_strategy, get_sample_size
 
 
 def model_name_to_slug(model_name: str) -> str:
@@ -45,48 +45,56 @@ def slug_to_model_name(slug: str) -> str:
 
 
 def get_per_model_results_pattern(country: str, results_dir: str = None, 
-                                   strategy: str = None) -> str:
+                                   strategy: str = None, sample_size: str = None) -> str:
     """Get glob pattern for per-model result files."""
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy)
+        results_dir = os.path.join('results', country, strategy, str(sample_size))
     return os.path.join(results_dir, f'ollama_results_*_acled_{country}_state_actors.csv')
 
 
 def get_combined_results_path(country: str, results_dir: str = None,
-                              strategy: str = None) -> str:
+                              strategy: str = None, sample_size: str = None) -> str:
     """Get path to combined results file."""
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy)
+        results_dir = os.path.join('results', country, strategy, str(sample_size))
     return os.path.join(results_dir, f'ollama_results_acled_{country}_state_actors.csv')
 
 
 def get_per_model_result_path(country: str, model_name: str, results_dir: str = None,
-                              strategy: str = None) -> str:
+                              strategy: str = None, sample_size: str = None) -> str:
     """Get path to a specific model's result file."""
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy)
+        results_dir = os.path.join('results', country, strategy, str(sample_size))
     slug = model_name_to_slug(model_name)
     return os.path.join(results_dir, f'ollama_results_{slug}_acled_{country}_state_actors.csv')
 
 
 def list_per_model_files(country: str, results_dir: str = None,
-                         strategy: str = None) -> list:
-    """List all per-model result files for a country and strategy.
+                         strategy: str = None, sample_size: str = None) -> list:
+    """List all per-model result files for a country, strategy, and sample size.
     
     Returns:
         List of (model_slug, file_path) tuples
     """
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy)
-    pattern = get_per_model_results_pattern(country, results_dir, strategy)
+        results_dir = os.path.join('results', country, strategy, str(sample_size))
+    pattern = get_per_model_results_pattern(country, results_dir, strategy, sample_size)
     files = glob.glob(pattern)
     
     # Extract model slug from filename
@@ -103,14 +111,15 @@ def list_per_model_files(country: str, results_dir: str = None,
 
 
 def aggregate_model_results(country: str = None, results_dir: str = None, 
-                           strategy: str = None,
+                           strategy: str = None, sample_size: str = None,
                            verbose: bool = True) -> pd.DataFrame:
     """Aggregate all per-model result files into a single DataFrame.
     
     Args:
         country: Country code (e.g., 'nga', 'cmr'). If None, reads from COUNTRY env var.
-        results_dir: Results directory. If None, uses default 'results/{country}/{strategy}'.
+        results_dir: Results directory. If None, uses default 'results/{country}/{strategy}/{sample_size}'.
         strategy: Prompting strategy. If None, reads from STRATEGY env var.
+        sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
         verbose: Print progress messages.
     
     Returns:
@@ -118,22 +127,24 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
     """
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     
     if country is None:
         country, results_dir = setup_country_environment()
     elif results_dir is None:
-        results_dir = os.path.join('results', country, strategy)
+        results_dir = os.path.join('results', country, strategy, str(sample_size))
     
-    per_model_files = list_per_model_files(country, results_dir, strategy)
+    per_model_files = list_per_model_files(country, results_dir, strategy, sample_size)
     
     if not per_model_files:
         if verbose:
-            print(f"No per-model result files found for strategy '{strategy}' in {results_dir}")
-            print(f"Pattern: {get_per_model_results_pattern(country, results_dir, strategy)}")
+            print(f"No per-model result files found for strategy '{strategy}', sample_size '{sample_size}' in {results_dir}")
+            print(f"Pattern: {get_per_model_results_pattern(country, results_dir, strategy, sample_size)}")
         return pd.DataFrame()
     
     if verbose:
-        print(f"Found {len(per_model_files)} per-model result files (strategy={strategy}):")
+        print(f"Found {len(per_model_files)} per-model result files (strategy={strategy}, sample_size={sample_size}):")
         for slug, path in per_model_files:
             print(f"  - {slug}: {path}")
     
@@ -171,7 +182,7 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
 
 
 def write_combined_results(country: str = None, results_dir: str = None,
-                          strategy: str = None,
+                          strategy: str = None, sample_size: str = None,
                           verbose: bool = True) -> str:
     """Aggregate per-model files and write combined results file.
     
@@ -180,20 +191,22 @@ def write_combined_results(country: str = None, results_dir: str = None,
     """
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     
     if country is None:
         country, results_dir = setup_country_environment()
     elif results_dir is None:
-        results_dir = os.path.join('results', country, strategy)
+        results_dir = os.path.join('results', country, strategy, str(sample_size))
     
-    combined = aggregate_model_results(country, results_dir, strategy, verbose)
+    combined = aggregate_model_results(country, results_dir, strategy, sample_size, verbose)
     
     if combined.empty:
         if verbose:
             print("No data to write")
         return None
     
-    out_path = get_combined_results_path(country, results_dir, strategy)
+    out_path = get_combined_results_path(country, results_dir, strategy, sample_size)
     combined.to_csv(out_path, index=False)
     
     if verbose:
@@ -213,8 +226,10 @@ def main():
                        help='Country code (e.g., cmr, nga). Default: COUNTRY env var')
     parser.add_argument('--strategy', default=os.environ.get('STRATEGY', None),
                        help='Prompting strategy (zero_shot, few_shot, explainable). Default: STRATEGY env var')
+    parser.add_argument('--sample-size', default=os.environ.get('SAMPLE_SIZE', None),
+                       help='Sample size (e.g., 500, 1000). Default: SAMPLE_SIZE env var')
     parser.add_argument('--results-dir', default=None,
-                       help='Results directory. Default: results/{country}')
+                       help='Results directory. Default: results/{country}/{strategy}/{sample_size}')
     parser.add_argument('--list-only', action='store_true',
                        help='List per-model files without aggregating')
     parser.add_argument('--quiet', action='store_true',
@@ -224,18 +239,19 @@ def main():
     
     verbose = not args.quiet
     strategy = args.strategy
+    sample_size = args.sample_size
     
     if args.list_only:
         country = args.country or os.environ.get('COUNTRY', 'cmr')
-        files = list_per_model_files(country, args.results_dir, strategy)
+        files = list_per_model_files(country, args.results_dir, strategy, sample_size)
         if files:
-            print(f"Per-model result files for {country} (strategy={strategy or get_strategy()}):")
+            print(f"Per-model result files for {country} (strategy={strategy or get_strategy()}, sample_size={sample_size or get_sample_size()}):")
             for slug, path in files:
                 print(f"  {slug}: {path}")
         else:
-            print(f"No per-model result files found for {country} (strategy={strategy or get_strategy()})")
+            print(f"No per-model result files found for {country} (strategy={strategy or get_strategy()}, sample_size={sample_size or get_sample_size()})")
     else:
-        write_combined_results(args.country, args.results_dir, strategy, verbose)
+        write_combined_results(args.country, args.results_dir, strategy, sample_size, verbose)
 
 
 if __name__ == '__main__':

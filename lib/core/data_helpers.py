@@ -11,37 +11,53 @@ def get_strategy() -> str:
     return os.environ.get('STRATEGY', 'zero_shot')
 
 
-def setup_country_environment(country: str | None = None, strategy: str | None = None) -> Tuple[str, str]:
-    """Standard country and strategy environment setup used across tools.
+def get_sample_size() -> str:
+    """Get the sample size from environment variable.
+    
+    Returns:
+        Sample size as string (e.g., '500', '1000').
+        Defaults to '500' if SAMPLE_SIZE env var is not set.
+    """
+    return os.environ.get('SAMPLE_SIZE', '500')
+
+
+def setup_country_environment(country: str | None = None, strategy: str | None = None,
+                              sample_size: str | None = None) -> Tuple[str, str]:
+    """Standard country, strategy, and sample size environment setup used across tools.
     
     Returns:
         Tuple of (country_code, results_dir_path)
         
-    Note: results_dir is now results/{country}/{strategy}/
+    Note: results_dir is now results/{country}/{strategy}/{sample_size}/
     """
     country = country or os.environ.get('COUNTRY', 'cmr')
     if strategy is None:
         strategy = get_strategy()
-    results_dir = os.path.join('results', country, strategy)
+    if sample_size is None:
+        sample_size = get_sample_size()
+    results_dir = os.path.join('results', country, strategy, str(sample_size))
     os.makedirs(results_dir, exist_ok=True)
     return country, results_dir
 
-def paths_for_country(country: str, strategy: str = None) -> Dict[str, str]:
-    """Get standard paths for a country and strategy.
+def paths_for_country(country: str, strategy: str = None, sample_size: str = None) -> Dict[str, str]:
+    """Get standard paths for a country, strategy, and sample size.
     
     Args:
         country: Country code (e.g., 'cmr', 'nga')
         strategy: Prompting strategy. If None, reads from STRATEGY env var.
+        sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
     
     Returns:
         Dictionary with paths for results_dir, datasets_dir, sample_path, calibrated_csv
         
-    Note: results_dir is now results/{country}/{strategy}/
+    Note: results_dir is now results/{country}/{strategy}/{sample_size}/
     """
     if strategy is None:
         strategy = get_strategy()
+    if sample_size is None:
+        sample_size = get_sample_size()
     
-    results_dir = os.path.join('results', country, strategy)
+    results_dir = os.path.join('results', country, strategy, str(sample_size))
     datasets_dir = os.path.join('datasets', country)
     sample_path = os.path.join(datasets_dir, f'state_actor_sample_{country}.csv')
     calibrated_csv = os.path.join(results_dir, 'ollama_results_calibrated.csv')

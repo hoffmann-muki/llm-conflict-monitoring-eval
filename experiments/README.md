@@ -94,10 +94,10 @@ SKIP_INFERENCE=true  # Skip to analysis phases (if results exist)
 SKIP_COUNTERFACTUAL=true  # Skip counterfactual phase
 
 # Full run
-COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_ollama_full_analysis.sh
+COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=zero_shot ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Analysis only (reuse existing inference results)
-SKIP_INFERENCE=true COUNTRY=cmr ./experiments/scripts/run_ollama_full_analysis.sh
+SKIP_INFERENCE=true COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 ./experiments/scripts/run_ollama_full_analysis.sh
 ```
 
 ### run_ollama_experiment.sh
@@ -137,19 +137,23 @@ python experiments/pipelines/ollama/run_ollama_classification.py cmr \
 
 ## Output Structure
 
-Results are organized by country and strategy:
+Results are organized by country, strategy, and sample size:
 
 ```
 results/
 ├── cmr/
 │   ├── zero_shot/
-│   │   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv
-│   │   ├── ollama_results_acled_cmr_state_actors.csv
-│   │   ├── ollama_results_calibrated.csv
-│   │   ├── metrics_acled_cmr_state_actors.csv
-│   │   └── ...
+│   │   ├── 500/
+│   │   │   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv
+│   │   │   ├── ollama_results_acled_cmr_state_actors.csv
+│   │   │   ├── ollama_results_calibrated.csv
+│   │   │   ├── metrics_acled_cmr_state_actors.csv
+│   │   │   └── ...
+│   │   └── 1000/
+│   │       └── ...
 │   └── few_shot/
-│       └── ...
+│       ├── 500/
+│       └── 1000/
 └── nga/
     └── ...
 ```

@@ -16,13 +16,13 @@
 #
 # Usage:
 #   # Run inference with one model
-#   COUNTRY=cmr SAMPLE_SIZE=500 OLLAMA_MODELS="mistral:7b" ./scripts/run_full_analysis.sh
+#   COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot OLLAMA_MODELS="mistral:7b" ./scripts/run_full_analysis.sh
 #
 #   # Run inference with another model (reuses same sample)
-#   COUNTRY=cmr OLLAMA_MODELS="llama3.1:8b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
+#   COUNTRY=cmr SAMPLE_SIZE=500 OLLAMA_MODELS="llama3.1:8b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
 #
 #   # Skip inference, just run analysis on existing per-model results
-#   COUNTRY=cmr SKIP_INFERENCE=true ./scripts/run_full_analysis.sh
+#   COUNTRY=cmr SAMPLE_SIZE=500 SKIP_INFERENCE=true ./scripts/run_full_analysis.sh
 #
 # Environment Variables:
 #   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
@@ -33,6 +33,13 @@
 #   CF_EVENTS            - Number of events for counterfactual [default: 50]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
+#
+# Directory Structure:
+#   results/{country}/{strategy}/{sample_size}/
+#     ├── ollama_results_*_acled_{country}_state_actors.csv  (per-model)
+#     ├── ollama_results_acled_{country}_state_actors.csv    (combined)
+#     ├── ollama_results_calibrated.csv
+#     └── ... (metrics, harm, counterfactual outputs)
 #
 ###############################################################################
 
@@ -49,6 +56,9 @@ CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-50}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
+
+# Derived paths
+RESULTS_DIR="results/${COUNTRY}/${STRATEGY}/${SAMPLE_SIZE}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -96,8 +106,8 @@ check_prerequisites() {
         exit 1
     fi
     
-    # Check if results directory exists (now includes strategy subdirectory)
-    mkdir -p "results/${COUNTRY}/${STRATEGY}"
+    # Check if results directory exists (includes strategy and sample_size subdirectories)
+    mkdir -p "${RESULTS_DIR}"
     
     log_success "Prerequisites check passed"
 }
@@ -107,8 +117,8 @@ run_inference() {
     if [ "$SKIP_INFERENCE" = "true" ]; then
         log_warn "Skipping inference phase (SKIP_INFERENCE=true)"
         
-        # Check if any per-model results exist (in strategy subdirectory)
-        PER_MODEL_COUNT=$(find "results/${COUNTRY}/${STRATEGY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+        # Check if any per-model results exist (in strategy/sample_size subdirectory)
+        PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
         if [ "$PER_MODEL_COUNT" -eq 0 ]; then
             log_error "No per-model prediction files found. Cannot skip inference."
             exit 1
@@ -117,7 +127,7 @@ run_inference() {
         return 0
     fi
     
-    log_phase "[Phase 1/5] Model Inference - Generating Predictions ($STRATEGY strategy)"
+    log_phase "[Phase 1/5] Model Inference - Generating Predictions ($STRATEGY strategy, $SAMPLE_SIZE samples)"
     log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}, strategy: ${STRATEGY}"
     
     # Note: If sample file exists, it will be reused for cross-model consistency
@@ -137,26 +147,26 @@ run_inference() {
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     fi
     
-    log_success "Phase 1 complete: Per-model predictions generated in results/${COUNTRY}/${STRATEGY}/"
+    log_success "Phase 1 complete: Per-model predictions generated in ${RESULTS_DIR}/"
 }
 
 # Phase 1.5: Aggregate per-model results
 run_aggregation() {
     log_phase "[Phase 1.5/5] Aggregating Per-Model Results"
     
-    log_step "Scanning for per-model result files in results/${COUNTRY}/${STRATEGY}/..."
-    PER_MODEL_COUNT=$(find "results/${COUNTRY}/${STRATEGY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+    log_step "Scanning for per-model result files in ${RESULTS_DIR}/..."
+    PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
     
     if [ "$PER_MODEL_COUNT" -eq 0 ]; then
-        log_error "No per-model result files found in results/${COUNTRY}/${STRATEGY}/"
+        log_error "No per-model result files found in ${RESULTS_DIR}/"
         exit 1
     fi
     
     log_step "Found $PER_MODEL_COUNT per-model result file(s). Aggregating..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.core.result_aggregator
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.core.result_aggregator
     
-    # Verify combined file was created (now in strategy subdirectory without strategy in filename)
-    if [ ! -f "results/${COUNTRY}/${STRATEGY}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
+    # Verify combined file was created (now in strategy/sample_size subdirectory)
+    if [ ! -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
         log_error "Aggregation failed - combined results file not created"
         exit 1
     fi
@@ -169,15 +179,15 @@ run_calibration_and_metrics() {
     log_phase "[Phase 2/5] Calibration & Core Metrics"
     
     log_step "Applying calibration and computing Brier scores..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.calibration
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.calibration
     log_success "Calibration complete"
     
     log_step "Computing classification metrics, fairness metrics, and error correlations..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.metrics
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.metrics
     log_success "Core metrics computed"
     
     log_step "Computing per-class decision thresholds..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.thresholds
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.thresholds
     log_success "Thresholds computed"
     
     log_success "Phase 2 complete: Calibration and core metrics"
@@ -188,15 +198,15 @@ run_bias_and_harm_analysis() {
     log_phase "[Phase 3/5] Bias & Harm Analysis"
     
     log_step "Computing False Legitimization/Illegitimization rates..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.harm
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.harm
     log_success "Harm metrics computed"
     
     log_step "Generating per-class reports and sampling error cases..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
     log_success "Error case sampling complete"
     
     log_step "Creating visualization plots..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.visualize_reports
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.visualize_reports
     log_success "Visualizations generated"
     
     log_success "Phase 3 complete: Bias and harm analysis"
@@ -216,7 +226,7 @@ run_counterfactual_analysis() {
         log_step "Running counterfactual analysis with models: ${CF_MODELS}"
         log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
-        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
             --models "${CF_MODELS}" \
             --events "${CF_EVENTS}"; then
             CF_ANALYSIS_SUCCESS=true
@@ -227,7 +237,7 @@ run_counterfactual_analysis() {
         log_step "Running counterfactual analysis with all WORKING_MODELS"
         log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
-        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
             --events "${CF_EVENTS}"; then
             CF_ANALYSIS_SUCCESS=true
         else
@@ -238,14 +248,14 @@ run_counterfactual_analysis() {
     if [ "$CF_ANALYSIS_SUCCESS" = true ]; then
         log_success "Counterfactual analysis complete"
         
-        # Find the most recent counterfactual output file (now in strategy subdirectory)
-        CF_FILE=$(find "results/${COUNTRY}/${STRATEGY}" -name "counterfactual_analysis_*.json" -type f -print0 2>/dev/null | \
+        # Find the most recent counterfactual output file (now in strategy/sample_size subdirectory)
+        CF_FILE=$(find "${RESULTS_DIR}" -name "counterfactual_analysis_*.json" -type f -print0 2>/dev/null | \
                   xargs -0 ls -t 2>/dev/null | head -1)
         
         if [ -n "$CF_FILE" ] && [ -f "$CF_FILE" ]; then
             log_step "Visualizing counterfactual results..."
             
-            if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.visualize_counterfactual --input "$CF_FILE"; then
+            if COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" "${VENV_PY:-python}" -m lib.analysis.visualize_counterfactual --input "$CF_FILE"; then
                 log_success "Counterfactual visualizations generated"
             else
                 log_warn "Counterfactual visualization failed (non-critical)"
@@ -263,8 +273,6 @@ run_counterfactual_analysis() {
 # Phase 5: Generate Summary Report
 generate_summary() {
     log_phase "[Phase 5/5] Analysis Complete - Summary Report"
-    
-    RESULTS_DIR="results/${COUNTRY}/${STRATEGY}"
     
     echo ""
     echo "Strategy: ${STRATEGY}"
@@ -372,6 +380,7 @@ main() {
     echo "  Strategy: ${STRATEGY}"
     echo "  Country: ${COUNTRY}"
     echo "  Sample Size: ${SAMPLE_SIZE}"
+    echo "  Results Directory: ${RESULTS_DIR}"
     echo "  Inference Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
     echo "  Counterfactual Models: ${CF_MODELS:-all WORKING_MODELS}"
     echo "  Counterfactual Events: ${CF_EVENTS}"

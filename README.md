@@ -61,11 +61,11 @@ COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # With specific models
-OLLAMA_MODELS=mistral:7b,llama3.1:8b COUNTRY=nga SAMPLE_SIZE=1000 \
+OLLAMA_MODELS=mistral:7b,llama3.1:8b COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=zero_shot \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Skip inference (analyze existing results)
-SKIP_INFERENCE=true COUNTRY=cmr \
+SKIP_INFERENCE=true COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 ```
 
@@ -77,13 +77,13 @@ python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 500 --strategy zero_shot
 
 # Aggregate per-model results
-COUNTRY=cmr STRATEGY=zero_shot python -m lib.core.result_aggregator
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.core.result_aggregator
 
 # Run specific analyses
-COUNTRY=cmr STRATEGY=zero_shot python -m lib.analysis.calibration
-COUNTRY=cmr STRATEGY=zero_shot python -m lib.analysis.metrics
-COUNTRY=cmr STRATEGY=zero_shot python -m lib.analysis.harm
-COUNTRY=cmr STRATEGY=zero_shot python -m lib.analysis.counterfactual --events 20
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.calibration
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.metrics
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.harm
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.counterfactual --events 20
 ```
 
 ### ConfliBERT Pipeline
@@ -103,19 +103,19 @@ python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
 The pipeline uses a **per-model-then-aggregate** workflow for fair cross-model comparisons:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ Phase 1: Per-Model Inference                                        │
-│   Each model classifies the SAME sample of events                   │
-│   Output: results/{country}/{strategy}/ollama_results_{model}_...   │
-├─────────────────────────────────────────────────────────────────────┤
-│ Phase 1.5: Aggregation                                              │
-│   Combine per-model files into single dataset                       │
-│   Output: results/{country}/{strategy}/ollama_results_acled_...     │
-├─────────────────────────────────────────────────────────────────────┤
-│ Phase 2-5: Analysis                                                 │
-│   Calibration, metrics, harm analysis, counterfactual testing       │
-│   Output: Various analysis files in same directory                  │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Phase 1: Per-Model Inference                                                │
+│   Each model classifies the SAME sample of events                           │
+│   Output: results/{country}/{strategy}/{sample_size}/ollama_results_...     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Phase 1.5: Aggregation                                                      │
+│   Combine per-model files into single dataset                               │
+│   Output: results/{country}/{strategy}/{sample_size}/ollama_results_...     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Phase 2-5: Analysis                                                         │
+│   Calibration, metrics, harm analysis, counterfactual testing               │
+│   Output: Various analysis files in same directory                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Benefits:**
@@ -126,24 +126,30 @@ The pipeline uses a **per-model-then-aggregate** workflow for fair cross-model c
 
 ## Results Directory Structure
 
+Results are organized by country, strategy, and sample size:
+
 ```
 results/
 ├── cmr/
 │   ├── zero_shot/
-│   │   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv
-│   │   ├── ollama_results_acled_cmr_state_actors.csv
-│   │   ├── ollama_results_calibrated.csv
-│   │   ├── metrics_acled_cmr_state_actors.csv
-│   │   ├── fairness_metrics_acled_cmr_state_actors.csv
-│   │   ├── harm_metrics_detailed.csv
-│   │   └── ...
+│   │   ├── 500/
+│   │   │   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv
+│   │   │   ├── ollama_results_acled_cmr_state_actors.csv
+│   │   │   ├── ollama_results_calibrated.csv
+│   │   │   ├── metrics_acled_cmr_state_actors.csv
+│   │   │   ├── fairness_metrics_acled_cmr_state_actors.csv
+│   │   │   ├── harm_metrics_detailed.csv
+│   │   │   └── ...
+│   │   └── 1000/
+│   │       └── ...
 │   └── few_shot/
-│       └── ...
+│       ├── 500/
+│       └── 1000/
 └── nga/
     ├── zero_shot/
-    │   └── ...
+    │   ├── 500/
+    │   └── 1000/
     └── few_shot/
-        └── ...
 ```
 
 ## Analysis Metrics

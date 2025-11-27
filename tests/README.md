@@ -84,7 +84,7 @@ Tests may require sample data in the following locations:
 | Path | Description |
 |------|-------------|
 | `datasets/{country}/` | Country-specific ACLED data |
-| `results/{country}/{strategy}/` | Analysis output files |
+| `results/{country}/{strategy}/{sample_size}/` | Analysis output files |
 | `datasets/{country}/state_actor_sample_{country}.csv` | Sample event files |
 
 ## Continuous Integration
