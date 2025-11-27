@@ -11,6 +11,7 @@
 #   COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_full_analysis.sh
 #
 # Environment Variables:
+#   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   OLLAMA_MODELS        - Models for inference [default: all WORKING_MODELS]
@@ -26,6 +27,7 @@ set -u  # Treat unset variables as an error
 set -o pipefail  # Pipeline fails if any command fails
 
 # Configuration with sensible defaults
+STRATEGY="${STRATEGY:-zero_shot}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 OLLAMA_MODELS="${OLLAMA_MODELS:-}"
@@ -99,16 +101,16 @@ run_inference() {
         return 0
     fi
     
-    log_phase "[Phase 1/5] Model Inference - Generating Predictions"
-    log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}"
+    log_phase "[Phase 1/5] Model Inference - Generating Predictions ($STRATEGY strategy)"
+    log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}, strategy: ${STRATEGY}"
     
     # Set OLLAMA_MODELS if provided, otherwise will use WORKING_MODELS from constants
     if [ -n "$OLLAMA_MODELS" ]; then
-        STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+        STRATEGY="${STRATEGY}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
             OLLAMA_MODELS="${OLLAMA_MODELS}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     else
-        STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+        STRATEGY="${STRATEGY}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     fi
     
@@ -218,6 +220,7 @@ generate_summary() {
     RESULTS_DIR="results/${COUNTRY}"
     
     echo ""
+    echo "Strategy: ${STRATEGY}"
     echo "Country: ${COUNTRY}"
     echo "Sample Size: ${SAMPLE_SIZE}"
     echo "Results Directory: ${RESULTS_DIR}/"
@@ -312,9 +315,10 @@ generate_summary() {
 main() {
     log_phase "LLM State Actor Bias - Full Analysis Pipeline"
     echo "Configuration:"
+    echo "  Strategy: ${STRATEGY}"
     echo "  Country: ${COUNTRY}"
     echo "  Sample Size: ${SAMPLE_SIZE}"
-    echo "  Counterfactual Models: ${CF_MODELS}"
+    echo "  Counterfactual Models: ${CF_MODELS:-all WORKING_MODELS}"
     echo "  Counterfactual Events: ${CF_EVENTS}"
     echo ""
     
