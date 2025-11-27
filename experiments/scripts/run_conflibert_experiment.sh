@@ -16,12 +16,14 @@
 #   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
+#   PRIMARY_GROUP        - Event type to oversample [default: none (proportional)]
+#   PRIMARY_SHARE        - Fraction for primary group (0-1) [default: 0.0]
 #   BATCH_SIZE           - Batch size for inference [default: 16]
 #   MAX_LENGTH           - Maximum sequence length [default: 256]
 #   DEVICE               - Device (cuda, mps, cpu) [default: auto]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
-#   CF_MODELS            - Models for counterfactual analysis [default: llama3.2,mistral:7b]
+#   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 50]
 #
 ###############################################################################
@@ -35,12 +37,14 @@ MODEL_PATH="${MODEL_PATH:-models/conflibert}"
 STRATEGY="${STRATEGY:-zero_shot}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
+PRIMARY_GROUP="${PRIMARY_GROUP:-}"
+PRIMARY_SHARE="${PRIMARY_SHARE:-0.0}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 MAX_LENGTH="${MAX_LENGTH:-256}"
 DEVICE="${DEVICE:-auto}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
-CF_MODELS="${CF_MODELS:-llama3.2,mistral:7b}"
+CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-50}"
 
 # Determine repository root (two levels up from this script)
@@ -136,12 +140,14 @@ log_info "Model Path:         $MODEL_PATH"
 log_info "Strategy:           $STRATEGY"
 log_info "Country:            $COUNTRY"
 log_info "Sample Size:        $SAMPLE_SIZE"
+log_info "Primary Group:      ${PRIMARY_GROUP:-none (proportional sampling)}"
+log_info "Primary Share:      $PRIMARY_SHARE"
 log_info "Batch Size:         $BATCH_SIZE"
 log_info "Max Length:         $MAX_LENGTH"
 log_info "Device:             $DEVICE"
 log_info "Skip Inference:     $SKIP_INFERENCE"
 log_info "Skip Counterfactual: $SKIP_COUNTERFACTUAL"
-log_info "CF Models:          $CF_MODELS"
+log_info "CF Models:          ${CF_MODELS:-all WORKING_MODELS}"
 log_info "CF Events:          $CF_EVENTS"
 log_info "Results Directory:  results/$COUNTRY/$STRATEGY/"
 echo ""
@@ -164,13 +170,20 @@ else
         DEVICE_ARG="--device $DEVICE"
     fi
     
-    "$VENV_PY" experiments/pipelines/conflibert/run_conflibert_classification.py "$COUNTRY" \
-        --model-path "$MODEL_PATH" \
-        --strategy "$STRATEGY" \
-        --sample-size "$SAMPLE_SIZE" \
-        --batch-size "$BATCH_SIZE" \
-        --max-length "$MAX_LENGTH" \
-        $DEVICE_ARG
+    # Set primary group arguments if specified
+    if [ -n "$PRIMARY_GROUP" ]; then
+        PRIMARY_ARGS="--primary-group \"$PRIMARY_GROUP\" --primary-share $PRIMARY_SHARE"
+    else
+        PRIMARY_ARGS=""
+    fi
+    
+    eval "\"$VENV_PY\" experiments/pipelines/conflibert/run_conflibert_classification.py \"$COUNTRY\" \
+        --model-path \"$MODEL_PATH\" \
+        --strategy \"$STRATEGY\" \
+        --sample-size \"$SAMPLE_SIZE\" \
+        --batch-size \"$BATCH_SIZE\" \
+        --max-length \"$MAX_LENGTH\" \
+        $DEVICE_ARG $PRIMARY_ARGS"
     
     log_success "ConfliBERT inference completed with $STRATEGY strategy"
 fi
@@ -221,14 +234,31 @@ else
     log_phase "PHASE 4: COUNTERFACTUAL PERTURBATION ANALYSIS"
     
     log_step "Running counterfactual perturbation testing on top-N disagreements..."
-    COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
-        "$VENV_PY" -m lib.analysis.counterfactual \
-        --models "$CF_MODELS" --events "$CF_EVENTS"
+    
+    # If CF_MODELS not set, use all WORKING_MODELS from constants
+    if [ -n "$CF_MODELS" ]; then
+        COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+            "$VENV_PY" -m lib.analysis.counterfactual \
+            --models "$CF_MODELS" --events "$CF_EVENTS"
+    else
+        COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+            "$VENV_PY" -m lib.analysis.counterfactual \
+            --events "$CF_EVENTS"
+    fi
     
     log_step "Generating counterfactual visualizations..."
-    COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
-        "$VENV_PY" -m lib.analysis.visualize_counterfactual \
-        --input "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
+    
+    # Find the most recent counterfactual output file
+    CF_FILE=$(find "$STRATEGY_RESULTS" -name "counterfactual_analysis_*.json" -type f -print0 2>/dev/null | \
+              xargs -0 ls -t 2>/dev/null | head -1)
+    
+    if [ -n "$CF_FILE" ] && [ -f "$CF_FILE" ]; then
+        COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+            "$VENV_PY" -m lib.analysis.visualize_counterfactual \
+            --input "$CF_FILE"
+    else
+        log_warn "Counterfactual output file not found"
+    fi
     
     log_success "Counterfactual analysis completed"
 fi
@@ -264,7 +294,10 @@ check_file "$STRATEGY_RESULTS/error_cases_false_illegitimization.csv"
 check_file "$STRATEGY_RESULTS/error_correlations_acled_${COUNTRY}_state_actors.csv"
 
 if [ "$SKIP_COUNTERFACTUAL" = "false" ]; then
-    check_file "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
+    CF_OUTPUT=$(find "$STRATEGY_RESULTS" -name "counterfactual_analysis_*.json" -type f 2>/dev/null | head -1)
+    if [ -n "$CF_OUTPUT" ]; then
+        check_file "$CF_OUTPUT"
+    fi
 fi
 
 echo ""
