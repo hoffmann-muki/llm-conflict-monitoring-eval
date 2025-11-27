@@ -48,13 +48,16 @@ python experiments/pipelines/ollama/run_ollama_classification.py cmr \
 Run the ConfliBERT pipeline:
 
 ```bash
+# Download ConfliBERT model first (one-time setup, ~437 MB)
+python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir models/conflibert
+
 # ConfliBERT experiment with proportional sampling
-STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+MODEL_PATH=models/conflibert STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_conflibert_experiment.sh
 
 # Or run the ConfliBERT classification directly
 python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
-  --strategy zero_shot --sample-size 300
+  --model-path models/conflibert --strategy zero_shot --sample-size 300
 ```
 
 **Sampling Configuration:**
@@ -94,7 +97,7 @@ See [experiments/README.md](experiments/README.md) for detailed usage and option
 
 ## Requirements
 
-- For Ollama pipelines: Ollama daemon running locally with required models (see experiments/scripts for expected model names)
-- For ConfliBERT: PyTorch and HuggingFace `transformers` to load `snowood1/ConfliBERT-scr-uncased`
+- For Ollama pipelines: Ollama daemon running locally with required models (see `lib/core/constants.py` for `WORKING_MODELS`)
+- For ConfliBERT: PyTorch and `transformers`; download the model with `download_conflibert_model.py` (~437 MB)
 - Python 3.7+ with `pandas`, `scikit-learn`, `matplotlib`, `tqdm`
-- ACLED dataset files in `datasets/<country>/`
+- ACLED dataset files in `datasets/`

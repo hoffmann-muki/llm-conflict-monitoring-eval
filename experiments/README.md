@@ -18,19 +18,19 @@ experiments/
 ```bash
 # Run complete experiment with zero-shot strategy
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_experiment.sh
+  ./experiments/scripts/run_ollama_experiment.sh
 
 # Run with few-shot strategy (1 example per category by default)
 STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_experiment.sh
+  ./experiments/scripts/run_ollama_experiment.sh
 
 # Run with few-shot strategy (3 examples per category)
 STRATEGY=few_shot EXAMPLES_PER_CATEGORY=3 COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_experiment.sh
+  ./experiments/scripts/run_ollama_experiment.sh
 
 # Run with explainable strategy
 STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 \
-  ./experiments/scripts/run_experiment.sh
+  ./experiments/scripts/run_ollama_experiment.sh
 ```
 
 ### Environment Variables
@@ -39,7 +39,8 @@ STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 \
 - `COUNTRY` - Country code (cmr, nga) [default: cmr]
 - `SAMPLE_SIZE` - Number of events [default: 500]
 - `EXAMPLES_PER_CATEGORY` - Few-shot examples per category (1-5) [default: 1]
-- `CF_MODELS` - Models for counterfactual [default: llama3.2,mistral:7b]
+- `OLLAMA_MODELS` - Models for inference [default: all WORKING_MODELS]
+- `CF_MODELS` - Models for counterfactual [default: all WORKING_MODELS]
 - `CF_EVENTS` - Counterfactual event count [default: 50]
 - `SKIP_INFERENCE` - Skip inference phase [default: false]
 - `SKIP_COUNTERFACTUAL` - Skip counterfactual analysis [default: false]
@@ -109,13 +110,16 @@ COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
 COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
   .venv/bin/python -m lib.analysis.per_class_metrics  # Run first
 COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
+  .venv/bin/python -m lib.analysis.counterfactual --events 20  # Uses all WORKING_MODELS
+
+# Or specify models explicitly:
+COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
   .venv/bin/python -m lib.analysis.counterfactual \
   --models llama3.2,mistral:7b --events 20
 
 # Or run on a percentage of disagreements (example: top 10% of disagreements):
 COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.counterfactual \
-  --models llama3.2,mistral:7b --top-percent 10
+  .venv/bin/python -m lib.analysis.counterfactual --top-percent 10
 ```
 
 ## Prompting Strategies

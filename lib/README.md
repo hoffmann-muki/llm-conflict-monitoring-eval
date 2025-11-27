@@ -53,27 +53,27 @@ result = run_ollama_structured('gemma:2b', prompt, system_msg)
 # Returns: {"label": "V", "confidence": 0.9}
 ```
 
-#### ConfliBERT (HuggingFace)
+#### ConfliBERT
 
 ConfliBERT classification integrated with the same prompting strategy framework:
 
 ```bash
+# Download model first (one-time setup)
+python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir models/conflibert
+
 # Run ConfliBERT classification
-python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 100
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
+  --model-path models/conflibert --strategy zero_shot --sample-size 100
 
 # Compare with Ollama models
 python -m lib.analysis.per_class_metrics cmr zero_shot
 ```
 
 **Key Points:**
+- Requires local model path (use `download_conflibert_model.py` to fetch)
 - Uses same strategy interface (zero_shot, few_shot, explainable) for organization
 - Outputs results in identical format to Ollama pipeline
 - Works with all downstream analysis tools (per_class_metrics, counterfactual, etc.)
- - Uses same strategy interface (zero_shot, few_shot, explainable) for organization
- - Outputs results in identical format to Ollama pipeline
- - Works with all downstream analysis tools (per_class_metrics, counterfactual, etc.)
-
-See [lib/conflibert/README.md](conflibert/README.md) for detailed usage.
 
 ### Analysis
 
@@ -95,12 +95,14 @@ COUNTRY=cmr python -m lib.analysis.per_class_metrics
 # Counterfactual perturbation testing (requires top_disagreements.csv)
 # Generate disagreements first and then run counterfactual on the top-N or top-percent:
 COUNTRY=cmr python -m lib.analysis.per_class_metrics  # Generate disagreements first
+COUNTRY=cmr python -m lib.analysis.counterfactual --events 20  # Uses all WORKING_MODELS
+
+# Or specify models explicitly:
 COUNTRY=cmr python -m lib.analysis.counterfactual \
   --models llama3.2,mistral:7b --events 20
 
 # Or use a percentage of available disagreements (e.g., top 10%):
-COUNTRY=cmr python -m lib.analysis.counterfactual \
-  --models llama3.2,mistral:7b --top-percent 10
+COUNTRY=cmr python -m lib.analysis.counterfactual --top-percent 10
 
 # Visualizations
 COUNTRY=cmr python -m lib.analysis.visualize_reports
