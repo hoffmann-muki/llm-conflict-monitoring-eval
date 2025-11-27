@@ -838,7 +838,7 @@ def main():
     
     # Load top-N disagreements (required input)
     paths = paths_for_country(country, strategy)
-    top_disagreements_path = os.path.join(paths['results_dir'], f'top_disagreements_{strategy}.csv')
+    top_disagreements_path = os.path.join(paths['results_dir'], 'top_disagreements.csv')
     
     if not os.path.exists(top_disagreements_path):
         raise FileNotFoundError(
@@ -884,7 +884,7 @@ def main():
     
     # Generate report
     models_slug = '_'.join(m.replace(':', '-').replace('.', '_') for m in models)
-    output_path = args.output or f"results/{country}/counterfactual_analysis_{strategy}_{models_slug}.json"
+    output_path = args.output or os.path.join(paths['results_dir'], f"counterfactual_analysis_{models_slug}.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     analyzer.generate_report(results, output_path)

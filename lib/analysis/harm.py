@@ -19,17 +19,17 @@ import os
 import pandas as pd
 import numpy as np
 from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
-from lib.core.data_helpers import paths_for_country, get_strategy
+from lib.core.data_helpers import paths_for_country
 from lib.core.result_aggregator import model_name_to_slug
 
 COUNTRY = os.environ.get('COUNTRY', 'cmr')
-STRATEGY = get_strategy()
+STRATEGY = os.environ.get('STRATEGY', 'zero_shot')
 paths = paths_for_country(COUNTRY, STRATEGY)
 os.makedirs(paths['results_dir'], exist_ok=True)
 
 CAL_CSV = paths['calibrated_csv']
-OUT_CSV = os.path.join(paths['results_dir'], f'fl_fi_{STRATEGY}_by_model.csv')
-OUT_DETAILED_CSV = os.path.join(paths['results_dir'], f'harm_metrics_{STRATEGY}_detailed.csv')
+OUT_CSV = os.path.join(paths['results_dir'], 'fl_fi_by_model.csv')
+OUT_DETAILED_CSV = os.path.join(paths['results_dir'], 'harm_metrics_detailed.csv')
 
 
 def get_per_model_output_path(base_path: str, model_name: str) -> str:

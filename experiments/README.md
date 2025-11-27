@@ -1,240 +1,189 @@
 # Experiments
 
-This directory contains experimental pipelines for testing different prompting strategies with complete quantitative analysis.
+Experiment pipelines, prompting strategies, and analysis scripts for LLM state actor bias research.
 
 ## Structure
 
 ```
 experiments/
-├── prompting_strategies/  # Different prompting approaches
-├── pipelines/             # Classification pipeline
-└── scripts/               # Automation scripts
+├── pipelines/
+│   ├── ollama/              # Ollama LLM classification pipeline
+│   └── conflibert/          # ConfliBERT transformer pipeline
+├── prompting_strategies/    # Modular prompting strategies
+└── scripts/                 # Shell scripts for running experiments
 ```
 
-## Running Experiments
+## Pipelines
 
-### Quick Start
+### Ollama Pipeline
 
-**Full Analysis Pipeline (Recommended):**
+Runs classification using local Ollama models (Mistral, Llama, Gemma, etc.).
 
 ```bash
-# Run full analysis with all working models
-COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-
-# Run with specific models only (for incremental runs)
-OLLAMA_MODELS=mistral:7b COUNTRY=nga SAMPLE_SIZE=1000 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-
-# Run with multiple specific models
-OLLAMA_MODELS=mistral:7b,llama3.1:8b COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-```
-
-**Strategy-Based Experiments:**
-
-```bash
-# Run complete experiment with zero-shot strategy
-STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_experiment.sh
-
-# Run with few-shot strategy
-STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_experiment.sh
-
-# Run with targeted sampling (60% Violence against civilians)
-PRIMARY_GROUP="Violence against civilians" PRIMARY_SHARE=0.6 \
-  STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_experiment.sh
-```
-
-**ConfliBERT Pipeline:**
-
-```bash
-# Download model first (one-time setup, ~437 MB)
-python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir models/conflibert
-
-# Run complete experiment with zero-shot strategy
-MODEL_PATH=models/conflibert STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_conflibert_experiment.sh
-
-# Run with targeted sampling
-MODEL_PATH=models/conflibert PRIMARY_GROUP="Violence against civilians" PRIMARY_SHARE=0.6 \
-  STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_conflibert_experiment.sh
-```
-
-## Workflow Architecture
-
-The pipeline uses a **per-model-then-aggregate** workflow:
-
-```
-Phase 1: Per-Model Inference
-    - Each model runs on the SAME sample of events
-    - Outputs: ollama_results_{strategy}_{model-slug}_acled_{country}_state_actors.csv
-
-Phase 1.5: Aggregation  
-    - Combines per-model files into single file (per strategy)
-    - Output: ollama_results_{strategy}_acled_{country}_state_actors.csv
-
-Phase 2: Calibration
-    - Outputs: ollama_results_{strategy}_calibrated.csv, calibration_brier_scores_{strategy}.csv
-
-Phase 3: Analysis
-    - Metrics, harm analysis, per-class reports
-
-Phase 4: Counterfactual (optional)
-    - Perturbation testing on disagreement cases
-
-Phase 5: Summary
-```
-
-**Key Benefits:**
-- **Fair comparison**: All models classify the exact same events
-- **Incremental runs**: Run one model at a time, aggregate later
-- **Reproducibility**: Same sample file reused across model runs
-
-### Environment Variables
-
-**Common to both pipelines:**
-- `STRATEGY` - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
-- `COUNTRY` - Country code (cmr, nga) [default: cmr]
-- `SAMPLE_SIZE` - Number of events [default: 500]
-- `PRIMARY_GROUP` - Event type to oversample [default: none (proportional)]
-- `PRIMARY_SHARE` - Fraction for primary group (0-1) [default: 0.0]
-- `CF_MODELS` - Models for counterfactual [default: all WORKING_MODELS]
-- `CF_EVENTS` - Counterfactual event count [default: 50]
-- `SKIP_INFERENCE` - Skip inference phase [default: false]
-- `SKIP_COUNTERFACTUAL` - Skip counterfactual analysis [default: false]
-
-**Ollama-specific:**
-- `OLLAMA_MODELS` - Comma-separated models for inference [default: all WORKING_MODELS]
-- `EXAMPLES_PER_CATEGORY` - Few-shot examples per category (1-5) [default: 1]
-
-**ConfliBERT-specific:**
-- `MODEL_PATH` - Path to local ConfliBERT model directory [default: models/conflibert]
-- `BATCH_SIZE` - Batch size for inference [default: 16]
-- `MAX_LENGTH` - Maximum sequence length [default: 256]
-- `DEVICE` - Device (cuda, mps, cpu) [default: auto]
-
-## Results Organization
-
-Results are organized by country with strategy embedded in filenames (no separate folders needed):
-
-```
-results/
-├── cmr/
-│   ├── ollama_results_zero_shot_mistral-7b_acled_cmr_state_actors.csv
-│   ├── ollama_results_zero_shot_llama3.1-8b_acled_cmr_state_actors.csv
-│   ├── ollama_results_zero_shot_acled_cmr_state_actors.csv      # Aggregated
-│   ├── ollama_results_zero_shot_calibrated.csv
-│   ├── calibration_brier_scores_zero_shot.csv
-│   ├── metrics_zero_shot_acled_cmr_state_actors.csv
-│   ├── ollama_results_few_shot_mistral-7b_acled_cmr_state_actors.csv
-│   ├── ollama_results_few_shot_acled_cmr_state_actors.csv       # Aggregated
-│   ├── calibration_brier_scores_few_shot.csv
-│   └── ...
-└── nga/
-    └── ...
-```
-
-This naming convention allows:
-- Running multiple strategies without overwriting files
-- Cross-model comparison within the same strategy
-- Easy filtering/sorting by strategy name
-
-Each directory contains complete quantitative analysis:
-- Classification metrics (P/R/F1, confusion matrices)
-- Fairness metrics (SPD, Equalized Odds with statistical tests)
-- Calibration metrics (Brier scores, reliability diagrams)
-- Harm metrics (False Legitimization/Illegitimization rates)
-- Error analysis (sampled cases, correlations)
-- Counterfactual robustness (perturbation testing)
-
-## Individual Scripts
-
-### Classification Pipeline
-
-**Ollama:**
-
-```bash
-# Run classification with proportional sampling (default)
+# Basic usage
 python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 300 --strategy zero_shot
+  --sample-size 500 --strategy zero_shot
 
-# Run with specific models
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 300 --models mistral:7b,llama3.1:8b
+# With specific models
+python experiments/pipelines/ollama/run_ollama_classification.py nga \
+  --sample-size 1000 --strategy few_shot \
+  --models "mistral:7b,llama3.1:8b"
 
-# Run with targeted sampling (e.g., 60% Violence against civilians)
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 300 \
-  --primary-group "Violence against civilians" --primary-share 0.6
+# Full analysis pipeline (classification + all metrics)
+COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
+  ./experiments/scripts/run_ollama_full_analysis.sh
 ```
 
-**ConfliBERT:**
+### ConfliBERT Pipeline
+
+Runs classification using the ConfliBERT transformer model (fine-tuned BERT for conflict events).
 
 ```bash
-# Run classification with proportional sampling (default)
+# Download model first (one-time, ~437 MB)
+python experiments/pipelines/conflibert/download_conflibert_model.py \
+  --out-dir models/conflibert
+
+# Run classification
 python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
-  --model-path models/conflibert --sample-size 300 --strategy zero_shot
+  --model-path models/conflibert --sample-size 500 --strategy zero_shot
 
-# Run with targeted sampling
-python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
-  --model-path models/conflibert --sample-size 300 \
-  --primary-group "Violence against civilians" --primary-share 0.6
-```
-
-**Sampling Options:**
-- By default, samples are drawn **proportionally** to reflect natural class distributions
-- Use `--primary-group` and `--primary-share` to oversample specific event types
-- Proportional sampling recommended for cross-country comparative analysis
-
-### Aggregation
-
-After running per-model inference, aggregate results:
-
-```bash
-# Aggregate per-model files into combined file
-COUNTRY=cmr python -c "
-from lib.core.result_aggregator import aggregate_model_results
-aggregate_model_results('cmr', 'results/cmr')
-"
-```
-
-### Analysis Scripts
-
-```bash
-# Calibration
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.calibration
-
-# Metrics
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.metrics
-
-# Harm analysis
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.harm
-
-# Counterfactual (requires top_disagreements.csv from per_class_metrics)
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.per_class_metrics  # Run first
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.counterfactual --events 20  # Uses all WORKING_MODELS
-
-# Or specify models explicitly:
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.counterfactual \
-  --models llama3.2,mistral:7b --events 20
-
-# Or run on a percentage of disagreements (example: top 10% of disagreements):
-COUNTRY=cmr RESULTS_DIR=results/cmr \
-  python -m lib.analysis.counterfactual --top-percent 10
+# Via shell script
+MODEL_PATH=models/conflibert COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_conflibert_experiment.sh
 ```
 
 ## Prompting Strategies
 
-See [prompting_strategies/README.md](prompting_strategies/README.md) for details on implementing new strategies.
+Modular strategies for generating classification prompts:
 
-**Note:** All prompting strategies generate prompts that are passed explicitly to `run_ollama_structured()`. There are no hardcoded prompts in the inference layer - the strategy pattern ensures complete separation of concerns.
+| Strategy | Description |
+|----------|-------------|
+| `zero_shot` | Direct classification without examples (default) |
+| `few_shot` | Classification with 1-5 examples per category |
+| `explainable` | Chain-of-thought reasoning for transparent decisions |
+
+```python
+from experiments.prompting_strategies import ZeroShotStrategy, FewShotStrategy
+
+strategy = ZeroShotStrategy()
+prompt = strategy.make_prompt("Military forces attacked civilians in the village")
+system_msg = strategy.get_system_message()
+```
+
+See [prompting_strategies/README.md](prompting_strategies/README.md) for creating custom strategies.
+
+## Scripts
+
+### run_ollama_full_analysis.sh
+
+Complete analysis pipeline with 5 phases:
+
+1. **Inference** - Run models on sample events
+2. **Aggregation** - Combine per-model results
+3. **Calibration** - Compute calibrated probabilities
+4. **Metrics** - Classification, fairness, and harm metrics
+5. **Counterfactual** - Perturbation robustness testing
+
+```bash
+# Environment variables
+COUNTRY=cmr          # Country code (cmr, nga)
+STRATEGY=zero_shot   # Prompting strategy
+SAMPLE_SIZE=500      # Number of events to sample
+OLLAMA_MODELS=...    # Comma-separated model list (optional)
+SKIP_INFERENCE=true  # Skip to analysis phases (if results exist)
+SKIP_COUNTERFACTUAL=true  # Skip counterfactual phase
+
+# Full run
+COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_ollama_full_analysis.sh
+
+# Analysis only (reuse existing inference results)
+SKIP_INFERENCE=true COUNTRY=cmr ./experiments/scripts/run_ollama_full_analysis.sh
+```
+
+### run_ollama_experiment.sh
+
+Lighter-weight experiment script for quick classification runs.
+
+### run_conflibert_experiment.sh
+
+ConfliBERT experiment with same interface as Ollama scripts.
+
+### run_calibrate_then_apply.sh
+
+Specialized script for calibration-focused experiments.
+
+## Sampling Options
+
+### Proportional Sampling (Default)
+
+Sample reflects natural class distribution in the data:
+
+```bash
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
+  --sample-size 500
+```
+
+### Targeted Oversampling
+
+Oversample specific event types for focused analysis:
+
+```bash
+# 60% Violence against civilians, 40% proportional to other classes
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
+  --sample-size 500 \
+  --primary-group "Violence against civilians" \
+  --primary-share 0.6
+```
+
+## Output Structure
+
+Results are organized by country and strategy:
+
+```
+results/
+├── cmr/
+│   ├── zero_shot/
+│   │   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv
+│   │   ├── ollama_results_acled_cmr_state_actors.csv
+│   │   ├── ollama_results_calibrated.csv
+│   │   ├── metrics_acled_cmr_state_actors.csv
+│   │   └── ...
+│   └── few_shot/
+│       └── ...
+└── nga/
+    └── ...
+```
+
+### Output Files
+
+| File | Description |
+|------|-------------|
+| `ollama_results_{model}_acled_{country}_state_actors.csv` | Per-model inference results |
+| `ollama_results_acled_{country}_state_actors.csv` | Combined results from all models |
+| `ollama_results_calibrated.csv` | Calibrated predictions |
+| `metrics_acled_{country}_state_actors.csv` | Classification metrics (P/R/F1) |
+| `fairness_metrics_acled_{country}_state_actors.csv` | SPD, Equalized Odds |
+| `harm_metrics_detailed.csv` | False Legitimization/Illegitimization rates |
+| `per_class_report.csv` | Per-class performance breakdown |
+| `top_disagreements.csv` | High-confidence model disagreements |
+| `counterfactual_analysis_{models}.json` | Perturbation test results |
+
+## Requirements
+
+- **Ollama**: Local Ollama daemon with models installed
+- **ConfliBERT**: PyTorch, transformers, downloaded model weights
+- **Data**: ACLED dataset in `datasets/`
+- **Python**: 3.7+ with pandas, scikit-learn, matplotlib, tqdm
+
+## Event Categories
+
+All pipelines classify events into ACLED categories:
+
+| Code | Category |
+|------|----------|
+| V | Violence against civilians |
+| B | Battles |
+| E | Explosions/Remote violence |
+| P | Protests |
+| R | Riots |
+| S | Strategic developments |

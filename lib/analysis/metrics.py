@@ -3,16 +3,15 @@ import numpy as np
 import json
 import os
 from scipy.stats import spearmanr
-from lib.core.data_helpers import setup_country_environment, get_strategy
+from lib.core.data_helpers import setup_country_environment
 from lib.core.result_aggregator import model_name_to_slug
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
-STRATEGY = get_strategy()
 
-RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_{STRATEGY}_acled_{COUNTRY}_state_actors.csv')
-OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_{STRATEGY}_acled_{COUNTRY}_state_actors.csv')
-OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_{STRATEGY}_acled_{COUNTRY}_state_actors.json')
-OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_{STRATEGY}_acled_{COUNTRY}_state_actors.csv')
+RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
+OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_state_actors.csv')
+OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_state_actors.json')
+OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_acled_{COUNTRY}_state_actors.csv')
 
 labels = ['V','B','E','P','R','S']
 
@@ -325,7 +324,7 @@ def main():
     # Analyze error correlations with text features
     correlation_df = analyze_error_correlations(df)
     if not correlation_df.empty:
-        out_corr_path = os.path.join(RESULTS_DIR, f'error_correlations_{STRATEGY}_acled_{COUNTRY}_state_actors.csv')
+        out_corr_path = os.path.join(RESULTS_DIR, f'error_correlations_acled_{COUNTRY}_state_actors.csv')
         correlation_df.to_csv(out_corr_path, index=False)
         print(f'\nWrote error correlation analysis to {out_corr_path}')
         

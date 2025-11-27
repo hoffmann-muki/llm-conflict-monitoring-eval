@@ -2,21 +2,20 @@
 """Compute per-model per-class thresholds from calibrated per-class probabilities.
 
 Writes:
-- results/selected_thresholds_per_class_{strategy}.csv
-- results/selected_thresholds_{strategy}.json (model -> {label: threshold})
+- results/{country}/{strategy}/selected_thresholds_per_class.csv
+- results/{country}/{strategy}/selected_thresholds.json (model -> {label: threshold})
 """
 import os
 import json
 import numpy as np
 import pandas as pd
-from lib.core.data_helpers import setup_country_environment, get_strategy
+from lib.core.data_helpers import setup_country_environment
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
-STRATEGY = get_strategy()
 
-CAL_CSV = os.path.join(RESULTS_DIR, f'ollama_results_{STRATEGY}_calibrated.csv')
-OUT_CSV = os.path.join(RESULTS_DIR, f'selected_thresholds_per_class_{STRATEGY}.csv')
-OUT_JSON = os.path.join(RESULTS_DIR, f'selected_thresholds_{STRATEGY}.json')
+CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+OUT_CSV = os.path.join(RESULTS_DIR, 'selected_thresholds_per_class.csv')
+OUT_JSON = os.path.join(RESULTS_DIR, 'selected_thresholds.json')
 
 labels = ['V','B','E','P','R','S']
 candidates = np.concatenate((np.linspace(0,0.9,10), [0.95,0.97,0.99]))

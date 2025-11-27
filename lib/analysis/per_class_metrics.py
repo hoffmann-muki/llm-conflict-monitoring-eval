@@ -5,25 +5,24 @@ Includes qualitative error case sampling for annotation:
 - Samples N=200 false legitimization errors (true=V, pred=B/S) 
 - Samples N=200 false illegitimization errors (true=B/S, pred=V)
 
-Reads: country-specific results/ollama_results_{strategy}_calibrated.csv
-Writes: country-specific results/per_class_report_{strategy}.csv, results/top_disagreements_{strategy}.csv,
-        results/error_cases_false_legitimization_{strategy}.csv, results/error_cases_false_illegitimization_{strategy}.csv
+Reads: country-specific results/{country}/{strategy}/ollama_results_calibrated.csv
+Writes: country-specific results/{country}/{strategy}/per_class_report.csv, top_disagreements.csv,
+        error_cases_false_legitimization.csv, error_cases_false_illegitimization.csv
 """
 from __future__ import annotations
 import os
 import pandas as pd
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
-from lib.core.data_helpers import setup_country_environment, get_strategy
+from lib.core.data_helpers import setup_country_environment
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
-STRATEGY = get_strategy()
 
-INPUT_CSV = os.path.join(RESULTS_DIR, f'ollama_results_{STRATEGY}_calibrated.csv')
-OUT_PER_CLASS = os.path.join(RESULTS_DIR, f'per_class_report_{STRATEGY}.csv')
-OUT_TOP = os.path.join(RESULTS_DIR, f'top_disagreements_{STRATEGY}.csv')
-OUT_FL_ERRORS = os.path.join(RESULTS_DIR, f'error_cases_false_legitimization_{STRATEGY}.csv')
-OUT_FI_ERRORS = os.path.join(RESULTS_DIR, f'error_cases_false_illegitimization_{STRATEGY}.csv')
+INPUT_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+OUT_PER_CLASS = os.path.join(RESULTS_DIR, 'per_class_report.csv')
+OUT_TOP = os.path.join(RESULTS_DIR, 'top_disagreements.csv')
+OUT_FL_ERRORS = os.path.join(RESULTS_DIR, 'error_cases_false_legitimization.csv')
+OUT_FI_ERRORS = os.path.join(RESULTS_DIR, 'error_cases_false_illegitimization.csv')
 
 TOP_N = 20
 ERROR_SAMPLE_SIZE = 200  # N=200 as specified

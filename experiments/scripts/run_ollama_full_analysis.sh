@@ -96,8 +96,8 @@ check_prerequisites() {
         exit 1
     fi
     
-    # Check if results directory exists
-    mkdir -p "results/${COUNTRY}"
+    # Check if results directory exists (now includes strategy subdirectory)
+    mkdir -p "results/${COUNTRY}/${STRATEGY}"
     
     log_success "Prerequisites check passed"
 }
@@ -107,8 +107,8 @@ run_inference() {
     if [ "$SKIP_INFERENCE" = "true" ]; then
         log_warn "Skipping inference phase (SKIP_INFERENCE=true)"
         
-        # Check if any per-model results exist
-        PER_MODEL_COUNT=$(find "results/${COUNTRY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+        # Check if any per-model results exist (in strategy subdirectory)
+        PER_MODEL_COUNT=$(find "results/${COUNTRY}/${STRATEGY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
         if [ "$PER_MODEL_COUNT" -eq 0 ]; then
             log_error "No per-model prediction files found. Cannot skip inference."
             exit 1
@@ -137,26 +137,26 @@ run_inference() {
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     fi
     
-    log_success "Phase 1 complete: Per-model predictions generated"
+    log_success "Phase 1 complete: Per-model predictions generated in results/${COUNTRY}/${STRATEGY}/"
 }
 
 # Phase 1.5: Aggregate per-model results
 run_aggregation() {
     log_phase "[Phase 1.5/5] Aggregating Per-Model Results"
     
-    log_step "Scanning for per-model result files (strategy=${STRATEGY})..."
-    PER_MODEL_COUNT=$(find "results/${COUNTRY}" -name "ollama_results_${STRATEGY}_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+    log_step "Scanning for per-model result files in results/${COUNTRY}/${STRATEGY}/..."
+    PER_MODEL_COUNT=$(find "results/${COUNTRY}/${STRATEGY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
     
     if [ "$PER_MODEL_COUNT" -eq 0 ]; then
-        log_error "No per-model result files found in results/${COUNTRY}/ for strategy ${STRATEGY}"
+        log_error "No per-model result files found in results/${COUNTRY}/${STRATEGY}/"
         exit 1
     fi
     
     log_step "Found $PER_MODEL_COUNT per-model result file(s). Aggregating..."
     COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.core.result_aggregator
     
-    # Verify combined file was created
-    if [ ! -f "results/${COUNTRY}/ollama_results_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ]; then
+    # Verify combined file was created (now in strategy subdirectory without strategy in filename)
+    if [ ! -f "results/${COUNTRY}/${STRATEGY}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
         log_error "Aggregation failed - combined results file not created"
         exit 1
     fi
@@ -238,8 +238,8 @@ run_counterfactual_analysis() {
     if [ "$CF_ANALYSIS_SUCCESS" = true ]; then
         log_success "Counterfactual analysis complete"
         
-        # Find the most recent counterfactual output file
-        CF_FILE=$(find "results/${COUNTRY}" -name "counterfactual_analysis_*.json" -type f -print0 2>/dev/null | \
+        # Find the most recent counterfactual output file (now in strategy subdirectory)
+        CF_FILE=$(find "results/${COUNTRY}/${STRATEGY}" -name "counterfactual_analysis_*.json" -type f -print0 2>/dev/null | \
                   xargs -0 ls -t 2>/dev/null | head -1)
         
         if [ -n "$CF_FILE" ] && [ -f "$CF_FILE" ]; then
@@ -264,7 +264,7 @@ run_counterfactual_analysis() {
 generate_summary() {
     log_phase "[Phase 5/5] Analysis Complete - Summary Report"
     
-    RESULTS_DIR="results/${COUNTRY}"
+    RESULTS_DIR="results/${COUNTRY}/${STRATEGY}"
     
     echo ""
     echo "Strategy: ${STRATEGY}"
@@ -278,51 +278,51 @@ generate_summary() {
     echo ""
     
     # Per-model inference results
-    echo "📁 Per-Model Inference Results (strategy=${STRATEGY}):"
-    for f in "${RESULTS_DIR}"/ollama_results_${STRATEGY}_*_acled_${COUNTRY}_state_actors.csv; do
+    echo "📁 Per-Model Inference Results:"
+    for f in "${RESULTS_DIR}"/ollama_results_*_acled_${COUNTRY}_state_actors.csv; do
         [ -f "$f" ] && echo "  ✓ $(basename "$f")"
     done
     
     # Core outputs
     echo ""
     echo "📊 Core Predictions & Calibration (combined + per-model):"
-    [ -f "${RESULTS_DIR}/ollama_results_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " ollama_results_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (raw predictions)"
-    [ -f "${RESULTS_DIR}/ollama_results_${STRATEGY}_calibrated.csv" ] && \
-        echo " ollama_results_${STRATEGY}_calibrated.csv (calibrated predictions)"
-    [ -f "${RESULTS_DIR}/calibration_brier_scores_${STRATEGY}.csv" ] && \
-        echo " calibration_brier_scores_${STRATEGY}.csv (Brier score analysis)"
-    [ -f "${RESULTS_DIR}/reliability_diagrams_${STRATEGY}.png" ] && \
-        echo " reliability_diagrams_${STRATEGY}.png (calibration plots)"
+    [ -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " ollama_results_acled_${COUNTRY}_state_actors.csv (raw predictions)"
+    [ -f "${RESULTS_DIR}/ollama_results_calibrated.csv" ] && \
+        echo " ollama_results_calibrated.csv (calibrated predictions)"
+    [ -f "${RESULTS_DIR}/calibration_brier_scores.csv" ] && \
+        echo " calibration_brier_scores.csv (Brier score analysis)"
+    [ -f "${RESULTS_DIR}/reliability_diagrams.png" ] && \
+        echo " reliability_diagrams.png (calibration plots)"
     
     echo ""
     echo "Classification Metrics:"
-    [ -f "${RESULTS_DIR}/metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (P/R/F1, accuracy)"
-    [ -f "${RESULTS_DIR}/confusion_matrices_${STRATEGY}_acled_${COUNTRY}_state_actors.json" ] && \
-        echo " confusion_matrices_${STRATEGY}_acled_${COUNTRY}_state_actors.json"
-    [ -f "${RESULTS_DIR}/per_class_report_${STRATEGY}.csv" ] && \
-        echo " per_class_report_${STRATEGY}.csv (per-class performance)"
+    [ -f "${RESULTS_DIR}/metrics_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " metrics_acled_${COUNTRY}_state_actors.csv (P/R/F1, accuracy)"
+    [ -f "${RESULTS_DIR}/confusion_matrices_acled_${COUNTRY}_state_actors.json" ] && \
+        echo " confusion_matrices_acled_${COUNTRY}_state_actors.json"
+    [ -f "${RESULTS_DIR}/per_class_report.csv" ] && \
+        echo " per_class_report.csv (per-class performance)"
     
     echo ""
     echo "Fairness & Bias Metrics:"
-    [ -f "${RESULTS_DIR}/fairness_metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " fairness_metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (SPD, Equalized Odds)"
-    [ -f "${RESULTS_DIR}/harm_metrics_${STRATEGY}_detailed.csv" ] && \
-        echo " harm_metrics_${STRATEGY}_detailed.csv (False Legitimization/Illegitimization rates)"
-    [ -f "${RESULTS_DIR}/fl_fi_${STRATEGY}_by_model.csv" ] && \
-        echo " fl_fi_${STRATEGY}_by_model.csv (FL/FI counts)"
+    [ -f "${RESULTS_DIR}/fairness_metrics_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " fairness_metrics_acled_${COUNTRY}_state_actors.csv (SPD, Equalized Odds)"
+    [ -f "${RESULTS_DIR}/harm_metrics_detailed.csv" ] && \
+        echo " harm_metrics_detailed.csv (False Legitimization/Illegitimization rates)"
+    [ -f "${RESULTS_DIR}/fl_fi_by_model.csv" ] && \
+        echo " fl_fi_by_model.csv (FL/FI counts)"
     
     echo ""
     echo "Source & Error Analysis:"
-    [ -f "${RESULTS_DIR}/error_correlations_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " error_correlations_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (notes length correlation)"
-    [ -f "${RESULTS_DIR}/top_disagreements_${STRATEGY}.csv" ] && \
-        echo " top_disagreements_${STRATEGY}.csv (high-confidence disagreements)"
-    [ -f "${RESULTS_DIR}/error_cases_false_legitimization_${STRATEGY}.csv" ] && \
-        echo " error_cases_false_legitimization_${STRATEGY}.csv (N≤200 error samples)"
-    [ -f "${RESULTS_DIR}/error_cases_false_illegitimization_${STRATEGY}.csv" ] && \
-        echo " error_cases_false_illegitimization_${STRATEGY}.csv (N≤200 error samples)"
+    [ -f "${RESULTS_DIR}/error_correlations_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " error_correlations_acled_${COUNTRY}_state_actors.csv (notes length correlation)"
+    [ -f "${RESULTS_DIR}/top_disagreements.csv" ] && \
+        echo " top_disagreements.csv (high-confidence disagreements)"
+    [ -f "${RESULTS_DIR}/error_cases_false_legitimization.csv" ] && \
+        echo " error_cases_false_legitimization.csv (N≤200 error samples)"
+    [ -f "${RESULTS_DIR}/error_cases_false_illegitimization.csv" ] && \
+        echo " error_cases_false_illegitimization.csv (N≤200 error samples)"
     
     echo ""
     echo "Counterfactual Analysis:"
@@ -335,12 +335,12 @@ generate_summary() {
     
     echo ""
     echo "Visualizations:"
-    [ -f "${RESULTS_DIR}/per_class_metrics_${STRATEGY}.png" ] && \
-        echo " per_class_metrics_${STRATEGY}.png"
-    [ -f "${RESULTS_DIR}/top_disagreements_table_${STRATEGY}.png" ] && \
-        echo " top_disagreements_table_${STRATEGY}.png"
-    [ -f "${RESULTS_DIR}/accuracy_vs_coverage_${STRATEGY}.png" ] && \
-        echo " accuracy_vs_coverage_${STRATEGY}.png"
+    [ -f "${RESULTS_DIR}/per_class_metrics.png" ] && \
+        echo " per_class_metrics.png"
+    [ -f "${RESULTS_DIR}/top_disagreements_table.png" ] && \
+        echo " top_disagreements_table.png"
+    [ -f "${RESULTS_DIR}/accuracy_vs_coverage.png" ] && \
+        echo " accuracy_vs_coverage.png"
     
     echo ""
     echo "====================================================================="

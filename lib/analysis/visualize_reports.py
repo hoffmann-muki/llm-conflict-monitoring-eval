@@ -2,21 +2,19 @@
 """Visualize per-class metrics and top disagreements.
 
 Outputs:
-- results/per_class_metrics_{strategy}.png
-- results/top_disagreements_table_{strategy}.png
+- results/{country}/{strategy}/per_class_metrics.png
+- results/{country}/{strategy}/top_disagreements_table.png
 """
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from lib.core.data_helpers import get_strategy
+from lib.core.data_helpers import setup_country_environment
 
-COUNTRY = os.environ.get('COUNTRY', 'cmr')
-STRATEGY = get_strategy()
-OUT_DIR = os.path.join('results', COUNTRY)
+COUNTRY, OUT_DIR = setup_country_environment()
 os.makedirs(OUT_DIR, exist_ok=True)
-PER_CLASS_CSV = os.path.join(OUT_DIR, f"per_class_report_{STRATEGY}.csv")
-TOP_CSV = os.path.join(OUT_DIR, f"top_disagreements_{STRATEGY}.csv")
+PER_CLASS_CSV = os.path.join(OUT_DIR, "per_class_report.csv")
+TOP_CSV = os.path.join(OUT_DIR, "top_disagreements.csv")
 
 def plot_per_class():
     df = pd.read_csv(PER_CLASS_CSV)
@@ -24,9 +22,9 @@ def plot_per_class():
     pivot = df.pivot(index="label", columns="model", values="f1")
     ax = pivot.plot(kind="bar", rot=0, figsize=(10, 6))
     ax.set_ylabel("F1 score")
-    ax.set_title(f"Per-class F1 by model ({STRATEGY})")
+    ax.set_title(f"Per-class F1 by model ({COUNTRY})")
     plt.tight_layout()
-    out = os.path.join(OUT_DIR, f"per_class_metrics_{STRATEGY}.png")
+    out = os.path.join(OUT_DIR, "per_class_metrics.png")
     plt.savefig(out, dpi=200)
     plt.close()
     print(f"Wrote {out}")
@@ -51,7 +49,7 @@ def render_top_table():
     table.auto_set_font_size(False)
     table.set_fontsize(8)
     table.scale(1, 1.2)
-    out = os.path.join(OUT_DIR, f"top_disagreements_table_{STRATEGY}.png")
+    out = os.path.join(OUT_DIR, "top_disagreements_table.png")
     plt.tight_layout()
     plt.savefig(out, dpi=200)
     plt.close()

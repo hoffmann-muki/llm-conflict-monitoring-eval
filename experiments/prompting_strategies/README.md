@@ -1,28 +1,33 @@
 # Prompting Strategies
 
-Modular prompting strategies for classification experiments.
+Modular prompting strategies for event classification experiments.
 
 ## Available Strategies
 
-### Zero-Shot
-Direct classification without examples. Default strategy for experiments.
+| Strategy | Description | Use Case |
+|----------|-------------|----------|
+| `zero_shot` | Direct classification without examples | Default, baseline comparison |
+| `few_shot` | Classification with 1-5 examples per category | Improved accuracy |
+| `explainable` | Chain-of-thought reasoning prompts | Transparent decision-making |
+
+## Usage
 
 ```python
-from experiments.prompting_strategies import ZeroShotStrategy
+from experiments.prompting_strategies import ZeroShotStrategy, FewShotStrategy
 
+# Zero-shot (default)
 strategy = ZeroShotStrategy()
-prompt = strategy.make_prompt("Military forces attacked civilians")
+prompt = strategy.make_prompt("Military forces attacked civilians in the village")
+system_msg = strategy.get_system_message()
+
+# Few-shot with examples
+strategy = FewShotStrategy()
+prompt = strategy.make_prompt("Protesters gathered in the capital")
 ```
 
-### Few-Shot
-Classification with example demonstrations (1-5 examples per category).
+## Creating Custom Strategies
 
-### Explainable
-Chain-of-thought reasoning prompts for transparent decision-making.
-
-## Creating New Strategies
-
-All strategies must inherit from `PromptingStrategy` base class:
+All strategies must inherit from the `PromptingStrategy` base class:
 
 ```python
 from experiments.prompting_strategies.base import PromptingStrategy
@@ -30,8 +35,8 @@ from typing import Dict, Any, Optional
 
 class MyStrategy(PromptingStrategy):
     def make_prompt(self, note: str) -> str:
-        """Generate prompt for the event note."""
-        return f"Your prompt template: {note}"
+        """Generate classification prompt for the event note."""
+        return f"Classify this event: {note}"
     
     def get_schema(self) -> Dict[str, Any]:
         """Define expected JSON response schema."""
@@ -46,41 +51,85 @@ class MyStrategy(PromptingStrategy):
     
     def get_system_message(self) -> Optional[str]:
         """Optional system message for the model."""
-        return "You are an expert classifier."
+        return "You are an expert conflict event classifier."
+    
+    def get_name(self) -> str:
+        """Strategy name for results organization."""
+        return "my_strategy"
 ```
 
 ## Base Class Interface
 
 ### Required Methods
 
-- `make_prompt(note: str) -> str`: Generate prompt for classification
-- `get_schema() -> Dict`: Return JSON schema for responses
-- `get_system_message() -> Optional[str]`: Return system message (or None)
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `make_prompt(note)` | `str` | Generate prompt for classification |
+| `get_schema()` | `Dict` | JSON schema for structured responses |
+| `get_system_message()` | `Optional[str]` | System message (or None) |
 
 ### Optional Methods
 
-- `get_name() -> str`: Override to customize strategy name (used in results organization)
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_name()` | `str` | Strategy name (defaults to class name) |
 
 ## Event Categories
 
-All strategies should support these ACLED event types:
-- V = Violence against civilians
-- B = Battles
-- E = Explosions/Remote violence
-- P = Protests
-- R = Riots
-- S = Strategic developments
+All strategies classify events into ACLED categories:
 
-## Integration
+| Code | Category |
+|------|----------|
+| V | Violence against civilians |
+| B | Battles |
+| E | Explosions/Remote violence |
+| P | Protests |
+| R | Riots |
+| S | Strategic developments |
+
+## Registering New Strategies
 
 1. Create your strategy file in this directory
 2. Add import to `__init__.py`
-3. Register your strategy in `lib.core.strategy_helpers` by adding it
-    to the `STRATEGY_REGISTRY` (see `lib/core/strategy_helpers.py`).
-4. Run experiments:
-    ```bash
-    STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
-      ./experiments/scripts/run_ollama_experiment.sh
-    ```
+3. Register in `lib/core/strategy_helpers.py`:
 
-**Architecture Note:** The inference layer (`lib.inference.ollama_client`) requires explicit prompts - it contains no hardcoded prompts. Strategies generate prompts; the `lib.core.strategy_helpers` module provides the central registry and factory for strategies, and the inference client handles API communication.
+```python
+# In STRATEGY_REGISTRY
+STRATEGY_REGISTRY = {
+    'zero_shot': ZeroShotStrategy,
+    'few_shot': FewShotStrategy,
+    'explainable': ExplainableStrategy,
+    'my_strategy': MyStrategy,  # Add your strategy
+}
+```
+
+4. Run experiments:
+```bash
+STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Prompting Strategy                                               │
+│   - Generates prompts from event text                           │
+│   - Defines response schema                                      │
+│   - Provides system message                                      │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Strategy Registry (lib/core/strategy_helpers.py)                │
+│   - Maps strategy names to classes                              │
+│   - Factory function get_strategy()                             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Inference Client (lib/inference/ollama_client.py)               │
+│   - Handles API communication                                   │
+│   - No hardcoded prompts - uses strategy output                 │
+└─────────────────────────────────────────────────────────────────┘
+```

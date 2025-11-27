@@ -7,23 +7,22 @@ from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from lib.core.data_helpers import setup_country_environment, get_strategy
+from lib.core.data_helpers import setup_country_environment
 from lib.core.result_aggregator import model_name_to_slug
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
-STRATEGY = get_strategy()
 
 # Input/raw predictions CSV (combined from aggregator)
-RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_{STRATEGY}_acled_{COUNTRY}_state_actors.csv')
+RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
 # Calibration params (written by calibrate_confidences)
-CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_{STRATEGY}_acled_{COUNTRY}_state_actors.json')
+CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_acled_{COUNTRY}_state_actors.json')
 # Combined outputs
-OUT_CAL_CSV = os.path.join(RESULTS_DIR, f'ollama_results_{STRATEGY}_calibrated.csv')
-OUT_METRICS_CSV = os.path.join(RESULTS_DIR, f'metrics_thresholds_{STRATEGY}_calibrated.csv')
-OUT_BRIER_CSV = os.path.join(RESULTS_DIR, f'calibration_brier_scores_{STRATEGY}.csv')
-OUT_PLOT_REL = os.path.join(RESULTS_DIR, f'reliability_diagrams_{STRATEGY}.png')
-OUT_PLOT_ACC = os.path.join(RESULTS_DIR, f'accuracy_vs_coverage_{STRATEGY}.png')
-OUT_ISO_MAP = os.path.join(RESULTS_DIR, f'isotonic_mappings_{STRATEGY}.json')
+OUT_CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')
+OUT_BRIER_CSV = os.path.join(RESULTS_DIR, 'calibration_brier_scores.csv')
+OUT_PLOT_REL = os.path.join(RESULTS_DIR, 'reliability_diagrams.png')
+OUT_PLOT_ACC = os.path.join(RESULTS_DIR, 'accuracy_vs_coverage.png')
+OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
 
 labels = ['V','B','E','P','R','S']
 thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]

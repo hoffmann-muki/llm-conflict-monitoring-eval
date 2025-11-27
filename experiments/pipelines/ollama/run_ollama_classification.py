@@ -232,8 +232,8 @@ def run_classification_experiment(country_code: str,
     print(f"  - {len(subset)} events")
     print(f"  - {len(models)} models\n")
     
-    # Setup results directory
-    _, results_dir = setup_country_environment(country_code)
+    # Setup results directory (includes strategy subdirectory)
+    _, results_dir = setup_country_environment(country_code, strategy_name)
     
     for m in models:
         print(f"Starting model: {m}")
@@ -254,7 +254,7 @@ def run_classification_experiment(country_code: str,
     
     print(f"\n{'='*70}")
     print(f"Experiment completed!")
-    print(f"Per-model results saved to: {results_dir}/ollama_results_{strategy_name}_*_acled_{country_code}_state_actors.csv")
+    print(f"Per-model results saved to: {results_dir}/ollama_results_*_acled_{country_code}_state_actors.csv")
     print(f"Run 'python -m lib.core.result_aggregator' to combine results for analysis.")
     print(f"{'='*70}\n")
     print(res_df.head(5))
