@@ -13,7 +13,8 @@
 # Environment Variables:
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
-#   CF_MODELS            - Models for counterfactual analysis [default: llama3.2,mistral:7b]
+#   OLLAMA_MODELS        - Models for inference [default: all WORKING_MODELS]
+#   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 50]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
@@ -27,7 +28,8 @@ set -o pipefail  # Pipeline fails if any command fails
 # Configuration with sensible defaults
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
-CF_MODELS="${CF_MODELS:-llama3.2,mistral:7b}"
+OLLAMA_MODELS="${OLLAMA_MODELS:-}"
+CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-50}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
@@ -100,8 +102,15 @@ run_inference() {
     log_phase "[Phase 1/5] Model Inference - Generating Predictions"
     log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}"
     
-    STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
-        "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
+    # Set OLLAMA_MODELS if provided, otherwise will use WORKING_MODELS from constants
+    if [ -n "$OLLAMA_MODELS" ]; then
+        STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+            OLLAMA_MODELS="${OLLAMA_MODELS}" \
+            "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
+    else
+        STRATEGY="zero_shot" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+            "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
+    fi
     
     log_success "Phase 1 complete: Predictions generated"
 }
@@ -153,13 +162,31 @@ run_counterfactual_analysis() {
     
     log_phase "[Phase 4/5] Counterfactual Perturbation Analysis"
     
-    log_step "Running counterfactual analysis with models: ${CF_MODELS}"
-    log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
-    
-    if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
-        --models "${CF_MODELS}" \
-        --events "${CF_EVENTS}"; then
+    # If CF_MODELS not set, use all WORKING_MODELS from constants
+    if [ -n "$CF_MODELS" ]; then
+        log_step "Running counterfactual analysis with models: ${CF_MODELS}"
+        log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
+        if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+            --models "${CF_MODELS}" \
+            --events "${CF_EVENTS}"; then
+            CF_ANALYSIS_SUCCESS=true
+        else
+            CF_ANALYSIS_SUCCESS=false
+        fi
+    else
+        log_step "Running counterfactual analysis with all WORKING_MODELS"
+        log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
+        
+        if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+            --events "${CF_EVENTS}"; then
+            CF_ANALYSIS_SUCCESS=true
+        else
+            CF_ANALYSIS_SUCCESS=false
+        fi
+    fi
+    
+    if [ "$CF_ANALYSIS_SUCCESS" = true ]; then
         log_success "Counterfactual analysis complete"
         
         # Find the most recent counterfactual output file

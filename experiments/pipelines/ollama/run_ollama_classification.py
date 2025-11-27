@@ -272,7 +272,7 @@ def main():
     parser.add_argument('--primary-share', type=float, default=0.0,
                        help='Fraction for primary group (0-1). Only used if --primary-group is set. '
                             'Default: 0.0')
-        parser.add_argument('--models', default=os.environ.get('OLLAMA_MODELS', None),
+    parser.add_argument('--models', default=os.environ.get('OLLAMA_MODELS', None),
                        help='Comma-separated list of Ollama models to run. Overrides WORKING_MODELS. '
                            'Example: --models "llama3.1:8b,mistral:7b"')
     
