@@ -1,6 +1,16 @@
 import os
 from typing import Dict, Tuple
 
+def get_strategy() -> str:
+    """Get the prompting strategy from environment variable.
+    
+    Returns:
+        Strategy name (e.g., 'zero_shot', 'few_shot', 'explainable').
+        Defaults to 'zero_shot' if STRATEGY env var is not set.
+    """
+    return os.environ.get('STRATEGY', 'zero_shot')
+
+
 def setup_country_environment(country: str | None = None) -> Tuple[str, str]:
     """Standard country environment setup used across tools.
     
@@ -12,11 +22,23 @@ def setup_country_environment(country: str | None = None) -> Tuple[str, str]:
     os.makedirs(results_dir, exist_ok=True)
     return country, results_dir
 
-def paths_for_country(country: str) -> Dict[str, str]:
+def paths_for_country(country: str, strategy: str = None) -> Dict[str, str]:
+    """Get standard paths for a country and strategy.
+    
+    Args:
+        country: Country code (e.g., 'cmr', 'nga')
+        strategy: Prompting strategy. If None, reads from STRATEGY env var.
+    
+    Returns:
+        Dictionary with paths for results_dir, datasets_dir, sample_path, calibrated_csv
+    """
+    if strategy is None:
+        strategy = get_strategy()
+    
     results_dir = os.path.join('results', country)
     datasets_dir = os.path.join('datasets', country)
     sample_path = os.path.join(datasets_dir, f'state_actor_sample_{country}.csv')
-    calibrated_csv = os.path.join(results_dir, 'ollama_results_calibrated.csv')
+    calibrated_csv = os.path.join(results_dir, f'ollama_results_{strategy}_calibrated.csv')
     return {
         'results_dir': results_dir,
         'datasets_dir': datasets_dir,

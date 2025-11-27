@@ -31,7 +31,7 @@ from lib.core.result_aggregator import model_name_to_slug, get_per_model_result_
 def run_model_on_rows_with_strategy(model_name: str, rows, strategy, 
                                     note_col: str = 'notes',
                                     event_id_col: str = 'event_id_cnty',
-                                    true_label_col: str = 'event_type',
+                                    true_label_col: str = 'gold_label',
                                     actor_norm_col: str = 'actor_norm'):
     """Run model on rows using specified prompting strategy.
     
@@ -243,7 +243,7 @@ def run_classification_experiment(country_code: str,
         
         # Save per-model results immediately (allows incremental runs)
         model_df = pd.DataFrame(model_results)
-        model_out_path = get_per_model_result_path(country_code, m, results_dir)
+        model_out_path = get_per_model_result_path(country_code, m, results_dir, strategy=strategy_name)
         model_df.to_csv(model_out_path, index=False)
         print(f"Saved {m} results to: {model_out_path}")
     
@@ -254,7 +254,7 @@ def run_classification_experiment(country_code: str,
     
     print(f"\n{'='*70}")
     print(f"Experiment completed!")
-    print(f"Per-model results saved to: {results_dir}/ollama_results_*_acled_{country_code}_state_actors.csv")
+    print(f"Per-model results saved to: {results_dir}/ollama_results_{strategy_name}_*_acled_{country_code}_state_actors.csv")
     print(f"Run 'python -m lib.core.result_aggregator' to combine results for analysis.")
     print(f"{'='*70}\n")
     print(res_df.head(5))

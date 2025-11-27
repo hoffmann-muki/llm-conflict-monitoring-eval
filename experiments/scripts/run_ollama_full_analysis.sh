@@ -144,19 +144,19 @@ run_inference() {
 run_aggregation() {
     log_phase "[Phase 1.5/5] Aggregating Per-Model Results"
     
-    log_step "Scanning for per-model result files..."
-    PER_MODEL_COUNT=$(find "results/${COUNTRY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+    log_step "Scanning for per-model result files (strategy=${STRATEGY})..."
+    PER_MODEL_COUNT=$(find "results/${COUNTRY}" -name "ollama_results_${STRATEGY}_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
     
     if [ "$PER_MODEL_COUNT" -eq 0 ]; then
-        log_error "No per-model result files found in results/${COUNTRY}/"
+        log_error "No per-model result files found in results/${COUNTRY}/ for strategy ${STRATEGY}"
         exit 1
     fi
     
     log_step "Found $PER_MODEL_COUNT per-model result file(s). Aggregating..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.core.result_aggregator
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.core.result_aggregator
     
     # Verify combined file was created
-    if [ ! -f "results/${COUNTRY}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
+    if [ ! -f "results/${COUNTRY}/ollama_results_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ]; then
         log_error "Aggregation failed - combined results file not created"
         exit 1
     fi
@@ -169,15 +169,15 @@ run_calibration_and_metrics() {
     log_phase "[Phase 2/5] Calibration & Core Metrics"
     
     log_step "Applying calibration and computing Brier scores..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.calibration
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.calibration
     log_success "Calibration complete"
     
     log_step "Computing classification metrics, fairness metrics, and error correlations..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.metrics
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.metrics
     log_success "Core metrics computed"
     
     log_step "Computing per-class decision thresholds..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.thresholds
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.thresholds
     log_success "Thresholds computed"
     
     log_success "Phase 2 complete: Calibration and core metrics"
@@ -188,15 +188,15 @@ run_bias_and_harm_analysis() {
     log_phase "[Phase 3/5] Bias & Harm Analysis"
     
     log_step "Computing False Legitimization/Illegitimization rates..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.harm
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.harm
     log_success "Harm metrics computed"
     
     log_step "Generating per-class reports and sampling error cases..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
     log_success "Error case sampling complete"
     
     log_step "Creating visualization plots..."
-    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.visualize_reports
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.visualize_reports
     log_success "Visualizations generated"
     
     log_success "Phase 3 complete: Bias and harm analysis"
@@ -216,7 +216,7 @@ run_counterfactual_analysis() {
         log_step "Running counterfactual analysis with models: ${CF_MODELS}"
         log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
-        if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
             --models "${CF_MODELS}" \
             --events "${CF_EVENTS}"; then
             CF_ANALYSIS_SUCCESS=true
@@ -227,7 +227,7 @@ run_counterfactual_analysis() {
         log_step "Running counterfactual analysis with all WORKING_MODELS"
         log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
-        if COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
             --events "${CF_EVENTS}"; then
             CF_ANALYSIS_SUCCESS=true
         else
@@ -278,51 +278,51 @@ generate_summary() {
     echo ""
     
     # Per-model inference results
-    echo "📁 Per-Model Inference Results:"
-    for f in "${RESULTS_DIR}"/ollama_results_*_acled_${COUNTRY}_state_actors.csv; do
+    echo "📁 Per-Model Inference Results (strategy=${STRATEGY}):"
+    for f in "${RESULTS_DIR}"/ollama_results_${STRATEGY}_*_acled_${COUNTRY}_state_actors.csv; do
         [ -f "$f" ] && echo "  ✓ $(basename "$f")"
     done
     
     # Core outputs
     echo ""
     echo "📊 Core Predictions & Calibration (combined + per-model):"
-    [ -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " ollama_results_acled_${COUNTRY}_state_actors.csv (raw predictions)"
-    [ -f "${RESULTS_DIR}/ollama_results_calibrated.csv" ] && \
-        echo " ollama_results_calibrated.csv (calibrated predictions)"
-    [ -f "${RESULTS_DIR}/calibration_brier_scores.csv" ] && \
-        echo " calibration_brier_scores.csv (Brier score analysis)"
-    [ -f "${RESULTS_DIR}/reliability_diagrams.png" ] && \
-        echo " reliability_diagrams.png (calibration plots)"
+    [ -f "${RESULTS_DIR}/ollama_results_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " ollama_results_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (raw predictions)"
+    [ -f "${RESULTS_DIR}/ollama_results_${STRATEGY}_calibrated.csv" ] && \
+        echo " ollama_results_${STRATEGY}_calibrated.csv (calibrated predictions)"
+    [ -f "${RESULTS_DIR}/calibration_brier_scores_${STRATEGY}.csv" ] && \
+        echo " calibration_brier_scores_${STRATEGY}.csv (Brier score analysis)"
+    [ -f "${RESULTS_DIR}/reliability_diagrams_${STRATEGY}.png" ] && \
+        echo " reliability_diagrams_${STRATEGY}.png (calibration plots)"
     
     echo ""
     echo "Classification Metrics:"
-    [ -f "${RESULTS_DIR}/metrics_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " metrics_acled_${COUNTRY}_state_actors.csv (P/R/F1, accuracy)"
-    [ -f "${RESULTS_DIR}/confusion_matrices_acled_${COUNTRY}_state_actors.json" ] && \
-        echo " confusion_matrices_acled_${COUNTRY}_state_actors.json"
-    [ -f "${RESULTS_DIR}/per_class_report.csv" ] && \
-        echo " per_class_report.csv (per-class performance)"
+    [ -f "${RESULTS_DIR}/metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (P/R/F1, accuracy)"
+    [ -f "${RESULTS_DIR}/confusion_matrices_${STRATEGY}_acled_${COUNTRY}_state_actors.json" ] && \
+        echo " confusion_matrices_${STRATEGY}_acled_${COUNTRY}_state_actors.json"
+    [ -f "${RESULTS_DIR}/per_class_report_${STRATEGY}.csv" ] && \
+        echo " per_class_report_${STRATEGY}.csv (per-class performance)"
     
     echo ""
     echo "Fairness & Bias Metrics:"
-    [ -f "${RESULTS_DIR}/fairness_metrics_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " fairness_metrics_acled_${COUNTRY}_state_actors.csv (SPD, Equalized Odds)"
-    [ -f "${RESULTS_DIR}/harm_metrics_detailed.csv" ] && \
-        echo " harm_metrics_detailed.csv (False Legitimization/Illegitimization rates)"
-    [ -f "${RESULTS_DIR}/fl_fi_by_model.csv" ] && \
-        echo " fl_fi_by_model.csv (FL/FI counts)"
+    [ -f "${RESULTS_DIR}/fairness_metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " fairness_metrics_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (SPD, Equalized Odds)"
+    [ -f "${RESULTS_DIR}/harm_metrics_${STRATEGY}_detailed.csv" ] && \
+        echo " harm_metrics_${STRATEGY}_detailed.csv (False Legitimization/Illegitimization rates)"
+    [ -f "${RESULTS_DIR}/fl_fi_${STRATEGY}_by_model.csv" ] && \
+        echo " fl_fi_${STRATEGY}_by_model.csv (FL/FI counts)"
     
     echo ""
     echo "Source & Error Analysis:"
-    [ -f "${RESULTS_DIR}/error_correlations_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " error_correlations_acled_${COUNTRY}_state_actors.csv (notes length correlation)"
-    [ -f "${RESULTS_DIR}/top_disagreements.csv" ] && \
-        echo " top_disagreements.csv (high-confidence disagreements)"
-    [ -f "${RESULTS_DIR}/error_cases_false_legitimization.csv" ] && \
-        echo " error_cases_false_legitimization.csv (N≤200 error samples)"
-    [ -f "${RESULTS_DIR}/error_cases_false_illegitimization.csv" ] && \
-        echo " error_cases_false_illegitimization.csv (N≤200 error samples)"
+    [ -f "${RESULTS_DIR}/error_correlations_${STRATEGY}_acled_${COUNTRY}_state_actors.csv" ] && \
+        echo " error_correlations_${STRATEGY}_acled_${COUNTRY}_state_actors.csv (notes length correlation)"
+    [ -f "${RESULTS_DIR}/top_disagreements_${STRATEGY}.csv" ] && \
+        echo " top_disagreements_${STRATEGY}.csv (high-confidence disagreements)"
+    [ -f "${RESULTS_DIR}/error_cases_false_legitimization_${STRATEGY}.csv" ] && \
+        echo " error_cases_false_legitimization_${STRATEGY}.csv (N≤200 error samples)"
+    [ -f "${RESULTS_DIR}/error_cases_false_illegitimization_${STRATEGY}.csv" ] && \
+        echo " error_cases_false_illegitimization_${STRATEGY}.csv (N≤200 error samples)"
     
     echo ""
     echo "Counterfactual Analysis:"
@@ -335,12 +335,12 @@ generate_summary() {
     
     echo ""
     echo "Visualizations:"
-    [ -f "${RESULTS_DIR}/per_class_metrics.png" ] && \
-        echo " per_class_metrics.png"
-    [ -f "${RESULTS_DIR}/top_disagreements_table.png" ] && \
-        echo " top_disagreements_table.png"
-    [ -f "${RESULTS_DIR}/accuracy_vs_coverage.png" ] && \
-        echo " accuracy_vs_coverage.png"
+    [ -f "${RESULTS_DIR}/per_class_metrics_${STRATEGY}.png" ] && \
+        echo " per_class_metrics_${STRATEGY}.png"
+    [ -f "${RESULTS_DIR}/top_disagreements_table_${STRATEGY}.png" ] && \
+        echo " top_disagreements_table_${STRATEGY}.png"
+    [ -f "${RESULTS_DIR}/accuracy_vs_coverage_${STRATEGY}.png" ] && \
+        echo " accuracy_vs_coverage_${STRATEGY}.png"
     
     echo ""
     echo "====================================================================="

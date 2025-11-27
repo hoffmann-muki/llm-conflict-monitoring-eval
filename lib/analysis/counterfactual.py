@@ -406,11 +406,12 @@ class PerturbationGenerator:
 class CounterfactualAnalyzer:
     """Main analyzer for counterfactual model behavior."""
     
-    def __init__(self, country: str, models: List[str]):
+    def __init__(self, country: str, models: List[str], strategy: str = None):
         self.country = country
         self.models = models
+        self.strategy = strategy or os.environ.get('STRATEGY', 'zero_shot')
         self.perturbation_generator = PerturbationGenerator()
-        self.paths = paths_for_country(country)
+        self.paths = paths_for_country(country, self.strategy)
         
         # Load original results
         self.original_results = self.load_original_results()
@@ -821,10 +822,12 @@ def main():
     parser.add_argument('--events', type=int, default=None, help='Number of top-N disagreements to analyze (default: all available)')
     parser.add_argument('--top-percent', type=float, default=None, help='Use top X%% of available disagreements (mutually exclusive with --events)')
     parser.add_argument('--output', default=None, help='Output file path')
+    parser.add_argument('--strategy', default=None, help='Strategy name to include in output filename (default: from STRATEGY env var)')
     
     args = parser.parse_args()
     
     country = os.environ.get('COUNTRY', 'cmr')
+    strategy = args.strategy or os.environ.get('STRATEGY', 'zero_shot')
     
     # Use WORKING_MODELS if --models not provided
     if args.models:
@@ -834,8 +837,8 @@ def main():
         print(f"No --models specified, using all WORKING_MODELS: {models}")
     
     # Load top-N disagreements (required input)
-    paths = paths_for_country(country)
-    top_disagreements_path = os.path.join(paths['results_dir'], 'top_disagreements.csv')
+    paths = paths_for_country(country, strategy)
+    top_disagreements_path = os.path.join(paths['results_dir'], f'top_disagreements_{strategy}.csv')
     
     if not os.path.exists(top_disagreements_path):
         raise FileNotFoundError(
@@ -868,7 +871,7 @@ def main():
     print(f"Using top-N disagreements where models disagree on classification\n")
     
     # Run analysis
-    analyzer = CounterfactualAnalyzer(country, models)
+    analyzer = CounterfactualAnalyzer(country, models, strategy)
     
     results = []
     for idx, event_row in events_df.iterrows():
@@ -880,8 +883,8 @@ def main():
             continue
     
     # Generate report
-    models_slug = '_'.join(m.replace(':', '_') for m in models)
-    output_path = args.output or f"results/{country}/counterfactual_analysis_{models_slug}.json"
+    models_slug = '_'.join(m.replace(':', '-').replace('.', '_') for m in models)
+    output_path = args.output or f"results/{country}/counterfactual_analysis_{strategy}_{models_slug}.json"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     analyzer.generate_report(results, output_path)

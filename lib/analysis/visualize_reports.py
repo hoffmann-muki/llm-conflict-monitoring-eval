@@ -2,19 +2,21 @@
 """Visualize per-class metrics and top disagreements.
 
 Outputs:
-- results/per_class_metrics.png
-- results/top_disagreements_table.png
+- results/per_class_metrics_{strategy}.png
+- results/top_disagreements_table_{strategy}.png
 """
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from lib.core.data_helpers import get_strategy
 
 COUNTRY = os.environ.get('COUNTRY', 'cmr')
+STRATEGY = get_strategy()
 OUT_DIR = os.path.join('results', COUNTRY)
 os.makedirs(OUT_DIR, exist_ok=True)
-PER_CLASS_CSV = os.path.join(OUT_DIR, "per_class_report.csv")
-TOP_CSV = os.path.join(OUT_DIR, "top_disagreements.csv")
+PER_CLASS_CSV = os.path.join(OUT_DIR, f"per_class_report_{STRATEGY}.csv")
+TOP_CSV = os.path.join(OUT_DIR, f"top_disagreements_{STRATEGY}.csv")
 
 def plot_per_class():
     df = pd.read_csv(PER_CLASS_CSV)
@@ -22,15 +24,21 @@ def plot_per_class():
     pivot = df.pivot(index="label", columns="model", values="f1")
     ax = pivot.plot(kind="bar", rot=0, figsize=(10, 6))
     ax.set_ylabel("F1 score")
-    ax.set_title("Per-class F1 by model")
+    ax.set_title(f"Per-class F1 by model ({STRATEGY})")
     plt.tight_layout()
-    out = os.path.join(OUT_DIR, "per_class_metrics.png")
+    out = os.path.join(OUT_DIR, f"per_class_metrics_{STRATEGY}.png")
     plt.savefig(out, dpi=200)
     plt.close()
     print(f"Wrote {out}")
 
 def render_top_table():
     df = pd.read_csv(TOP_CSV)
+    
+    # Handle empty dataframe
+    if df.empty:
+        print(f"No disagreements to visualize (only one model or perfect agreement)")
+        return
+    
     # Select columns to display (keep event_id, true_label, actor_norm and preds/probs)
     cols = [c for c in df.columns if c in ("event_id", "true_label", "actor_norm") or c.startswith("pred_label_") or c.startswith("pred_prob_")]
     tab = df[cols].copy()
@@ -43,7 +51,7 @@ def render_top_table():
     table.auto_set_font_size(False)
     table.set_fontsize(8)
     table.scale(1, 1.2)
-    out = os.path.join(OUT_DIR, "top_disagreements_table.png")
+    out = os.path.join(OUT_DIR, f"top_disagreements_table_{STRATEGY}.png")
     plt.tight_layout()
     plt.savefig(out, dpi=200)
     plt.close()
