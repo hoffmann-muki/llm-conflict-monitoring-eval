@@ -5,8 +5,8 @@ Produces results compatible with the repository's analysis tooling
 (`per_class_metrics`, `counterfactual`, etc.).
 
 Usage examples:
-    python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --strategy zero_shot --sample-size 100
-    python experiments/pipelines/conflibert/run_conflibert_classification.py nga --strategy few_shot --sample-size 200
+    python experiments/pipelines/conflibert/run_conflibert_classification.py cmr --model-path models/conflibert --strategy zero_shot --sample-size 100
+    python experiments/pipelines/conflibert/run_conflibert_classification.py nga --model-path models/conflibert --strategy few_shot --sample-size 200
 """
 import argparse
 import pandas as pd
@@ -69,8 +69,8 @@ def parse_args():
                        help='Number of events to sample (default: 100)')
     parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'),
                        help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
-    parser.add_argument('--model', default='snowood1/ConfliBERT-scr-uncased',
-                       help='HuggingFace model ID or path (default: snowood1/ConfliBERT-scr-uncased)')
+    parser.add_argument('--model-path', required=True,
+                       help='Path to local ConfliBERT model directory (use download_conflibert_model.py to obtain)')
     parser.add_argument('--batch-size', type=int, default=16,
                        help='Batch size for inference (default: 16)')
     parser.add_argument('--max-length', type=int, default=256,
@@ -81,7 +81,7 @@ def parse_args():
     return parser.parse_args()
 
 def run_conflibert_classification(country_code: str, strategy_name: str, 
-                                 sample_size: int, model_name: str,
+                                 sample_size: int, model_path: str,
                                  batch_size: int, max_length: int, device: str,
                                  primary_group: str | None = None, primary_share: float = 0.0):
     """Run ConfliBERT classification with independent stratified sampling.
@@ -95,7 +95,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
         country_code: Country code (e.g., 'cmr', 'nga')
         strategy_name: Strategy name (for output organization)
         sample_size: Number of samples to generate
-        model_name: HuggingFace model ID
+        model_path: Path to local ConfliBERT model directory
         batch_size: Batch size for inference
         max_length: Max sequence length
         device: Device for inference
@@ -117,7 +117,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     print(f"\n{'='*70}")
     print(f"ConfliBERT Classification: {country_name} ({country_code})")
     print(f"Strategy: {strategy_name}")
-    print(f"Model: {model_name}")
+    print(f"Model path: {model_path}")
     print(f"Sample size: {sample_size}")
     print(f"{'='*70}\n")
     
@@ -214,10 +214,17 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     # Map labels to codes
     true_label_codes = [LABEL_MAP.get(lab) for lab in true_labels]
     
-    # Load model and tokenizer
-    print(f"Loading model/tokenizer: {model_name}")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    # Validate model path exists
+    if not os.path.exists(model_path):
+        raise SystemExit(
+            f"Model path not found: {model_path}\n"
+            f"Run: python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir {model_path}"
+        )
+    
+    # Load model and tokenizer from local path
+    print(f"Loading model/tokenizer from: {model_path}")
+    tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True, local_files_only=True)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
     model.to(device)
     model.eval()
     
@@ -260,7 +267,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                 confidence = float(prob_vec[pred_id])
                 
                 results.append({
-                    "model": f"conflibert_{model_name.split('/')[-1]}",
+                    "model": f"conflibert_{os.path.basename(model_path.rstrip('/'))}",
                     "event_id": event_ids[idx],
                     "true_label": true_label_codes[idx],
                     "pred_label": pred_code,
@@ -309,7 +316,7 @@ def main():
         country_code=args.country,
         strategy_name=args.strategy,
         sample_size=args.sample_size,
-        model_name=args.model,
+        model_path=args.model_path,
         batch_size=args.batch_size,
         max_length=args.max_length,
         device=args.device

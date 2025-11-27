@@ -12,6 +12,7 @@
 #   STRATEGY=explainable COUNTRY=cmr ./experiments/scripts/run_conflibert_experiment.sh
 #
 # Environment Variables:
+#   MODEL_PATH           - Path to local ConfliBERT model directory [default: models/conflibert]
 #   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
@@ -30,6 +31,7 @@ set -u  # Treat unset variables as an error
 set -o pipefail  # Pipeline fails if any command fails
 
 # Configuration with sensible defaults
+MODEL_PATH="${MODEL_PATH:-models/conflibert}"
 STRATEGY="${STRATEGY:-zero_shot}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
@@ -120,8 +122,17 @@ if ! "$VENV_PY" -c "import torch, transformers" 2>/dev/null; then
 fi
 log_success "PyTorch and transformers available"
 
+# Check model path exists
+if [ ! -d "$MODEL_PATH" ]; then
+    log_error "Model path not found: $MODEL_PATH"
+    log_info "Download model with: python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir $MODEL_PATH"
+    exit 1
+fi
+log_success "ConfliBERT model found at: $MODEL_PATH"
+
 # Display configuration
 log_phase "CONFLIBERT EXPERIMENT CONFIGURATION"
+log_info "Model Path:         $MODEL_PATH"
 log_info "Strategy:           $STRATEGY"
 log_info "Country:            $COUNTRY"
 log_info "Sample Size:        $SAMPLE_SIZE"
@@ -154,6 +165,7 @@ else
     fi
     
     "$VENV_PY" experiments/pipelines/conflibert/run_conflibert_classification.py "$COUNTRY" \
+        --model-path "$MODEL_PATH" \
         --strategy "$STRATEGY" \
         --sample-size "$SAMPLE_SIZE" \
         --batch-size "$BATCH_SIZE" \
