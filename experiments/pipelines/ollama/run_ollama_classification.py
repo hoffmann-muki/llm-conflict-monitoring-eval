@@ -23,6 +23,7 @@ from lib.data_preparation import extract_country_rows, get_actor_norm_series, ex
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_MODELS, COUNTRY_NAMES as _COUNTRY_NAMES
 from lib.inference.ollama_client import run_ollama_structured
 from lib.core.data_helpers import paths_for_country, resolve_columns, write_sample, setup_country_environment
+from lib.core.result_aggregator import model_name_to_slug, get_per_model_result_path
 
 # get_strategy and COUNTRY_NAMES are provided by lib.core.constants
 
@@ -183,29 +184,37 @@ def run_classification_experiment(country_code: str,
     
     print(f"Usable state-actor rows found ({country_name}): {len(usable):,}")
     
-    # Build stratified sample
-    n_total = min(sample_size, len(usable))
-    
-    # Log sampling configuration
-    if primary_group:
-        print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
-              f"{(1-primary_share)*100:.0f}% proportional to other classes")
+    # Check if sample file already exists (for consistent cross-model comparison)
+    sample_path = paths['sample_path']
+    if os.path.exists(sample_path):
+        print(f"Reusing existing sample file for cross-model consistency: {sample_path}")
+        df_test = pd.read_csv(sample_path)
+        print(f"Loaded {len(df_test)} events from existing sample")
     else:
-        print("Using proportional sampling: sample reflects natural class distribution")
+        # Build stratified sample
+        n_total = min(sample_size, len(usable))
+        
+        # Log sampling configuration
+        if primary_group:
+            print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
+                  f"{(1-primary_share)*100:.0f}% proportional to other classes")
+        else:
+            print("Using proportional sampling: sample reflects natural class distribution")
+        
+        df_test = build_stratified_sample(
+            usable,
+            stratify_col='event_type',
+            n_total=n_total,
+            primary_group=primary_group,
+            primary_share=primary_share,
+            label_map=LABEL_MAP,
+            random_state=42,
+            replace=False
+        )
+        
+        sample_path = write_sample(country_code, df_test)
+        print(f"Wrote stratified sample to {sample_path}")
     
-    df_test = build_stratified_sample(
-        usable,
-        stratify_col='event_type',
-        n_total=n_total,
-        primary_group=primary_group,
-        primary_share=primary_share,
-        label_map=LABEL_MAP,
-        random_state=42,
-        replace=False
-    )
-    
-    sample_path = write_sample(country_code, df_test)
-    print(f"Wrote stratified sample to {sample_path}")
     print(df_test.head())
     
     # Run classification with strategy
@@ -223,35 +232,34 @@ def run_classification_experiment(country_code: str,
     print(f"  - {len(subset)} events")
     print(f"  - {len(models)} models\n")
     
+    # Setup results directory
+    _, results_dir = setup_country_environment(country_code)
+    
     for m in models:
         print(f"Starting model: {m}")
         model_results = run_model_on_rows_with_strategy(m, subset, strategy)
         results.extend(model_results)
         print(f"Model {m} completed.")
+        
+        # Save per-model results immediately (allows incremental runs)
+        model_df = pd.DataFrame(model_results)
+        model_out_path = get_per_model_result_path(country_code, m, results_dir)
+        model_df.to_csv(model_out_path, index=False)
+        print(f"Saved {m} results to: {model_out_path}")
     
     res_df = pd.DataFrame(results)
     
-    # Setup results directory with strategy subfolder
-    _, results_dir = setup_country_environment(country_code)
-    
-    # Create strategy-specific subdirectory
-    strategy_results_dir = os.path.join(results_dir, strategy_name)
-    os.makedirs(strategy_results_dir, exist_ok=True)
-    
-    # Save results
-    out_path = os.path.join(
-        strategy_results_dir, 
-        f"ollama_results_acled_{country_code}_state_actors.csv"
-    )
-    res_df.to_csv(out_path, index=False)
+    # Note: Per-model files already saved above. 
+    # The combined file will be created by result_aggregator before analysis phases.
     
     print(f"\n{'='*70}")
     print(f"Experiment completed!")
-    print(f"Results saved to: {out_path}")
+    print(f"Per-model results saved to: {results_dir}/ollama_results_*_acled_{country_code}_state_actors.csv")
+    print(f"Run 'python -m lib.core.result_aggregator' to combine results for analysis.")
     print(f"{'='*70}\n")
     print(res_df.head(5))
     
-    return out_path
+    return results_dir
 
 
 def main():

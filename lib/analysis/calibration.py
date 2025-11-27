@@ -8,14 +8,15 @@ from sklearn.metrics import brier_score_loss
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from lib.core.data_helpers import setup_country_environment
+from lib.core.result_aggregator import model_name_to_slug
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
 
-# Input/raw predictions CSV (pipeline written)
+# Input/raw predictions CSV (combined from aggregator)
 RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
 # Calibration params (written by calibrate_confidences)
 CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_acled_{COUNTRY}_state_actors.json')
-# Outputs
+# Combined outputs
 OUT_CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
 OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')
 OUT_BRIER_CSV = os.path.join(RESULTS_DIR, 'calibration_brier_scores.csv')
@@ -26,6 +27,17 @@ OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
 labels = ['V','B','E','P','R','S']
 thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
 RANDOM_SEED = 42  # For reproducible train/test splits
+
+
+def get_per_model_output_path(base_path: str, model_name: str) -> str:
+    """Generate per-model output path from base path.
+    
+    Example: 'results/nga/calibration_brier_scores.csv' + 'mistral:7b'
+             -> 'results/nga/calibration_brier_scores_mistral-7b.csv'
+    """
+    slug = model_name_to_slug(model_name)
+    base, ext = os.path.splitext(base_path)
+    return f"{base}_{slug}{ext}"
 
 def temp_scaled(p, T):
     p = np.clip(p, 1e-12, 1-1e-12)
@@ -239,6 +251,14 @@ def main():
     os.makedirs('results', exist_ok=True)
     df_test.to_csv(OUT_CAL_CSV, index=False)
     print('Saved calibrated TEST set to', OUT_CAL_CSV)
+    
+    # Save per-model calibrated CSVs
+    for m in df_test['model'].unique():
+        model_df = df_test[df_test['model'] == m]
+        model_path = get_per_model_output_path(OUT_CAL_CSV, m)
+        model_df.to_csv(model_path, index=False)
+        print(f'Saved per-model calibrated CSV: {model_path}')
+    
     # Save isotonic mappings
     with open(OUT_ISO_MAP,'w') as f:
         json.dump(iso_mappings, f)
@@ -249,12 +269,27 @@ def main():
     all_metrics = pd.concat([df_raw, df_iso, df_temp], ignore_index=True)
     all_metrics.to_csv(OUT_METRICS_CSV, index=False)
     print('Saved threshold metrics (test set) to', OUT_METRICS_CSV)
+    
+    # Save per-model threshold metrics
+    for m in all_metrics['model'].unique():
+        model_metrics = all_metrics[all_metrics['model'] == m]
+        model_path = get_per_model_output_path(OUT_METRICS_CSV, m)
+        model_metrics.to_csv(model_path, index=False)
+        print(f'Saved per-model threshold metrics: {model_path}')
+    
     # Compute Brier scores (on TEST set only)
     brier_df = compute_brier_scores(df_test, iso_mappings, cal_params)
     brier_df.to_csv(OUT_BRIER_CSV, index=False)
     print('\nBrier Scores on TEST set (lower is better):')
     print(brier_df.to_string(index=False))
     print(f'\nSaved Brier scores to {OUT_BRIER_CSV}')
+    
+    # Save per-model Brier scores
+    for m in brier_df['model'].unique():
+        model_brier = brier_df[brier_df['model'] == m]
+        model_path = get_per_model_output_path(OUT_BRIER_CSV, m)
+        model_brier.to_csv(model_path, index=False)
+        print(f'Saved per-model Brier scores: {model_path}')
     
     # Plots (on TEST set only)
     reliability_curve_plot(df_test, iso_mappings, cal_params)

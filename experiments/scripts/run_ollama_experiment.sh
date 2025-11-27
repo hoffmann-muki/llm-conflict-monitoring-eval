@@ -5,15 +5,24 @@
 # This script runs classification experiments with different prompting strategies
 # and generates complete quantitative analysis for comparison.
 #
+# Workflow:
+#   1. Per-model inference → per-model result files
+#   1.5. Aggregation → combined results for cross-model analysis
+#   2. Calibration & metrics
+#   3. Harm & per-class analysis
+#   4. Counterfactual analysis
+#   5. Summary
+#
 # Usage:
-#   STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_experiment.sh
-#   STRATEGY=few_shot COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_experiment.sh
-#   STRATEGY=explainable COUNTRY=cmr ./experiments/scripts/run_experiment.sh
+#   STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_ollama_experiment.sh
+#   STRATEGY=few_shot COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_ollama_experiment.sh
+#   STRATEGY=explainable COUNTRY=cmr ./experiments/scripts/run_ollama_experiment.sh
 #
 # Environment Variables:
 #   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
+#   OLLAMA_MODELS        - Comma-separated models for inference [default: all WORKING_MODELS]
 #   CF_MODELS            - Models for counterfactual analysis [default: llama3.2,mistral:7b]
 #   CF_EVENTS            - Number of events for counterfactual [default: 50]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
@@ -29,6 +38,7 @@ set -o pipefail  # Pipeline fails if any command fails
 STRATEGY="${STRATEGY:-zero_shot}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
+OLLAMA_MODELS="${OLLAMA_MODELS:-}"
 CF_MODELS="${CF_MODELS:-llama3.2,mistral:7b}"
 CF_EVENTS="${CF_EVENTS:-50}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
@@ -116,6 +126,7 @@ log_phase "EXPERIMENT CONFIGURATION"
 log_info "Strategy:           $STRATEGY"
 log_info "Country:            $COUNTRY"
 log_info "Sample Size:        $SAMPLE_SIZE"
+log_info "Ollama Models:      ${OLLAMA_MODELS:-all WORKING_MODELS}"
 log_info "Skip Inference:     $SKIP_INFERENCE"
 log_info "Skip Counterfactual: $SKIP_COUNTERFACTUAL"
 log_info "CF Models:          $CF_MODELS"
@@ -133,11 +144,30 @@ else
     log_phase "PHASE 1: MODEL INFERENCE ($STRATEGY strategy)"
     
     log_step "Running classification with $STRATEGY prompting..."
+    
+    # Build models argument if OLLAMA_MODELS is set
+    MODELS_ARG=""
+    if [ -n "$OLLAMA_MODELS" ]; then
+        MODELS_ARG="--models $OLLAMA_MODELS"
+    fi
+    
     STRATEGY="$STRATEGY" COUNTRY="$COUNTRY" SAMPLE_SIZE="$SAMPLE_SIZE" \
-        "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py
+        "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py $MODELS_ARG
     
     log_success "Inference completed with $STRATEGY strategy"
 fi
+
+# Phase 1.5: Aggregate per-model results
+log_phase "PHASE 1.5: AGGREGATE PER-MODEL RESULTS"
+
+log_step "Aggregating per-model inference files into combined file..."
+COUNTRY="$COUNTRY" RESULTS_DIR="results/$COUNTRY/$STRATEGY" \
+    "$VENV_PY" -c "
+from lib.core.result_aggregator import aggregate_model_results
+aggregate_model_results('$COUNTRY', 'results/$COUNTRY/$STRATEGY')
+"
+
+log_success "Aggregation completed"
 
 # Phase 2: Calibration & Core Metrics
 log_phase "PHASE 2: CALIBRATION & CORE METRICS"

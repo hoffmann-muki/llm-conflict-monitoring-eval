@@ -1,2 +1,0 @@
-model_a,model_b,n_common,b,c,mcnemar_stat,mcnemar_p
-gemma:2b,gemma:7b,5,0,0,inf,0.0

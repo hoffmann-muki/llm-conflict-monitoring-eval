@@ -6,15 +6,29 @@
 # through calibration, fairness metrics, harm analysis, and counterfactual
 # perturbation testing.
 #
+# WORKFLOW: Per-Model-Then-Aggregate
+# ----------------------------------
+# 1. Run inference one model at a time (saves disk space)
+# 2. Each model produces: ollama_results_{model-slug}_acled_{country}_state_actors.csv
+# 3. The sample file is created once and reused for all models (fair comparison)
+# 4. Before analysis phases, aggregator combines per-model files into one
+# 5. Analysis phases produce both combined and per-model output files
+#
 # Usage:
-#   COUNTRY=cmr SAMPLE_SIZE=500 ./scripts/run_full_analysis.sh
-#   COUNTRY=nga SAMPLE_SIZE=1000 ./scripts/run_full_analysis.sh
+#   # Run inference with one model
+#   COUNTRY=cmr SAMPLE_SIZE=500 OLLAMA_MODELS="mistral:7b" ./scripts/run_full_analysis.sh
+#
+#   # Run inference with another model (reuses same sample)
+#   COUNTRY=cmr OLLAMA_MODELS="llama3.1:8b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
+#
+#   # Skip inference, just run analysis on existing per-model results
+#   COUNTRY=cmr SKIP_INFERENCE=true ./scripts/run_full_analysis.sh
 #
 # Environment Variables:
 #   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
-#   OLLAMA_MODELS        - Models for inference [default: all WORKING_MODELS]
+#   OLLAMA_MODELS        - Models for inference (single or comma-separated) [default: all WORKING_MODELS]
 #   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 50]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
@@ -93,28 +107,61 @@ run_inference() {
     if [ "$SKIP_INFERENCE" = "true" ]; then
         log_warn "Skipping inference phase (SKIP_INFERENCE=true)"
         
-        # Check if calibrated results exist
-        if [ ! -f "results/${COUNTRY}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
-            log_error "Raw predictions not found. Cannot skip inference."
+        # Check if any per-model results exist
+        PER_MODEL_COUNT=$(find "results/${COUNTRY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+        if [ "$PER_MODEL_COUNT" -eq 0 ]; then
+            log_error "No per-model prediction files found. Cannot skip inference."
             exit 1
         fi
+        log_success "Found $PER_MODEL_COUNT per-model result file(s)"
         return 0
     fi
     
     log_phase "[Phase 1/5] Model Inference - Generating Predictions ($STRATEGY strategy)"
     log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}, strategy: ${STRATEGY}"
     
+    # Note: If sample file exists, it will be reused for cross-model consistency
+    if [ -f "datasets/${COUNTRY}/state_actor_sample_${COUNTRY}.csv" ]; then
+        log_step "Existing sample file found - will be reused for fair cross-model comparison"
+    fi
+    
     # Set OLLAMA_MODELS if provided, otherwise will use WORKING_MODELS from constants
     if [ -n "$OLLAMA_MODELS" ]; then
+        log_step "Running inference with model(s): ${OLLAMA_MODELS}"
         STRATEGY="${STRATEGY}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
             OLLAMA_MODELS="${OLLAMA_MODELS}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     else
+        log_step "Running inference with all WORKING_MODELS"
         STRATEGY="${STRATEGY}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     fi
     
-    log_success "Phase 1 complete: Predictions generated"
+    log_success "Phase 1 complete: Per-model predictions generated"
+}
+
+# Phase 1.5: Aggregate per-model results
+run_aggregation() {
+    log_phase "[Phase 1.5/5] Aggregating Per-Model Results"
+    
+    log_step "Scanning for per-model result files..."
+    PER_MODEL_COUNT=$(find "results/${COUNTRY}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+    
+    if [ "$PER_MODEL_COUNT" -eq 0 ]; then
+        log_error "No per-model result files found in results/${COUNTRY}/"
+        exit 1
+    fi
+    
+    log_step "Found $PER_MODEL_COUNT per-model result file(s). Aggregating..."
+    COUNTRY="${COUNTRY}" "${VENV_PY:-python}" -m lib.core.result_aggregator
+    
+    # Verify combined file was created
+    if [ ! -f "results/${COUNTRY}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
+        log_error "Aggregation failed - combined results file not created"
+        exit 1
+    fi
+    
+    log_success "Phase 1.5 complete: Results aggregated for cross-model analysis"
 }
 
 # Phase 2: Calibration and Core Metrics
@@ -230,8 +277,15 @@ generate_summary() {
     echo "====================================================================="
     echo ""
     
+    # Per-model inference results
+    echo "📁 Per-Model Inference Results:"
+    for f in "${RESULTS_DIR}"/ollama_results_*_acled_${COUNTRY}_state_actors.csv; do
+        [ -f "$f" ] && echo "  ✓ $(basename "$f")"
+    done
+    
     # Core outputs
-    echo "📊 Core Predictions & Calibration:"
+    echo ""
+    echo "📊 Core Predictions & Calibration (combined + per-model):"
     [ -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_state_actors.csv" ] && \
         echo " ollama_results_acled_${COUNTRY}_state_actors.csv (raw predictions)"
     [ -f "${RESULTS_DIR}/ollama_results_calibrated.csv" ] && \
@@ -313,17 +367,25 @@ generate_summary() {
 
 # Main execution
 main() {
-    log_phase "LLM State Actor Bias - Full Analysis Pipeline"
+    log_phase "LLM State Actor Bias - Full Analysis Pipeline (Per-Model-Then-Aggregate)"
     echo "Configuration:"
     echo "  Strategy: ${STRATEGY}"
     echo "  Country: ${COUNTRY}"
     echo "  Sample Size: ${SAMPLE_SIZE}"
+    echo "  Inference Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
     echo "  Counterfactual Models: ${CF_MODELS:-all WORKING_MODELS}"
     echo "  Counterfactual Events: ${CF_EVENTS}"
+    echo ""
+    echo "Workflow:"
+    echo "  1. Inference produces per-model result files"
+    echo "  2. Sample file is reused across models for fair comparison"
+    echo "  3. Aggregator combines per-model files before analysis"
+    echo "  4. Analysis produces both combined and per-model outputs"
     echo ""
     
     check_prerequisites
     run_inference
+    run_aggregation
     run_calibration_and_metrics
     run_bias_and_harm_analysis
     run_counterfactual_analysis

@@ -15,7 +15,23 @@ experiments/
 
 ### Quick Start
 
-**Ollama Pipeline:**
+**Full Analysis Pipeline (Recommended):**
+
+```bash
+# Run full analysis with all working models
+COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+
+# Run with specific models only (for incremental runs)
+OLLAMA_MODELS=mistral:7b COUNTRY=nga SAMPLE_SIZE=1000 \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+
+# Run with multiple specific models
+OLLAMA_MODELS=mistral:7b,llama3.1:8b COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+```
+
+**Strategy-Based Experiments:**
 
 ```bash
 # Run complete experiment with zero-shot strategy
@@ -48,6 +64,36 @@ MODEL_PATH=models/conflibert PRIMARY_GROUP="Violence against civilians" PRIMARY_
   ./experiments/scripts/run_conflibert_experiment.sh
 ```
 
+## Workflow Architecture
+
+The pipeline uses a **per-model-then-aggregate** workflow:
+
+```
+Phase 1: Per-Model Inference
+    - Each model runs on the SAME sample of events
+    - Outputs: ollama_results_{model-slug}_acled_{country}_state_actors.csv
+
+Phase 1.5: Aggregation  
+    - Combines per-model files into single file
+    - Output: ollama_results_acled_{country}_state_actors.csv
+
+Phase 2: Calibration
+    - Outputs: ollama_results_calibrated.csv, calibration_brier_scores.csv
+
+Phase 3: Analysis
+    - Metrics, harm analysis, per-class reports
+
+Phase 4: Counterfactual (optional)
+    - Perturbation testing on disagreement cases
+
+Phase 5: Summary
+```
+
+**Key Benefits:**
+- **Fair comparison**: All models classify the exact same events
+- **Incremental runs**: Run one model at a time, aggregate later
+- **Reproducibility**: Same sample file reused across model runs
+
 ### Environment Variables
 
 **Common to both pipelines:**
@@ -62,7 +108,7 @@ MODEL_PATH=models/conflibert PRIMARY_GROUP="Violence against civilians" PRIMARY_
 - `SKIP_COUNTERFACTUAL` - Skip counterfactual analysis [default: false]
 
 **Ollama-specific:**
-- `OLLAMA_MODELS` - Models for inference [default: all WORKING_MODELS]
+- `OLLAMA_MODELS` - Comma-separated models for inference [default: all WORKING_MODELS]
 - `EXAMPLES_PER_CATEGORY` - Few-shot examples per category (1-5) [default: 1]
 
 **ConfliBERT-specific:**
@@ -73,8 +119,25 @@ MODEL_PATH=models/conflibert PRIMARY_GROUP="Violence against civilians" PRIMARY_
 
 ## Results Organization
 
-Results are organized by country and strategy:
+Results are organized by country (and optionally strategy):
 
+```
+results/
+├── cmr/
+│   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv   # Per-model
+│   ├── ollama_results_llama3.1-8b_acled_cmr_state_actors.csv  # Per-model
+│   ├── ollama_results_acled_cmr_state_actors.csv              # Aggregated
+│   ├── ollama_results_calibrated.csv                          # Calibrated
+│   ├── calibration_brier_scores.csv                           # Combined
+│   ├── calibration_brier_scores_mistral-7b.csv                # Per-model
+│   ├── metrics_acled_cmr_state_actors.csv                     # Combined
+│   ├── metrics_acled_cmr_state_actors_mistral-7b.csv          # Per-model
+│   └── ...
+└── nga/
+    └── ...
+```
+
+For strategy-based experiments:
 ```
 results/
 ├── cmr/
@@ -85,7 +148,7 @@ results/
     └── ...
 ```
 
-Each strategy folder contains complete quantitative analysis:
+Each directory contains complete quantitative analysis:
 - Classification metrics (P/R/F1, confusion matrices)
 - Fairness metrics (SPD, Equalized Odds with statistical tests)
 - Calibration metrics (Brier scores, reliability diagrams)
@@ -103,6 +166,10 @@ Each strategy folder contains complete quantitative analysis:
 # Run classification with proportional sampling (default)
 python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 --strategy zero_shot
+
+# Run with specific models
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
+  --sample-size 300 --models mistral:7b,llama3.1:8b
 
 # Run with targeted sampling (e.g., 60% Violence against civilians)
 python experiments/pipelines/ollama/run_ollama_classification.py cmr \
@@ -128,35 +195,47 @@ python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
 - Use `--primary-group` and `--primary-share` to oversample specific event types
 - Proportional sampling recommended for cross-country comparative analysis
 
+### Aggregation
+
+After running per-model inference, aggregate results:
+
+```bash
+# Aggregate per-model files into combined file
+COUNTRY=cmr python -c "
+from lib.core.result_aggregator import aggregate_model_results
+aggregate_model_results('cmr', 'results/cmr')
+"
+```
+
 ### Analysis Scripts
 
 ```bash
 # Calibration
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.calibration
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.calibration
 
 # Metrics
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.metrics
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.metrics
 
 # Harm analysis
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.harm
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.harm
 
 # Counterfactual (requires top_disagreements.csv from per_class_metrics)
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.per_class_metrics  # Run first
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.counterfactual --events 20  # Uses all WORKING_MODELS
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.per_class_metrics  # Run first
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.counterfactual --events 20  # Uses all WORKING_MODELS
 
 # Or specify models explicitly:
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.counterfactual \
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.counterfactual \
   --models llama3.2,mistral:7b --events 20
 
 # Or run on a percentage of disagreements (example: top 10% of disagreements):
-COUNTRY=cmr RESULTS_DIR=results/cmr/zero_shot \
-  .venv/bin/python -m lib.analysis.counterfactual --top-percent 10
+COUNTRY=cmr RESULTS_DIR=results/cmr \
+  python -m lib.analysis.counterfactual --top-percent 10
 ```
 
 ## Prompting Strategies

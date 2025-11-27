@@ -24,11 +24,11 @@ results/          # Results organized by country/strategy
 ## Setup
 ```bash
 # Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 
 # Install dependencies
-.venv/bin/python -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Quick Start
@@ -36,13 +36,17 @@ source .venv/bin/activate
 Run the Ollama pipeline:
 
 ```bash
-# Zero-shot experiment with proportional sampling
+# Full analysis with all working models
+COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+
+# Run with specific models only
+OLLAMA_MODELS=mistral:7b,llama3.1:8b COUNTRY=nga SAMPLE_SIZE=1000 \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+
+# Strategy-based experiment (zero-shot, few-shot, explainable)
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_experiment.sh
-
-# Or run Ollama classification directly with custom sampling
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 300 --strategy zero_shot
 ```
 
 Run the ConfliBERT pipeline:
@@ -59,6 +63,31 @@ MODEL_PATH=models/conflibert STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
 python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
   --model-path models/conflibert --strategy zero_shot --sample-size 300
 ```
+
+## Workflow Architecture
+
+The pipeline uses a **per-model-then-aggregate** workflow for fair cross-model comparisons:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Phase 1: Per-Model Inference                                        │
+│   - Each model runs on the SAME sample of events                    │
+│   - Outputs: ollama_results_{model-slug}_acled_{country}...csv      │
+├─────────────────────────────────────────────────────────────────────┤
+│ Phase 1.5: Aggregation                                              │
+│   - Combines per-model files into single file                       │
+│   - Output: ollama_results_acled_{country}_state_actors.csv         │
+├─────────────────────────────────────────────────────────────────────┤
+│ Phase 2+: Analysis                                                   │
+│   - Calibration, metrics, harm analysis                             │
+│   - All operate on aggregated file for cross-model analysis         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+This ensures:
+- **Fair comparison**: All models classify the exact same events
+- **Incremental runs**: Run one model at a time, aggregate later
+- **Reproducibility**: Same sample file reused across model runs
 
 **Sampling Configuration:**
 
@@ -89,16 +118,22 @@ This generates complete quantitative analysis:
 - Error analysis and source correlations
 - Counterfactual robustness testing (on top-N disagreement cases)
 
-Results are saved to `results/<COUNTRY>/<STRATEGY>/`
+Results are saved to `results/<COUNTRY>/` or `results/<COUNTRY>/<STRATEGY>/`
 
 ## Analysis Outputs
 
-- Each experiment produces:
-- `ollama_results_calibrated.csv` - Calibrated predictions for Ollama models
-- `conflibert_results_acled_<country>_state_actors.csv` - ConfliBERT predictions
-- `metrics_acled_<country>_state_actors.csv` - Classification metrics
-- `fairness_metrics_acled_<country>_state_actors.csv` - Fairness analysis
-- `harm_metrics_detailed.csv` - FL/FIR rates
+Each experiment produces:
+
+**Per-Model Files (Phase 1):**
+- `ollama_results_{model-slug}_acled_{country}_state_actors.csv` - Per-model inference
+
+**Aggregated Files (Phase 1.5+):**
+- `ollama_results_acled_{country}_state_actors.csv` - Combined inference results
+- `ollama_results_calibrated.csv` - Calibrated predictions
+- `calibration_brier_scores.csv` - Calibration metrics (combined + per-model)
+- `metrics_acled_{country}_state_actors.csv` - Classification metrics (combined + per-model)
+- `fairness_metrics_acled_{country}_state_actors.csv` - Fairness analysis (combined + per-model)
+- `harm_metrics_detailed.csv` - FL/FIR rates (combined + per-model)
 - `error_cases_*.csv` - Sampled error cases
 - `counterfactual_analysis_*.json` - Perturbation testing results
 - Various visualization plots

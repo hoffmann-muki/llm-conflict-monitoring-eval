@@ -20,6 +20,7 @@ import pandas as pd
 import numpy as np
 from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
 from lib.core.data_helpers import paths_for_country
+from lib.core.result_aggregator import model_name_to_slug
 
 COUNTRY = os.environ.get('COUNTRY', 'cmr')
 paths = paths_for_country(COUNTRY)
@@ -28,6 +29,13 @@ os.makedirs(paths['results_dir'], exist_ok=True)
 CAL_CSV = paths['calibrated_csv']
 OUT_CSV = os.path.join(paths['results_dir'], 'fl_fi_by_model.csv')
 OUT_DETAILED_CSV = os.path.join(paths['results_dir'], 'harm_metrics_detailed.csv')
+
+
+def get_per_model_output_path(base_path: str, model_name: str) -> str:
+    """Generate per-model output path from base path."""
+    slug = model_name_to_slug(model_name)
+    base, ext = os.path.splitext(base_path)
+    return f"{base}_{slug}{ext}"
 
 def compute_harm_rates(df: pd.DataFrame) -> pd.DataFrame:
     """Compute detailed false legitimization and false illegitimization rates."""
@@ -80,10 +88,25 @@ def main():
     print('Wrote traditional FL/FI metrics to', OUT_CSV)
     print(out.to_string(index=False))
     
+    # Save per-model FL/FI metrics
+    for m in out['model'].unique():
+        model_flfi = out[out['model'] == m]
+        model_path = get_per_model_output_path(OUT_CSV, m)
+        model_flfi.to_csv(model_path, index=False)
+        print(f'Saved per-model FL/FI metrics: {model_path}')
+    
     # Compute detailed harm-aware rates
     harm_df = compute_harm_rates(df)
     harm_df.to_csv(OUT_DETAILED_CSV, index=False)
     print(f'\nWrote detailed harm metrics to {OUT_DETAILED_CSV}')
+    
+    # Save per-model detailed harm metrics
+    for m in harm_df['model'].unique():
+        model_harm = harm_df[harm_df['model'] == m]
+        model_path = get_per_model_output_path(OUT_DETAILED_CSV, m)
+        model_harm.to_csv(model_path, index=False)
+        print(f'Saved per-model harm metrics: {model_path}')
+    
     print('\n=== Harm-Aware Metrics (False Legitimization & Illegitimization Rates) ===')
     print(harm_df[['model', 'false_legitimization_rate_FLR', 'false_illegitimization_rate_FIR', 'harm_ratio_FL_to_FI']].to_string(index=False))
 

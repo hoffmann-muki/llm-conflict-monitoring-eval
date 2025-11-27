@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-# Generic calibration script that works for any country
+###############################################################################
+# Two-Stage Calibration and Application Script
+#
+# This script performs a two-stage calibration workflow:
+#   1. Run inference on a small sample to determine thresholds
+#   2. Run inference on a larger sample and apply the thresholds
+#
+# Workflow:
+#   - Stage 1: Small sample inference → per-model files → aggregate → calibrate → select thresholds
+#   - Stage 2: Large sample inference → per-model files → aggregate → calibrate → apply thresholds
+#
 # Usage: ./run_calibrate_then_apply.sh [COUNTRY]
 # COUNTRY defaults to cmr if not specified
+###############################################################################
+set -euo pipefail
 
 COUNTRY=${1:-${COUNTRY:-cmr}}
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VENV_PY="$REPO_ROOT/.venv/bin/python"
 if [ ! -x "$VENV_PY" ]; then
   echo "Warning: project venv python not found at $VENV_PY. Falling back to system python3."
@@ -17,19 +28,34 @@ fi
 # Config
 SMALL_SAMPLE=${SMALL_SAMPLE:-20}
 LARGE_SAMPLE=${LARGE_SAMPLE:-50}
+OLLAMA_MODELS=${OLLAMA_MODELS:-}
 # minimum coverage required when choosing a threshold from the small sample (0..1)
 MIN_COVERAGE=${MIN_COVERAGE:-0.5}
 
 echo "Using python: $VENV_PY"
 echo "Country: $COUNTRY"
+echo "Ollama Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
 echo "Small sample=$SMALL_SAMPLE Large sample=$LARGE_SAMPLE MIN_COVERAGE=$MIN_COVERAGE"
 
 cd "$REPO_ROOT"
 
+# Build models argument if OLLAMA_MODELS is set
+MODELS_ARG=""
+if [ -n "$OLLAMA_MODELS" ]; then
+    MODELS_ARG="--models $OLLAMA_MODELS"
+fi
+
 echo "--- Running small sample (SAMPLE_SIZE=$SMALL_SAMPLE) ---"
-# Run the classification pipeline
+# Run the classification pipeline (outputs per-model files)
 STRATEGY="zero_shot" SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY \
-    "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py
+    "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py $MODELS_ARG
+
+# Aggregate per-model files into combined file
+echo "--- Aggregating per-model results ---"
+COUNTRY=$COUNTRY "$VENV_PY" -c "
+from lib.core.result_aggregator import aggregate_model_results
+aggregate_model_results('$COUNTRY', 'results/${COUNTRY}')
+"
 
 # Run calibration and evaluation
 COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
@@ -68,9 +94,16 @@ print("Wrote thresholds to $THRESH_JSON")
 PY
 
 echo "--- Running large sample (SAMPLE_SIZE=$LARGE_SAMPLE) ---"
-# Run the large sample with the classification pipeline
+# Run the large sample with the classification pipeline (outputs per-model files)
 STRATEGY="zero_shot" SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY \
-    "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py
+    "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py $MODELS_ARG
+
+# Aggregate per-model files into combined file
+echo "--- Aggregating per-model results ---"
+COUNTRY=$COUNTRY "$VENV_PY" -c "
+from lib.core.result_aggregator import aggregate_model_results
+aggregate_model_results('$COUNTRY', 'results/${COUNTRY}')
+"
 
 # Run calibration and evaluation
 COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
