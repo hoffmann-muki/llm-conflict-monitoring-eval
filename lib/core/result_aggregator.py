@@ -109,20 +109,20 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
     
     Args:
         country: Country code (e.g., 'nga', 'cmr'). If None, reads from COUNTRY env var.
-        results_dir: Results directory. If None, uses default 'results/{country}'.
+        results_dir: Results directory. If None, uses default 'results/{country}/{strategy}'.
         strategy: Prompting strategy. If None, reads from STRATEGY env var.
         verbose: Print progress messages.
     
     Returns:
         Combined DataFrame with all models' results.
     """
+    if strategy is None:
+        strategy = get_strategy()
+    
     if country is None:
         country, results_dir = setup_country_environment()
     elif results_dir is None:
-        results_dir = os.path.join('results', country)
-    
-    if strategy is None:
-        strategy = get_strategy()
+        results_dir = os.path.join('results', country, strategy)
     
     per_model_files = list_per_model_files(country, results_dir, strategy)
     
@@ -178,13 +178,13 @@ def write_combined_results(country: str = None, results_dir: str = None,
     Returns:
         Path to the combined results file.
     """
+    if strategy is None:
+        strategy = get_strategy()
+    
     if country is None:
         country, results_dir = setup_country_environment()
     elif results_dir is None:
-        results_dir = os.path.join('results', country)
-    
-    if strategy is None:
-        strategy = get_strategy()
+        results_dir = os.path.join('results', country, strategy)
     
     combined = aggregate_model_results(country, results_dir, strategy, verbose)
     
