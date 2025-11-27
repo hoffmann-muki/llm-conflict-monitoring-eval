@@ -95,7 +95,8 @@ def run_classification_experiment(country_code: str,
                                   sample_size: int = 100,
                                   strategy_name: str = 'zero_shot',
                                   primary_group: str | None = None,
-                                  primary_share: float = 0.0):
+                                  primary_share: float = 0.0,
+                                  models: list | None = None):
     """Run classification experiment with specified prompting strategy.
     
     Args:
@@ -208,7 +209,13 @@ def run_classification_experiment(country_code: str,
     print(df_test.head())
     
     # Run classification with strategy
-    models = WORKING_MODELS
+    # Priority: explicit `models` argument -> OLLAMA_MODELS env var -> WORKING_MODELS constant
+    if models is None:
+        env_models = os.environ.get('OLLAMA_MODELS')
+        if env_models:
+            models = [m.strip() for m in env_models.split(',') if m.strip()]
+        else:
+            models = WORKING_MODELS
     
     results = []
     subset = df_test.copy()
@@ -265,6 +272,9 @@ def main():
     parser.add_argument('--primary-share', type=float, default=0.0,
                        help='Fraction for primary group (0-1). Only used if --primary-group is set. '
                             'Default: 0.0')
+        parser.add_argument('--models', default=os.environ.get('OLLAMA_MODELS', None),
+                       help='Comma-separated list of Ollama models to run. Overrides WORKING_MODELS. '
+                           'Example: --models "llama3.1:8b,mistral:7b"')
     
     args = parser.parse_args()
     
@@ -276,12 +286,17 @@ def main():
         parser.error('--primary-share must be > 0 when --primary-group is specified')
     
     # Run the experiment
+    models_arg = None
+    if args.models:
+        models_arg = [m.strip() for m in args.models.split(',') if m.strip()]
+
     run_classification_experiment(
         country_code=args.country,
         sample_size=args.sample_size,
         strategy_name=args.strategy,
         primary_group=args.primary_group,
-        primary_share=args.primary_share
+        primary_share=args.primary_share,
+        models=models_arg
     )
 
 
