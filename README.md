@@ -72,15 +72,15 @@ The pipeline uses a **per-model-then-aggregate** workflow for fair cross-model c
 ┌─────────────────────────────────────────────────────────────────────┐
 │ Phase 1: Per-Model Inference                                        │
 │   - Each model runs on the SAME sample of events                    │
-│   - Outputs: ollama_results_{model-slug}_acled_{country}...csv      │
+│   - Outputs: ollama_results_{strategy}_{model-slug}_acled_{country}...csv │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Phase 1.5: Aggregation                                              │
-│   - Combines per-model files into single file                       │
-│   - Output: ollama_results_acled_{country}_state_actors.csv         │
+│   - Combines per-model files into single file (per strategy)        │
+│   - Output: ollama_results_{strategy}_acled_{country}_state_actors.csv │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Phase 2+: Analysis                                                   │
 │   - Calibration, metrics, harm analysis                             │
-│   - All operate on aggregated file for cross-model analysis         │
+│   - All outputs include strategy in filename for separation         │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -122,21 +122,22 @@ Results are saved to `results/<COUNTRY>/` or `results/<COUNTRY>/<STRATEGY>/`
 
 ## Analysis Outputs
 
-Each experiment produces:
+Each experiment produces strategy-specific files (no overwriting between strategies):
 
 **Per-Model Files (Phase 1):**
-- `ollama_results_{model-slug}_acled_{country}_state_actors.csv` - Per-model inference
+- `ollama_results_{strategy}_{model-slug}_acled_{country}_state_actors.csv` - Per-model inference
 
 **Aggregated Files (Phase 1.5+):**
-- `ollama_results_acled_{country}_state_actors.csv` - Combined inference results
-- `ollama_results_calibrated.csv` - Calibrated predictions
-- `calibration_brier_scores.csv` - Calibration metrics (combined + per-model)
-- `metrics_acled_{country}_state_actors.csv` - Classification metrics (combined + per-model)
-- `fairness_metrics_acled_{country}_state_actors.csv` - Fairness analysis (combined + per-model)
-- `harm_metrics_detailed.csv` - FL/FIR rates (combined + per-model)
-- `error_cases_*.csv` - Sampled error cases
-- `counterfactual_analysis_*.json` - Perturbation testing results
-- Various visualization plots
+- `ollama_results_{strategy}_acled_{country}_state_actors.csv` - Combined inference results
+- `ollama_results_{strategy}_calibrated.csv` - Calibrated predictions
+- `calibration_brier_scores_{strategy}.csv` - Calibration metrics
+- `metrics_{strategy}_acled_{country}_state_actors.csv` - Classification metrics
+- `fairness_metrics_{strategy}_acled_{country}_state_actors.csv` - Fairness analysis
+- `harm_metrics_{strategy}_detailed.csv` - FL/FIR rates
+- `error_cases_false_legitimization_{strategy}.csv` - Sampled FL error cases
+- `error_cases_false_illegitimization_{strategy}.csv` - Sampled FI error cases
+- `counterfactual_analysis_{strategy}_*.json` - Perturbation testing results
+- `per_class_metrics_{strategy}.png`, `reliability_diagrams_{strategy}.png` - Visualizations
 
 See [experiments/README.md](experiments/README.md) for detailed usage and options.
 

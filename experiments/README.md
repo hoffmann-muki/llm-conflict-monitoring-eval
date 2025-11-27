@@ -71,14 +71,14 @@ The pipeline uses a **per-model-then-aggregate** workflow:
 ```
 Phase 1: Per-Model Inference
     - Each model runs on the SAME sample of events
-    - Outputs: ollama_results_{model-slug}_acled_{country}_state_actors.csv
+    - Outputs: ollama_results_{strategy}_{model-slug}_acled_{country}_state_actors.csv
 
 Phase 1.5: Aggregation  
-    - Combines per-model files into single file
-    - Output: ollama_results_acled_{country}_state_actors.csv
+    - Combines per-model files into single file (per strategy)
+    - Output: ollama_results_{strategy}_acled_{country}_state_actors.csv
 
 Phase 2: Calibration
-    - Outputs: ollama_results_calibrated.csv, calibration_brier_scores.csv
+    - Outputs: ollama_results_{strategy}_calibrated.csv, calibration_brier_scores_{strategy}.csv
 
 Phase 3: Analysis
     - Metrics, harm analysis, per-class reports
@@ -119,34 +119,29 @@ Phase 5: Summary
 
 ## Results Organization
 
-Results are organized by country (and optionally strategy):
+Results are organized by country with strategy embedded in filenames (no separate folders needed):
 
 ```
 results/
 ├── cmr/
-│   ├── ollama_results_mistral-7b_acled_cmr_state_actors.csv   # Per-model
-│   ├── ollama_results_llama3.1-8b_acled_cmr_state_actors.csv  # Per-model
-│   ├── ollama_results_acled_cmr_state_actors.csv              # Aggregated
-│   ├── ollama_results_calibrated.csv                          # Calibrated
-│   ├── calibration_brier_scores.csv                           # Combined
-│   ├── calibration_brier_scores_mistral-7b.csv                # Per-model
-│   ├── metrics_acled_cmr_state_actors.csv                     # Combined
-│   ├── metrics_acled_cmr_state_actors_mistral-7b.csv          # Per-model
+│   ├── ollama_results_zero_shot_mistral-7b_acled_cmr_state_actors.csv
+│   ├── ollama_results_zero_shot_llama3.1-8b_acled_cmr_state_actors.csv
+│   ├── ollama_results_zero_shot_acled_cmr_state_actors.csv      # Aggregated
+│   ├── ollama_results_zero_shot_calibrated.csv
+│   ├── calibration_brier_scores_zero_shot.csv
+│   ├── metrics_zero_shot_acled_cmr_state_actors.csv
+│   ├── ollama_results_few_shot_mistral-7b_acled_cmr_state_actors.csv
+│   ├── ollama_results_few_shot_acled_cmr_state_actors.csv       # Aggregated
+│   ├── calibration_brier_scores_few_shot.csv
 │   └── ...
 └── nga/
     └── ...
 ```
 
-For strategy-based experiments:
-```
-results/
-├── cmr/
-│   ├── zero_shot/
-│   ├── few_shot/
-│   └── explainable/
-└── nga/
-    └── ...
-```
+This naming convention allows:
+- Running multiple strategies without overwriting files
+- Cross-model comparison within the same strategy
+- Easy filtering/sorting by strategy name
 
 Each directory contains complete quantitative analysis:
 - Classification metrics (P/R/F1, confusion matrices)

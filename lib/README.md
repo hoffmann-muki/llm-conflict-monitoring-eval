@@ -151,6 +151,7 @@ COUNTRY=cmr python -m lib.analysis.thresholds
 
 Most analysis modules use:
 - `COUNTRY` - Country code (cmr, nga)
+- `STRATEGY` - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 - `RESULTS_DIR` - Results directory path (optional, auto-detected from COUNTRY)
 
 ## Output Files
@@ -158,34 +159,33 @@ Most analysis modules use:
 Each analysis module writes to `results/<COUNTRY>/` (or `results/<COUNTRY>/<STRATEGY>/`):
 
 **Per-Model Inference:**
-- `ollama_results_{model-slug}_acled_{country}_state_actors.csv` - Per-model results
+- `ollama_results_{strategy}_{model-slug}_acled_{country}_state_actors.csv` - Per-model results
 
 **Aggregated:**
-- `ollama_results_acled_{country}_state_actors.csv` - Combined results from all models
+- `ollama_results_{strategy}_acled_{country}_state_actors.csv` - Combined results from all models
 
 **Calibration:**
-- `ollama_results_calibrated.csv` - Calibrated predictions
-- `calibration_brier_scores.csv` - Combined Brier scores
-- `calibration_brier_scores_{model-slug}.csv` - Per-model Brier scores
-- `reliability_diagrams.png` - Visualization
+- `ollama_results_{strategy}_calibrated.csv` - Calibrated predictions
+- `calibration_brier_scores_{strategy}.csv` - Brier scores
+- `isotonic_mappings_{strategy}.json` - Isotonic calibration mappings
+- `reliability_diagrams_{strategy}.png` - Visualization
 
 **Metrics:**
-- `metrics_acled_{country}_state_actors.csv` - Combined classification metrics
-- `metrics_acled_{country}_state_actors_{model-slug}.csv` - Per-model metrics
-- `fairness_metrics_acled_{country}_state_actors.csv` - Combined fairness metrics
-- `fairness_metrics_acled_{country}_state_actors_{model-slug}.csv` - Per-model fairness
-- `confusion_matrices_acled_{country}_state_actors.json` - Confusion matrices
+- `metrics_{strategy}_acled_{country}_state_actors.csv` - Classification metrics
+- `fairness_metrics_{strategy}_acled_{country}_state_actors.csv` - Fairness metrics
+- `confusion_matrices_{strategy}_acled_{country}_state_actors.json` - Confusion matrices
 
 **Harm:**
-- `harm_metrics_detailed.csv` - Combined FL/FI rates
-- `harm_metrics_detailed_{model-slug}.csv` - Per-model FL/FI rates
-- `fl_fi_by_model.csv` - Aggregated harm metrics
+- `harm_metrics_{strategy}_detailed.csv` - FL/FI rates
+- `fl_fi_{strategy}_by_model.csv` - Aggregated harm metrics
 
 **Error Analysis:**
-- `error_cases_false_legitimization.csv` - Sampled FL errors
-- `error_cases_false_illegitimization.csv` - Sampled FI errors
-- `error_correlations_acled_{country}_state_actors.csv` - Error correlations
+- `error_cases_false_legitimization_{strategy}.csv` - Sampled FL errors
+- `error_cases_false_illegitimization_{strategy}.csv` - Sampled FI errors
+- `error_correlations_{strategy}_acled_{country}_state_actors.csv` - Error correlations
+- `per_class_report_{strategy}.csv` - Per-class metrics
+- `top_disagreements_{strategy}.csv` - Model disagreements
 
 **Counterfactual:**
-- `counterfactual_analysis_{models}.json` - Full analysis
-- `counterfactual_analysis_{models}_summary.csv` - Summary CSV
+- `counterfactual_analysis_{strategy}_{models}.json` - Full analysis
+- `counterfactual_analysis_{strategy}_{models}_summary.csv` - Summary CSV
