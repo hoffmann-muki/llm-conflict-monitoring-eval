@@ -15,35 +15,61 @@ experiments/
 
 ### Quick Start
 
+**Ollama Pipeline:**
+
 ```bash
 # Run complete experiment with zero-shot strategy
 STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_experiment.sh
 
-# Run with few-shot strategy (1 example per category by default)
+# Run with few-shot strategy
 STRATEGY=few_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_experiment.sh
 
-# Run with few-shot strategy (3 examples per category)
-STRATEGY=few_shot EXAMPLES_PER_CATEGORY=3 COUNTRY=cmr SAMPLE_SIZE=500 \
+# Run with targeted sampling (60% Violence against civilians)
+PRIMARY_GROUP="Violence against civilians" PRIMARY_SHARE=0.6 \
+  STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_experiment.sh
+```
 
-# Run with explainable strategy
-STRATEGY=explainable COUNTRY=nga SAMPLE_SIZE=1000 \
-  ./experiments/scripts/run_ollama_experiment.sh
+**ConfliBERT Pipeline:**
+
+```bash
+# Download model first (one-time setup, ~437 MB)
+python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir models/conflibert
+
+# Run complete experiment with zero-shot strategy
+MODEL_PATH=models/conflibert STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_conflibert_experiment.sh
+
+# Run with targeted sampling
+MODEL_PATH=models/conflibert PRIMARY_GROUP="Violence against civilians" PRIMARY_SHARE=0.6 \
+  STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 \
+  ./experiments/scripts/run_conflibert_experiment.sh
 ```
 
 ### Environment Variables
 
+**Common to both pipelines:**
 - `STRATEGY` - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 - `COUNTRY` - Country code (cmr, nga) [default: cmr]
 - `SAMPLE_SIZE` - Number of events [default: 500]
-- `EXAMPLES_PER_CATEGORY` - Few-shot examples per category (1-5) [default: 1]
-- `OLLAMA_MODELS` - Models for inference [default: all WORKING_MODELS]
+- `PRIMARY_GROUP` - Event type to oversample [default: none (proportional)]
+- `PRIMARY_SHARE` - Fraction for primary group (0-1) [default: 0.0]
 - `CF_MODELS` - Models for counterfactual [default: all WORKING_MODELS]
 - `CF_EVENTS` - Counterfactual event count [default: 50]
 - `SKIP_INFERENCE` - Skip inference phase [default: false]
 - `SKIP_COUNTERFACTUAL` - Skip counterfactual analysis [default: false]
+
+**Ollama-specific:**
+- `OLLAMA_MODELS` - Models for inference [default: all WORKING_MODELS]
+- `EXAMPLES_PER_CATEGORY` - Few-shot examples per category (1-5) [default: 1]
+
+**ConfliBERT-specific:**
+- `MODEL_PATH` - Path to local ConfliBERT model directory [default: models/conflibert]
+- `BATCH_SIZE` - Batch size for inference [default: 16]
+- `MAX_LENGTH` - Maximum sequence length [default: 256]
+- `DEVICE` - Device (cuda, mps, cpu) [default: auto]
 
 ## Results Organization
 
@@ -71,6 +97,8 @@ Each strategy folder contains complete quantitative analysis:
 
 ### Classification Pipeline
 
+**Ollama:**
+
 ```bash
 # Run classification with proportional sampling (default)
 python experiments/pipelines/ollama/run_ollama_classification.py cmr \
@@ -80,10 +108,19 @@ python experiments/pipelines/ollama/run_ollama_classification.py cmr \
 python experiments/pipelines/ollama/run_ollama_classification.py cmr \
   --sample-size 300 \
   --primary-group "Violence against civilians" --primary-share 0.6
+```
 
-# Using environment variables
-STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=100 \
-  python experiments/pipelines/ollama/run_ollama_classification.py
+**ConfliBERT:**
+
+```bash
+# Run classification with proportional sampling (default)
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
+  --model-path models/conflibert --sample-size 300 --strategy zero_shot
+
+# Run with targeted sampling
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
+  --model-path models/conflibert --sample-size 300 \
+  --primary-group "Violence against civilians" --primary-share 0.6
 ```
 
 **Sampling Options:**

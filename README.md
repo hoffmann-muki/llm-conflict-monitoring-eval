@@ -62,13 +62,23 @@ python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
 
 **Sampling Configuration:**
 
-By default, the pipeline uses **proportional stratified sampling** where samples reflect the natural distribution of event types in your data. This is recommended for cross-country comparative analysis.
+By default, both pipelines use **proportional stratified sampling** where samples reflect the natural distribution of event types in your data. This is recommended for cross-country comparative analysis.
 
 To oversample specific event types (e.g., for focused analysis on rare events):
 
 ```bash
+# Ollama pipeline
 python experiments/pipelines/ollama/run_ollama_classification.py cmr --sample-size 300 \
   --primary-group "Violence against civilians" --primary-share 0.6
+
+# ConfliBERT pipeline
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
+  --model-path models/conflibert --sample-size 300 \
+  --primary-group "Violence against civilians" --primary-share 0.6
+
+# Or via environment variables (both scripts)
+PRIMARY_GROUP="Violence against civilians" PRIMARY_SHARE=0.6 COUNTRY=cmr \
+  ./experiments/scripts/run_ollama_experiment.sh
 ```
 
 This generates complete quantitative analysis:
