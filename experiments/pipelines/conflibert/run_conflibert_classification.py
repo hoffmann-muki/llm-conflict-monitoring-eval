@@ -71,6 +71,12 @@ def parse_args():
                        help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
     parser.add_argument('--model-path', required=True,
                        help='Path to local ConfliBERT model directory (use download_conflibert_model.py to obtain)')
+    parser.add_argument('--primary-group', default=None,
+                       help='Event type to oversample (e.g., "Violence against civilians"). '
+                            'Default: None (proportional sampling)')
+    parser.add_argument('--primary-share', type=float, default=0.0,
+                       help='Fraction for primary group (0-1). Only used if --primary-group is set. '
+                            'Default: 0.0')
     parser.add_argument('--batch-size', type=int, default=16,
                        help='Batch size for inference (default: 16)')
     parser.add_argument('--max-length', type=int, default=256,
@@ -312,6 +318,13 @@ def main():
     """Main entry point matching Ollama classification interface."""
     args = parse_args()
     
+    # Validate primary_share
+    if args.primary_share < 0 or args.primary_share > 1:
+        raise ValueError('--primary-share must be between 0 and 1')
+    
+    if args.primary_group and args.primary_share == 0:
+        raise ValueError('--primary-share must be > 0 when --primary-group is specified')
+    
     run_conflibert_classification(
         country_code=args.country,
         strategy_name=args.strategy,
@@ -319,7 +332,9 @@ def main():
         model_path=args.model_path,
         batch_size=args.batch_size,
         max_length=args.max_length,
-        device=args.device
+        device=args.device,
+        primary_group=args.primary_group,
+        primary_share=args.primary_share
     )
 
 
