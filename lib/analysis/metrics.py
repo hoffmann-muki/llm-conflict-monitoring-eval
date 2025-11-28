@@ -4,7 +4,6 @@ import json
 import os
 from scipy.stats import spearmanr
 from lib.core.data_helpers import setup_country_environment
-from lib.core.result_aggregator import model_name_to_slug
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
 
@@ -19,12 +18,6 @@ labels = ['V','B','E','P','R','S']
 # V = Violence against civilians is typically the most sensitive label
 SEVERE_LABELS = ['V']  # Can be adjusted based on context
 
-
-def get_per_model_output_path(base_path: str, model_name: str) -> str:
-    """Generate per-model output path from base path."""
-    slug = model_name_to_slug(model_name)
-    base, ext = os.path.splitext(base_path)
-    return f"{base}_{slug}{ext}"
 
 def compute_metrics(df):
     models = df['model'].unique()
@@ -294,30 +287,12 @@ def main():
     print('Wrote confusion matrices to', OUT_CMS)
     print(mdf.to_string(index=False))
     
-    # Save per-model metrics
-    for m in mdf['model'].unique():
-        model_metrics = mdf[mdf['model'] == m]
-        model_path = get_per_model_output_path(OUT_METRICS, m)
-        model_metrics.to_csv(model_path, index=False)
-        # Save per-model confusion matrix
-        model_cms_path = get_per_model_output_path(OUT_CMS, m)
-        with open(model_cms_path, 'w') as f:
-            json.dump({'labels': labels, 'cms': {m: cms.get(m)}}, f, indent=2)
-        print(f'Saved per-model metrics: {model_path}')
-    
     # Compute fairness metrics
     fairness_df = compute_fairness_metrics(df, target_label='V', n_bootstrap=1000)
     if not fairness_df.empty:
         fairness_df.to_csv(OUT_FAIRNESS, index=False)
         print(f'\nWrote fairness metrics to {OUT_FAIRNESS}')
         print(fairness_df.to_string(index=False))
-        
-        # Save per-model fairness metrics
-        for m in fairness_df['model'].unique():
-            model_fairness = fairness_df[fairness_df['model'] == m]
-            model_path = get_per_model_output_path(OUT_FAIRNESS, m)
-            model_fairness.to_csv(model_path, index=False)
-            print(f'Saved per-model fairness metrics: {model_path}')
     else:
         print('\nCould not compute fairness metrics (missing actor information)')
     
@@ -327,13 +302,6 @@ def main():
         out_corr_path = os.path.join(RESULTS_DIR, f'error_correlations_acled_{COUNTRY}_state_actors.csv')
         correlation_df.to_csv(out_corr_path, index=False)
         print(f'\nWrote error correlation analysis to {out_corr_path}')
-        
-        # Save per-model correlation analysis
-        for m in correlation_df['model'].unique():
-            model_corr = correlation_df[correlation_df['model'] == m]
-            model_path = get_per_model_output_path(out_corr_path, m)
-            model_corr.to_csv(model_path, index=False)
-            print(f'Saved per-model error correlations: {model_path}')
         
         print('\n=== Error Rate by Notes Length ===')
         length_corr = correlation_df[correlation_df['feature'] == 'notes_length']
