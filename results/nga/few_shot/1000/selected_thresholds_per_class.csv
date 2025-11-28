@@ -1,7 +1,0 @@
-model,label,threshold
-mistral:7b,V,0.1
-mistral:7b,B,0.1
-mistral:7b,E,0.0
-mistral:7b,P,0.0
-mistral:7b,R,0.0
-mistral:7b,S,0.30000000000000004
