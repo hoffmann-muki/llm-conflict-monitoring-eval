@@ -19,16 +19,14 @@ import os
 import pandas as pd
 import numpy as np
 from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
-from lib.core.data_helpers import paths_for_country
+from lib.core.data_helpers import setup_country_environment
 
-COUNTRY = os.environ.get('COUNTRY', 'cmr')
-STRATEGY = os.environ.get('STRATEGY', 'zero_shot')
-paths = paths_for_country(COUNTRY, STRATEGY)
-os.makedirs(paths['results_dir'], exist_ok=True)
+COUNTRY, RESULTS_DIR = setup_country_environment()
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
-CAL_CSV = paths['calibrated_csv']
-OUT_CSV = os.path.join(paths['results_dir'], 'fl_fi_by_model.csv')
-OUT_DETAILED_CSV = os.path.join(paths['results_dir'], 'harm_metrics_detailed.csv')
+CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+OUT_CSV = os.path.join(RESULTS_DIR, 'fl_fi_by_model.csv')
+OUT_DETAILED_CSV = os.path.join(RESULTS_DIR, 'harm_metrics_detailed.csv')
 
 
 def compute_harm_rates(df: pd.DataFrame) -> pd.DataFrame:

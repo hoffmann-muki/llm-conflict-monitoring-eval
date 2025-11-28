@@ -26,7 +26,7 @@ from scipy.stats import chi2
 from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
-from lib.core.data_helpers import paths_for_country
+from lib.core.data_helpers import paths_for_country, get_strategy, setup_country_environment
 from lib.core.constants import WORKING_MODELS
 from experiments.prompting_strategies import ZeroShotStrategy
 import sys
@@ -409,7 +409,7 @@ class CounterfactualAnalyzer:
     def __init__(self, country: str, models: List[str], strategy: str = None):
         self.country = country
         self.models = models
-        self.strategy = strategy or os.environ.get('STRATEGY', 'zero_shot')
+        self.strategy = strategy or get_strategy()
         self.perturbation_generator = PerturbationGenerator()
         self.paths = paths_for_country(country, self.strategy)
         
@@ -826,8 +826,8 @@ def main():
     
     args = parser.parse_args()
     
-    country = os.environ.get('COUNTRY', 'cmr')
-    strategy = args.strategy or os.environ.get('STRATEGY', 'zero_shot')
+    country, _ = setup_country_environment()
+    strategy = args.strategy or get_strategy()
     
     # Use WORKING_MODELS if --models not provided
     if args.models:

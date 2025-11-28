@@ -138,7 +138,7 @@ run_inference() {
     log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}, strategy: ${STRATEGY}"
     
     # Note: If sample file exists, it will be reused for cross-model consistency
-    if [ -f "datasets/${COUNTRY}/state_actor_sample_${COUNTRY}.csv" ]; then
+    if [ -f "datasets/${COUNTRY}/state_actor_sample_${COUNTRY}_${SAMPLE_SIZE}.csv" ]; then
         log_step "Existing sample file found - will be reused for fair cross-model comparison"
     fi
     

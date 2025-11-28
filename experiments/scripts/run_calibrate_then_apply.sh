@@ -16,6 +16,7 @@
 set -euo pipefail
 
 COUNTRY=${1:-${COUNTRY:-cmr}}
+STRATEGY=${STRATEGY:-zero_shot}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -34,8 +35,13 @@ MIN_COVERAGE=${MIN_COVERAGE:-0.5}
 
 echo "Using python: $VENV_PY"
 echo "Country: $COUNTRY"
+echo "Strategy: $STRATEGY"
 echo "Ollama Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
 echo "Small sample=$SMALL_SAMPLE Large sample=$LARGE_SAMPLE MIN_COVERAGE=$MIN_COVERAGE"
+
+# Build results directory paths (consistent with rest of codebase)
+SMALL_RESULTS_DIR="results/${COUNTRY}/${STRATEGY}/${SMALL_SAMPLE}"
+LARGE_RESULTS_DIR="results/${COUNTRY}/${STRATEGY}/${LARGE_SAMPLE}"
 
 cd "$REPO_ROOT"
 
@@ -47,23 +53,23 @@ fi
 
 echo "--- Running small sample (SAMPLE_SIZE=$SMALL_SAMPLE) ---"
 # Run the classification pipeline (outputs per-model files)
-STRATEGY="zero_shot" SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY \
+STRATEGY=$STRATEGY SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY \
     "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py $MODELS_ARG
 
 # Aggregate per-model files into combined file
 echo "--- Aggregating per-model results ---"
-COUNTRY=$COUNTRY "$VENV_PY" -c "
+STRATEGY=$STRATEGY SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -c "
 from lib.core.result_aggregator import aggregate_model_results
-aggregate_model_results('$COUNTRY', 'results/${COUNTRY}')
+aggregate_model_results('$COUNTRY', '$SMALL_RESULTS_DIR')
 "
 
 # Run calibration and evaluation
-COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
-COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.thresholds
+STRATEGY=$STRATEGY SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
+STRATEGY=$STRATEGY SAMPLE_SIZE=$SMALL_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.thresholds
 
 # Country-specific file paths
-METRICS_FILE="results/${COUNTRY}/metrics_thresholds_calibrated.csv"
-THRESH_JSON="results/selected_thresholds_${COUNTRY}.json"
+METRICS_FILE="${SMALL_RESULTS_DIR}/metrics_thresholds_calibrated.csv"
+THRESH_JSON="${SMALL_RESULTS_DIR}/selected_thresholds.json"
 
 if [ ! -f "$METRICS_FILE" ]; then
   echo "Expected metrics file not found: $METRICS_FILE"
@@ -95,20 +101,20 @@ PY
 
 echo "--- Running large sample (SAMPLE_SIZE=$LARGE_SAMPLE) ---"
 # Run the large sample with the classification pipeline (outputs per-model files)
-STRATEGY="zero_shot" SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY \
+STRATEGY=$STRATEGY SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY \
     "$VENV_PY" experiments/pipelines/ollama/run_ollama_classification.py $MODELS_ARG
 
 # Aggregate per-model files into combined file
 echo "--- Aggregating per-model results ---"
-COUNTRY=$COUNTRY "$VENV_PY" -c "
+STRATEGY=$STRATEGY SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -c "
 from lib.core.result_aggregator import aggregate_model_results
-aggregate_model_results('$COUNTRY', 'results/${COUNTRY}')
+aggregate_model_results('$COUNTRY', '$LARGE_RESULTS_DIR')
 "
 
 # Run calibration and evaluation
-COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
+STRATEGY=$STRATEGY SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.calibration
 
-CALIBRATED_CSV="results/${COUNTRY}/ollama_results_calibrated.csv"
+CALIBRATED_CSV="${LARGE_RESULTS_DIR}/ollama_results_calibrated.csv"
 
 if [ ! -f "$CALIBRATED_CSV" ]; then
     echo "Expected calibrated CSV not found: $CALIBRATED_CSV"
@@ -158,14 +164,14 @@ for m, info in th.items():
     rows.append({'model':m, 'threshold':thr_repr, 'accepted': len(accepted), 'coverage': (len(accepted)/total if total>0 else 0), 'accuracy': (None if acc is None else float(acc)), 'total_valid': total})
 
 final_df = pd.DataFrame(rows)
-out_path = 'results/${COUNTRY}/final_threshold_performance.csv'
+out_path = '${LARGE_RESULTS_DIR}/final_threshold_performance.csv'
 final_df.to_csv(out_path, index=False)
 print(f"Final threshold performance (saved to {out_path}):")
 print(final_df.to_string(index=False))
 PY
 
 echo "--- Generating reports ---"
-COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.per_class_metrics
-COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.visualize_reports
+STRATEGY=$STRATEGY SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.per_class_metrics
+STRATEGY=$STRATEGY SAMPLE_SIZE=$LARGE_SAMPLE COUNTRY=$COUNTRY "$VENV_PY" -m lib.analysis.visualize_reports
 
-echo "Done! Check results/$COUNTRY/ for outputs."
+echo "Done! Check $LARGE_RESULTS_DIR/ for outputs."

@@ -1,26 +1,37 @@
 #!/usr/bin/env python3
 """Compare FL/FI across model sizes (e.g., gemma:2b vs gemma:7b).
 
-Usage: COUNTRY=cmr python tools/compare_model_sizes.py --family gemma --sizes 2b,7b --out results/cmr/compare_gemma_sizes.csv
+Usage: 
+  COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.compare_models \
+    --family gemma --sizes 2b,7b
 
 What it does:
-- Reads `results/<COUNTRY>/ollama_results_calibrated.csv`.
+- Reads results from the appropriate strategy/sample_size directory
 - Filters rows to models matching family:size (e.g., gemma:2b, gemma:7b).
 - Computes FL/FI counts and rates per model, and per-family-size.
 - Runs McNemar test for pairwise comparisons on the same events.
-- Writes a small CSV with comparisons and prints results.
+- Writes comparison CSV and prints results.
+
+Note: Cross-model comparisons are only valid when comparing models run with:
+  - Same country
+  - Same strategy
+  - Same sample_size
+  - Same num_examples (for few_shot strategy)
 """
 import os
 import argparse
 import pandas as pd
 from statsmodels.stats.contingency_tables import mcnemar
-from lib.core.data_helpers import paths_for_country
+from lib.core.data_helpers import setup_country_environment, get_strategy, get_sample_size, get_num_examples
 from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
 from lib.core.constants import LABEL_MAP
 from lib.inference.ollama_client import run_model_on_rows
 
-COUNTRY = os.environ.get('COUNTRY', 'cmr')
-RESULTS_DIR = os.path.join('results', COUNTRY)
+# Use setup_country_environment to get proper paths including strategy/sample_size
+COUNTRY, RESULTS_DIR = setup_country_environment()
+STRATEGY = get_strategy()
+SAMPLE_SIZE = get_sample_size()
+NUM_EXAMPLES = get_num_examples()
 
 LABELS = list(LABEL_MAP.values())
 
@@ -70,10 +81,18 @@ def main():
     family = args.family
     sizes = [s.strip() for s in args.sizes.split(',') if s.strip()]
     models = [f"{family}:{s}" for s in sizes]
+    
+    # Print comparison context for clarity
+    print(f"\\n{'='*70}")
+    print(f"Cross-Model Comparison: {family} family")
+    print(f"Context: {COUNTRY}, {STRATEGY}, sample_size={SAMPLE_SIZE}" + 
+          (f", num_examples={NUM_EXAMPLES}" if STRATEGY == 'few_shot' and NUM_EXAMPLES else ""))
+    print(f"Models: {', '.join(models)}")
+    print(f"Results directory: {RESULTS_DIR}")
+    print(f"{'='*70}\\n")
 
-    # Load calibrated CSV if present, otherwise start empty
-    paths = paths_for_country(COUNTRY)
-    cal_csv_path = paths['calibrated_csv']
+    # Load calibrated CSV from the correct strategy/sample_size directory
+    cal_csv_path = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
     if os.path.exists(cal_csv_path):
         df = pd.read_csv(cal_csv_path)
     else:
@@ -82,11 +101,15 @@ def main():
     # Detect missing models and run them on the sample when run_missing is true
     missing = [m for m in models if (df.empty or m not in df['model'].unique())]
     if missing and run_missing:
-        sample_path = os.path.join('datasets', COUNTRY, f'state_actor_sample_{COUNTRY}.csv')
+        # Use the correct sample path with sample_size suffix
+        sample_path = os.path.join('datasets', COUNTRY, f'state_actor_sample_{COUNTRY}_{SAMPLE_SIZE}.csv')
         if not os.path.exists(sample_path):
-            raise SystemExit(f"Missing sample file for inference: {sample_path}")
+            raise SystemExit(
+                f"Missing sample file for inference: {sample_path}\\n"
+                f"Run the main pipeline first to create the sample, or check SAMPLE_SIZE={SAMPLE_SIZE}"
+            )
         sample = pd.read_csv(sample_path)
-        print('Running inference for missing models:', missing)
+        print(f'Running inference for missing models on sample ({len(sample)} events):', missing)
         new_results = []
         for mrun in missing:
             print('Running model', mrun)
@@ -116,9 +139,23 @@ def main():
         if m not in out_df['model'].values:
             out_df = pd.concat([out_df, pd.DataFrame([{'model': m, 'total': 0, 'fl': 0, 'fi': 0}])], ignore_index=True)
     out_df = out_df.sort_values('model')
+    
+    # Add comparison context metadata to output
+    out_df.insert(0, 'country', COUNTRY)
+    out_df.insert(1, 'strategy', STRATEGY)
+    out_df.insert(2, 'sample_size', SAMPLE_SIZE)
+    out_df.insert(3, 'num_examples', NUM_EXAMPLES if STRATEGY == 'few_shot' else None)
 
     # pairwise comparisons on same event ids (if event_id column exists)
     comparisons = []
+    # Add comparison metadata for traceability
+    comparison_metadata = {
+        'country': COUNTRY,
+        'strategy': STRATEGY,
+        'sample_size': SAMPLE_SIZE,
+        'num_examples': NUM_EXAMPLES if STRATEGY == 'few_shot' else None
+    }
+    
     if 'event_id' in df.columns:
         for i in range(len(models)):
             for j in range(i+1, len(models)):
@@ -128,7 +165,16 @@ def main():
                 right = df[df['model']==b][['event_id','true_label','pred_label']].rename(columns={'pred_label':'pred_b'})
                 merged = left.merge(right, on=['event_id','true_label'])
                 if merged.empty:
-                    comparisons.append({'model_a':a,'model_b':b,'n_common':0,'note':'no common events'})
+                    comparisons.append({
+                        'country': COUNTRY,
+                        'strategy': STRATEGY,
+                        'sample_size': SAMPLE_SIZE,
+                        'num_examples': NUM_EXAMPLES if STRATEGY == 'few_shot' else None,
+                        'model_a': a,
+                        'model_b': b,
+                        'n_common': 0,
+                        'note': 'no common events'
+                    })
                     continue
                 # compute contingency for correctness on relevant labels
                 merged['a_correct'] = merged.apply(lambda r: r['pred_a']==r['true_label'], axis=1)
@@ -140,7 +186,21 @@ def main():
                 c_count = int(((merged['a_correct']==False) & (merged['b_correct']==True)).sum())
                 d_count = int(((merged['a_correct']==False) & (merged['b_correct']==False)).sum())
                 stat, p = mcnemar_test({'a':a_count,'b':b_count,'c':c_count,'d':d_count})
-                comparisons.append({'model_a':a,'model_b':b,'n_common':len(merged),'both_correct':a_count,'a_correct_b_wrong':b_count,'a_wrong_b_correct':c_count,'both_wrong':d_count,'mcnemar_stat':stat,'mcnemar_p':p})
+                comparisons.append({
+                    'country': COUNTRY,
+                    'strategy': STRATEGY, 
+                    'sample_size': SAMPLE_SIZE,
+                    'num_examples': NUM_EXAMPLES if STRATEGY == 'few_shot' else None,
+                    'model_a': a,
+                    'model_b': b,
+                    'n_common': len(merged),
+                    'both_correct': a_count,
+                    'a_correct_b_wrong': b_count,
+                    'a_wrong_b_correct': c_count,
+                    'both_wrong': d_count,
+                    'mcnemar_stat': stat,
+                    'mcnemar_p': p
+                })
     else:
         comparisons.append({'note':'event_id not present; cannot do paired comparisons'})
 

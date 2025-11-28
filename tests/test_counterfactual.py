@@ -20,11 +20,19 @@ def test_counterfactual_pipeline():
     print("=" * 50)
     
     # Use the sample dataset with actual text data
-    sample_data_path = Path("datasets/nga/state_actor_sample_nga.csv")
+    # Try the new format first (with sample_size), fall back to old format for backwards compatibility
+    sample_size = os.environ.get('SAMPLE_SIZE', '1000')
+    sample_data_path = Path(f"datasets/nga/state_actor_sample_nga_{sample_size}.csv")
     if not sample_data_path.exists():
-        print(f"Sample data file not found: {sample_data_path}")
-        print("Please ensure the dataset exists.")
-        return False
+        # Fallback: look for any sample file matching pattern
+        sample_dir = Path("datasets/nga")
+        sample_files = list(sample_dir.glob("state_actor_sample_nga_*.csv"))
+        if sample_files:
+            sample_data_path = sample_files[0]
+        else:
+            print(f"No sample data file found in {sample_dir}")
+            print("Run the main pipeline first to create a sample file.")
+            return False
     
     print(f"Found sample data: {sample_data_path}")
     
