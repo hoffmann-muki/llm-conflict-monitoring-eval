@@ -117,7 +117,8 @@ def paths_for_country(country: str, strategy: str = None, sample_size: str = Non
     
     results_dir = _build_results_dir(country, strategy, str(sample_size), num_examples)
     datasets_dir = os.path.join('datasets', country)
-    sample_path = os.path.join(datasets_dir, f'state_actor_sample_{country}.csv')
+    # Include sample_size in filename for fair cross-model comparison at different sample sizes
+    sample_path = os.path.join(datasets_dir, f'state_actor_sample_{country}_{sample_size}.csv')
     calibrated_csv = os.path.join(results_dir, 'ollama_results_calibrated.csv')
     return {
         'results_dir': results_dir,
@@ -138,9 +139,24 @@ def resolve_columns(df, candidates):
         out[name] = cols_lower.get(name.lower(), None)
     return out
 
-def write_sample(country: str, sample_df, sample_name: str = 'state_actor_sample') -> str:
-    paths = paths_for_country(country)
+def write_sample(country: str, sample_df, sample_size: str = None, 
+                 sample_name: str = 'state_actor_sample') -> str:
+    """Write sample DataFrame to CSV for cross-model consistency.
+    
+    Args:
+        country: Country code (e.g., 'cmr', 'nga')
+        sample_df: DataFrame containing the sample
+        sample_size: Sample size (included in filename for fair comparison)
+        sample_name: Base name for the sample file
+    
+    Returns:
+        Path to the written sample file
+    """
+    if sample_size is None:
+        sample_size = get_sample_size()
+    paths = paths_for_country(country, sample_size=sample_size)
     os.makedirs(paths['datasets_dir'], exist_ok=True)
-    path = os.path.join(paths['datasets_dir'], f'{sample_name}_{country}.csv')
+    # Use sample_path which already includes sample_size
+    path = paths['sample_path']
     sample_df.to_csv(path, index=False)
     return path

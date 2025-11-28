@@ -217,7 +217,7 @@ def run_classification_experiment(country_code: str,
             replace=False
         )
         
-        sample_path = write_sample(country_code, df_test)
+        sample_path = write_sample(country_code, df_test, sample_size=str(sample_size))
         print(f"Wrote stratified sample to {sample_path}")
     
     print(df_test.head())

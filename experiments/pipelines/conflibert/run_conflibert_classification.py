@@ -192,31 +192,38 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     
     print(f"Usable state-actor rows found ({country_name}): {len(usable):,}")
     
-    # Build stratified sample
-    n_total = min(sample_size, len(usable))
-    
-    if primary_group:
-        print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
-              f"{(1-primary_share)*100:.0f}% proportional to other classes")
+    # Check if sample file already exists (for consistent cross-model/cross-pipeline comparison)
+    # Uses unified sample path shared with Ollama pipeline
+    sample_path = paths['sample_path']
+    if os.path.exists(sample_path):
+        print(f"Reusing existing sample file for cross-model consistency: {sample_path}")
+        df = pd.read_csv(sample_path)
+        print(f"Loaded {len(df)} events from existing sample")
     else:
-        print("Using proportional sampling: sample reflects natural class distribution")
-    
-    df = build_stratified_sample(
-        usable,
-        stratify_col='event_type',
-        n_total=n_total,
-        primary_group=primary_group,
-        primary_share=primary_share,
-        label_map=LABEL_MAP,
-        random_state=42,
-        replace=False
-    )
-    
-    # Save sample for reproducibility
-    sample_path = os.path.join(paths['datasets_dir'], f"conflibert_sample_{country_code}_state_actors.csv")
-    df.to_csv(sample_path, index=False)
-    print(f"Wrote stratified sample to {sample_path}")
-    print(f"Loaded sample size: {len(df)} events")
+        # Build stratified sample
+        n_total = min(sample_size, len(usable))
+        
+        if primary_group:
+            print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
+                  f"{(1-primary_share)*100:.0f}% proportional to other classes")
+        else:
+            print("Using proportional sampling: sample reflects natural class distribution")
+        
+        df = build_stratified_sample(
+            usable,
+            stratify_col='event_type',
+            n_total=n_total,
+            primary_group=primary_group,
+            primary_share=primary_share,
+            label_map=LABEL_MAP,
+            random_state=42,
+            replace=False
+        )
+        
+        # Save sample for reproducibility (unified path for cross-pipeline comparison)
+        df.to_csv(sample_path, index=False)
+        print(f"Wrote stratified sample to {sample_path}")
+        print(f"Sample size: {len(df)} events")
     
     # Extract data
     texts = df['notes'].astype(str).tolist()
