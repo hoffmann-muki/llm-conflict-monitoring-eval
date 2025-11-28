@@ -1,49 +1,33 @@
 # Prompting Strategies
 
-Modular prompting strategies for event classification experiments.
+Modular prompting strategies for event classification.
 
 ## Available Strategies
 
-| Strategy | Description | Environment Variable | Use Case |
-|----------|-------------|---------------------|----------|
-| `zero_shot` | Direct classification without examples | `STRATEGY=zero_shot` | Default, baseline comparison |
-| `few_shot` | Classification with 1-5 examples per category | `STRATEGY=few_shot NUM_EXAMPLES=3` | Improved accuracy |
-| `explainable` | Chain-of-thought reasoning prompts | `STRATEGY=explainable` | Transparent decision-making |
+| Strategy | Description | Config |
+|----------|-------------|--------|
+| `zero_shot` | Direct classification without examples | Default |
+| `few_shot` | Classification with examples per category | `NUM_EXAMPLES=1..5` |
+| `explainable` | Chain-of-thought reasoning | - |
 
 ## Usage
 
 ```python
 from experiments.prompting_strategies import ZeroShotStrategy, FewShotStrategy
 
-# Zero-shot (default)
+# Zero-shot
 strategy = ZeroShotStrategy()
-prompt = strategy.make_prompt("Military forces attacked civilians in the village")
+prompt = strategy.make_prompt("Military forces attacked civilians")
 system_msg = strategy.get_system_message()
 
-# Few-shot with configurable number of examples
-strategy = FewShotStrategy(num_examples=3)  # 1-5 examples per category
+# Few-shot with configurable examples
+strategy = FewShotStrategy(num_examples=3)
 prompt = strategy.make_prompt("Protesters gathered in the capital")
-```
-
-### Environment-Based Configuration
-
-The number of few-shot examples can be configured via environment variable:
-
-```bash
-# Run with 3 examples per category
-COUNTRY=cmr STRATEGY=few_shot SAMPLE_SIZE=500 NUM_EXAMPLES=3 \
-  python experiments/pipelines/ollama/run_ollama_classification.py
-```
-
-Results are organized into subdirectories by number of examples:
-```
-results/cmr/few_shot/500/3/   # NUM_EXAMPLES=3
-results/cmr/few_shot/500/5/   # NUM_EXAMPLES=5
 ```
 
 ## Creating Custom Strategies
 
-All strategies must inherit from the `PromptingStrategy` base class:
+Inherit from `PromptingStrategy`:
 
 ```python
 from experiments.prompting_strategies.base import PromptingStrategy
@@ -51,11 +35,11 @@ from typing import Dict, Any, Optional
 
 class MyStrategy(PromptingStrategy):
     def make_prompt(self, note: str) -> str:
-        """Generate classification prompt for the event note."""
+        """Generate classification prompt."""
         return f"Classify this event: {note}"
     
     def get_schema(self) -> Dict[str, Any]:
-        """Define expected JSON response schema."""
+        """JSON schema for structured response."""
         return {
             "type": "object",
             "properties": {
@@ -66,7 +50,7 @@ class MyStrategy(PromptingStrategy):
         }
     
     def get_system_message(self) -> Optional[str]:
-        """Optional system message for the model."""
+        """Optional system message."""
         return "You are an expert conflict event classifier."
     
     def get_name(self) -> str:
@@ -76,77 +60,25 @@ class MyStrategy(PromptingStrategy):
 
 ## Base Class Interface
 
-### Required Methods
+| Method | Returns | Required |
+|--------|---------|----------|
+| `make_prompt(note)` | `str` | Yes |
+| `get_schema()` | `Dict` | Yes |
+| `get_system_message()` | `Optional[str]` | Yes |
+| `get_name()` | `str` | No (defaults to class name) |
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `make_prompt(note)` | `str` | Generate prompt for classification |
-| `get_schema()` | `Dict` | JSON schema for structured responses |
-| `get_system_message()` | `Optional[str]` | System message (or None) |
+## Registering Strategies
 
-### Optional Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `get_name()` | `str` | Strategy name (defaults to class name) |
-
-## Event Categories
-
-All strategies classify events into ACLED categories:
-
-| Code | Category |
-|------|----------|
-| V | Violence against civilians |
-| B | Battles |
-| E | Explosions/Remote violence |
-| P | Protests |
-| R | Riots |
-| S | Strategic developments |
-
-## Registering New Strategies
-
-1. Create your strategy file in this directory
+1. Create strategy file in this directory
 2. Add import to `__init__.py`
-3. Register in `lib/core/strategy_helpers.py`:
-
-```python
-# In STRATEGY_REGISTRY
-STRATEGY_REGISTRY = {
-    'zero_shot': ZeroShotStrategy,
-    'few_shot': FewShotStrategy,
-    'explainable': ExplainableStrategy,
-    'my_strategy': MyStrategy,  # Add your strategy
-}
-```
-
-4. Run experiments:
-```bash
-STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-```
+3. Register in `lib/core/strategy_helpers.py`
+4. Run: `STRATEGY=my_strategy ./experiments/scripts/run_ollama_full_analysis.sh`
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ Prompting Strategy                                               │
-│   - Generates prompts from event text                           │
-│   - Defines response schema                                      │
-│   - Provides system message                                      │
-│   - Configurable parameters (e.g., num_examples for few_shot)   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Strategy Registry (lib/core/strategy_helpers.py)                │
-│   - Maps strategy names to classes                              │
-│   - Factory function get_strategy()                             │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Inference Client (lib/inference/ollama_client.py)               │
-│   - Handles API communication                                   │
-│   - No hardcoded prompts - uses strategy output                 │
-└─────────────────────────────────────────────────────────────────┘
+Prompting Strategy → Strategy Registry → Inference Client
+     (prompts)      (lib/core)          (lib/inference)
 ```
+
+Strategies generate prompts; the inference client handles API communication with no hardcoded prompts.
