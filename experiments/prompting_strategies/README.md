@@ -4,11 +4,11 @@ Modular prompting strategies for event classification experiments.
 
 ## Available Strategies
 
-| Strategy | Description | Use Case |
-|----------|-------------|----------|
-| `zero_shot` | Direct classification without examples | Default, baseline comparison |
-| `few_shot` | Classification with 1-5 examples per category | Improved accuracy |
-| `explainable` | Chain-of-thought reasoning prompts | Transparent decision-making |
+| Strategy | Description | Environment Variable | Use Case |
+|----------|-------------|---------------------|----------|
+| `zero_shot` | Direct classification without examples | `STRATEGY=zero_shot` | Default, baseline comparison |
+| `few_shot` | Classification with 1-5 examples per category | `STRATEGY=few_shot NUM_EXAMPLES=3` | Improved accuracy |
+| `explainable` | Chain-of-thought reasoning prompts | `STRATEGY=explainable` | Transparent decision-making |
 
 ## Usage
 
@@ -20,9 +20,25 @@ strategy = ZeroShotStrategy()
 prompt = strategy.make_prompt("Military forces attacked civilians in the village")
 system_msg = strategy.get_system_message()
 
-# Few-shot with examples
-strategy = FewShotStrategy()
+# Few-shot with configurable number of examples
+strategy = FewShotStrategy(num_examples=3)  # 1-5 examples per category
 prompt = strategy.make_prompt("Protesters gathered in the capital")
+```
+
+### Environment-Based Configuration
+
+The number of few-shot examples can be configured via environment variable:
+
+```bash
+# Run with 3 examples per category
+COUNTRY=cmr STRATEGY=few_shot SAMPLE_SIZE=500 NUM_EXAMPLES=3 \
+  python experiments/pipelines/ollama/run_ollama_classification.py
+```
+
+Results are organized into subdirectories by number of examples:
+```
+results/cmr/few_shot/500/3/   # NUM_EXAMPLES=3
+results/cmr/few_shot/500/5/   # NUM_EXAMPLES=5
 ```
 
 ## Creating Custom Strategies
@@ -117,6 +133,7 @@ STRATEGY=my_strategy COUNTRY=cmr SAMPLE_SIZE=500 \
 │   - Generates prompts from event text                           │
 │   - Defines response schema                                      │
 │   - Provides system message                                      │
+│   - Configurable parameters (e.g., num_examples for few_shot)   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼

@@ -12,6 +12,17 @@ lib/
 └── inference/         # Ollama model inference
 ```
 
+## Environment Variables
+
+All modules use consistent environment variable configuration:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `COUNTRY` | Country code (cmr, nga) | cmr |
+| `STRATEGY` | Prompting strategy (zero_shot, few_shot, explainable) | zero_shot |
+| `SAMPLE_SIZE` | Number of events sampled | 500 |
+| `NUM_EXAMPLES` | Few-shot examples per category (1-5, only for few_shot) | None |
+
 ## Modules
 
 ### Data Preparation
@@ -40,28 +51,79 @@ Constants, utilities, and result aggregation:
 
 ```python
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, WORKING_MODELS
-from lib.core.data_helpers import setup_country_environment, paths_for_country, get_sample_size
+from lib.core.data_helpers import (
+    setup_country_environment,
+    paths_for_country,
+    get_strategy,
+    get_sample_size,
+    get_num_examples,
+    write_sample
+)
 from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
 from lib.core.result_aggregator import aggregate_model_results, get_per_model_result_path
+```
+
+**Environment Setup (Recommended):**
+
+```python
+from lib.core.data_helpers import setup_country_environment, get_strategy, get_sample_size
+
+# Get country and results directory from environment
+country, results_dir = setup_country_environment()
+# Returns: ('cmr', 'results/cmr/zero_shot/500')
+
+# For few_shot with NUM_EXAMPLES=3:
+# Returns: ('cmr', 'results/cmr/few_shot/500/3')
+
+# Get individual values
+strategy = get_strategy()       # 'zero_shot'
+sample_size = get_sample_size() # '500'
+num_examples = get_num_examples()  # None or 1-5
+```
+
+**Path Resolution:**
+
+```python
+from lib.core.data_helpers import paths_for_country
+
+paths = paths_for_country('cmr')
+# Returns:
+# {
+#   'results_dir': 'results/cmr/zero_shot/500',
+#   'datasets_dir': 'datasets/cmr',
+#   'sample_path': 'datasets/cmr/state_actor_sample_cmr_500.csv',
+#   'calibrated_csv': 'results/cmr/zero_shot/500/ollama_results_calibrated.csv'
+# }
 ```
 
 **Result Aggregator:**
 
 Combines per-model inference files into a single aggregated file for cross-model analysis:
 
-```python
-from lib.core.result_aggregator import aggregate_model_results, model_name_to_slug
-
+```bash
 # Aggregate all per-model files
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.core.result_aggregator
+```
 
-# Programmatic usage
-from lib.core.result_aggregator import get_per_model_result_path
+```python
+from lib.core.result_aggregator import get_per_model_result_path, model_name_to_slug
+
+# Get path for specific model's results
 path = get_per_model_result_path('cmr', 'mistral:7b', strategy='zero_shot', sample_size='500')
 # Returns: results/cmr/zero_shot/500/ollama_results_mistral-7b_acled_cmr_state_actors.csv
 
 # Convert model name to filename-safe slug
 slug = model_name_to_slug('llama3.1:8b')  # Returns: 'llama3.1-8b'
+```
+
+**Sample File Management:**
+
+```python
+from lib.core.data_helpers import write_sample
+
+# Write sample for cross-model consistency
+path = write_sample('cmr', sample_df, sample_size='500')
+# Creates: datasets/cmr/state_actor_sample_cmr_500.csv
 ```
 
 ### Inference
@@ -101,7 +163,7 @@ COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.per_class_
 # Counterfactual perturbation testing
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.counterfactual --events 20
 
-# Or specify models explicitly
+# Specify models explicitly
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.counterfactual \
   --models llama3.2,mistral:7b --events 20
 
@@ -111,7 +173,7 @@ COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.counterfac
 # Visualizations
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.visualize_reports
 
-# Model size comparisons
+# Model size comparisons (includes metadata for traceability)
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.compare_models \
   --family gemma --sizes 2b,7b
 
@@ -119,14 +181,13 @@ COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.compare_mo
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.thresholds
 ```
 
-## Environment Variables
+**Few-Shot Examples:**
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `COUNTRY` | Country code (cmr, nga) | cmr |
-| `STRATEGY` | Prompting strategy (zero_shot, few_shot, explainable) | zero_shot |
-| `SAMPLE_SIZE` | Number of events sampled | 500 |
-| `RESULTS_DIR` | Results directory path | Auto-detected |
+```bash
+# Run analysis for few-shot with 3 examples
+COUNTRY=cmr STRATEGY=few_shot SAMPLE_SIZE=500 NUM_EXAMPLES=3 \
+  python -m lib.analysis.metrics
+```
 
 ## Directory Structure
 
@@ -145,13 +206,20 @@ results/
 │   │   └── 1000/
 │   │       └── ...
 │   └── few_shot/
-│       ├── 500/
-│       └── 1000/
+│       └── 500/
+│           ├── 3/       # NUM_EXAMPLES=3
+│           │   └── ...
+│           └── 5/       # NUM_EXAMPLES=5
+│               └── ...
 └── nga/
-    ├── zero_shot/
-    │   ├── 500/
-    │   └── 1000/
-    └── few_shot/
+    └── ...
+
+datasets/
+├── cmr/
+│   ├── state_actor_sample_cmr_500.csv    # Unified sample for 500 events
+│   └── state_actor_sample_cmr_1000.csv   # Unified sample for 1000 events
+└── nga/
+    └── ...
 ```
 
 ## Output Files
@@ -200,3 +268,9 @@ Each analysis module writes to `results/<country>/<strategy>/<sample_size>/`:
 |------|-------------|
 | `counterfactual_analysis_{models}.json` | Full analysis |
 | `counterfactual_analysis_{models}_summary.csv` | Summary table |
+
+### Model Comparison
+| File | Description |
+|------|-------------|
+| `compare_{family}_sizes.csv` | FL/FI by model with metadata |
+| `compare_{family}_pairwise.csv` | McNemar test results with context |

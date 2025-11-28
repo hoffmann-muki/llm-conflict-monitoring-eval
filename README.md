@@ -8,6 +8,7 @@ This repository provides tools to test whether LLMs exhibit systematic bias when
 - Multiple countries (Cameroon, Nigeria)
 - Multiple model families (Ollama models, ConfliBERT)
 - Multiple prompting strategies (zero-shot, few-shot, explainable)
+- Configurable few-shot examples (1-5 examples per category)
 - Comprehensive fairness and harm-aware metrics
 
 ## Repository Structure
@@ -23,7 +24,7 @@ This repository provides tools to test whether LLMs exhibit systematic bias when
 │   ├── data_preparation/ # Data extraction and sampling
 │   └── inference/        # Model inference clients
 ├── datasets/             # Country-specific ACLED data
-├── results/              # Results by country/strategy
+├── results/              # Results by country/strategy/sample_size
 └── tests/                # Test suite
 ```
 
@@ -37,8 +38,8 @@ This repository provides tools to test whether LLMs exhibit systematic bias when
 
 ```bash
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -56,8 +57,12 @@ python experiments/pipelines/conflibert/download_conflibert_model.py \
 ### Full Analysis Pipeline
 
 ```bash
-# Run complete analysis with all models
+# Run complete analysis with all models (zero-shot)
 COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
+  ./experiments/scripts/run_ollama_full_analysis.sh
+
+# Few-shot with 3 examples per category
+COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # With specific models
@@ -73,8 +78,8 @@ SKIP_INFERENCE=true COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 \
 
 ```bash
 # Classification only
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 500 --strategy zero_shot
+COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
+  python experiments/pipelines/ollama/run_ollama_classification.py
 
 # Aggregate per-model results
 COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.core.result_aggregator
@@ -94,9 +99,21 @@ python experiments/pipelines/conflibert/download_conflibert_model.py \
   --out-dir models/conflibert
 
 # Run classification
-python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
-  --model-path models/conflibert --sample-size 500
+COUNTRY=cmr SAMPLE_SIZE=500 python experiments/pipelines/conflibert/run_conflibert_classification.py \
+  --model-path models/conflibert
 ```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `COUNTRY` | Country code (cmr, nga) | cmr |
+| `STRATEGY` | Prompting strategy (zero_shot, few_shot, explainable) | zero_shot |
+| `SAMPLE_SIZE` | Number of events to sample | 500 |
+| `NUM_EXAMPLES` | Few-shot examples per category (1-5, only for few_shot strategy) | None |
+| `OLLAMA_MODELS` | Comma-separated model list | All WORKING_MODELS |
+| `SKIP_INFERENCE` | Skip inference phase (true/false) | false |
+| `SKIP_COUNTERFACTUAL` | Skip counterfactual phase (true/false) | false |
 
 ## Workflow Architecture
 
@@ -104,24 +121,26 @@ The pipeline uses a **per-model-then-aggregate** workflow for fair cross-model c
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
+│ Sample Creation                                                              │
+│   Unified sample file: datasets/{country}/state_actor_sample_{country}_{n}.csv │
+│   Same sample reused across all models for fair comparison                   │
+├─────────────────────────────────────────────────────────────────────────────┤
 │ Phase 1: Per-Model Inference                                                │
 │   Each model classifies the SAME sample of events                           │
 │   Output: results/{country}/{strategy}/{sample_size}/ollama_results_...     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Phase 1.5: Aggregation                                                      │
 │   Combine per-model files into single dataset                               │
-│   Output: results/{country}/{strategy}/{sample_size}/ollama_results_...     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Phase 2-5: Analysis                                                         │
 │   Calibration, metrics, harm analysis, counterfactual testing               │
-│   Output: Various analysis files in same directory                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Benefits:**
 - **Fair comparison**: All models classify identical events
 - **Incremental runs**: Run one model at a time, aggregate later
-- **Reproducibility**: Same sample file reused across model runs
+- **Reproducibility**: Same sample file (with `random_state=42`) reused across model runs
 - **Strategy isolation**: Different strategies produce separate result sets
 
 ## Results Directory Structure
@@ -143,13 +162,20 @@ results/
 │   │   └── 1000/
 │   │       └── ...
 │   └── few_shot/
-│       ├── 500/
-│       └── 1000/
+│       └── 500/
+│           ├── 3/           # NUM_EXAMPLES=3
+│           │   └── ...
+│           └── 5/           # NUM_EXAMPLES=5
+│               └── ...
 └── nga/
-    ├── zero_shot/
-    │   ├── 500/
-    │   └── 1000/
-    └── few_shot/
+    └── ...
+
+datasets/
+├── cmr/
+│   ├── state_actor_sample_cmr_500.csv    # Unified sample for 500 events
+│   └── state_actor_sample_cmr_1000.csv   # Unified sample for 1000 events
+└── nga/
+    └── ...
 ```
 
 ## Analysis Metrics
@@ -185,8 +211,8 @@ All pipelines classify events into ACLED categories:
 Samples reflect the natural class distribution in the data:
 
 ```bash
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 500
+COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
+  python experiments/pipelines/ollama/run_ollama_classification.py
 ```
 
 ### Targeted Oversampling
@@ -194,16 +220,30 @@ python experiments/pipelines/ollama/run_ollama_classification.py cmr \
 Oversample specific event types for focused analysis:
 
 ```bash
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
+python experiments/pipelines/ollama/run_ollama_classification.py \
   --sample-size 500 \
   --primary-group "Violence against civilians" \
   --primary-share 0.6
 ```
 
+## Cross-Model Comparison
+
+For valid cross-model comparisons, ensure all models are run with:
+- Same `COUNTRY`
+- Same `STRATEGY`
+- Same `SAMPLE_SIZE`
+- Same `NUM_EXAMPLES` (for few_shot strategy)
+
+```bash
+# Compare model sizes within a family
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 \
+  python -m lib.analysis.compare_models --family gemma --sizes 2b,7b
+```
+
 ## Requirements
 
-- Python 3.7+
-- pandas, scikit-learn, matplotlib, tqdm, scipy
+- Python 3.10+
+- pandas, scikit-learn, matplotlib, tqdm, scipy, statsmodels
 - **Ollama**: Local daemon with models (`ollama serve`)
 - **ConfliBERT**: PyTorch, transformers, model weights
 - ACLED dataset files in `datasets/`
