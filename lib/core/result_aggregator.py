@@ -16,7 +16,7 @@ import os
 import glob
 import re
 import pandas as pd
-from lib.core.data_helpers import setup_country_environment, get_strategy, get_sample_size
+from lib.core.data_helpers import setup_country_environment, get_strategy, get_sample_size, get_num_examples
 
 
 def model_name_to_slug(model_name: str) -> str:
@@ -45,44 +45,54 @@ def slug_to_model_name(slug: str) -> str:
 
 
 def get_per_model_results_pattern(country: str, results_dir: str = None, 
-                                   strategy: str = None, sample_size: str = None) -> str:
+                                   strategy: str = None, sample_size: str = None,
+                                   num_examples: int = None) -> str:
     """Get glob pattern for per-model result files."""
     if strategy is None:
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy, str(sample_size))
+        _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     return os.path.join(results_dir, f'ollama_results_*_acled_{country}_state_actors.csv')
 
 
 def get_combined_results_path(country: str, results_dir: str = None,
-                              strategy: str = None, sample_size: str = None) -> str:
+                              strategy: str = None, sample_size: str = None,
+                              num_examples: int = None) -> str:
     """Get path to combined results file."""
     if strategy is None:
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy, str(sample_size))
+        _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     return os.path.join(results_dir, f'ollama_results_acled_{country}_state_actors.csv')
 
 
 def get_per_model_result_path(country: str, model_name: str, results_dir: str = None,
-                              strategy: str = None, sample_size: str = None) -> str:
+                              strategy: str = None, sample_size: str = None,
+                              num_examples: int = None) -> str:
     """Get path to a specific model's result file."""
     if strategy is None:
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy, str(sample_size))
+        _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     slug = model_name_to_slug(model_name)
     return os.path.join(results_dir, f'ollama_results_{slug}_acled_{country}_state_actors.csv')
 
 
 def list_per_model_files(country: str, results_dir: str = None,
-                         strategy: str = None, sample_size: str = None) -> list:
+                         strategy: str = None, sample_size: str = None,
+                         num_examples: int = None) -> list:
     """List all per-model result files for a country, strategy, and sample size.
     
     Returns:
@@ -92,9 +102,11 @@ def list_per_model_files(country: str, results_dir: str = None,
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     if results_dir is None:
-        results_dir = os.path.join('results', country, strategy, str(sample_size))
-    pattern = get_per_model_results_pattern(country, results_dir, strategy, sample_size)
+        _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
+    pattern = get_per_model_results_pattern(country, results_dir, strategy, sample_size, num_examples)
     files = glob.glob(pattern)
     
     # Extract model slug from filename
@@ -112,6 +124,7 @@ def list_per_model_files(country: str, results_dir: str = None,
 
 def aggregate_model_results(country: str = None, results_dir: str = None, 
                            strategy: str = None, sample_size: str = None,
+                           num_examples: int = None,
                            verbose: bool = True) -> pd.DataFrame:
     """Aggregate all per-model result files into a single DataFrame.
     
@@ -120,6 +133,7 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
         results_dir: Results directory. If None, uses default 'results/{country}/{strategy}/{sample_size}'.
         strategy: Prompting strategy. If None, reads from STRATEGY env var.
         sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
+        num_examples: Number of few-shot examples. If None, reads from NUM_EXAMPLES env var.
         verbose: Print progress messages.
     
     Returns:
@@ -129,18 +143,20 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     
     if country is None:
-        country, results_dir = setup_country_environment()
+        country, results_dir = setup_country_environment(None, strategy, sample_size, num_examples)
     elif results_dir is None:
-        results_dir = os.path.join('results', country, strategy, str(sample_size))
+        _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     
-    per_model_files = list_per_model_files(country, results_dir, strategy, sample_size)
+    per_model_files = list_per_model_files(country, results_dir, strategy, sample_size, num_examples)
     
     if not per_model_files:
         if verbose:
             print(f"No per-model result files found for strategy '{strategy}', sample_size '{sample_size}' in {results_dir}")
-            print(f"Pattern: {get_per_model_results_pattern(country, results_dir, strategy, sample_size)}")
+            print(f"Pattern: {get_per_model_results_pattern(country, results_dir, strategy, sample_size, num_examples)}")
         return pd.DataFrame()
     
     if verbose:
@@ -183,6 +199,7 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
 
 def write_combined_results(country: str = None, results_dir: str = None,
                           strategy: str = None, sample_size: str = None,
+                          num_examples: int = None,
                           verbose: bool = True) -> str:
     """Aggregate per-model files and write combined results file.
     
@@ -193,20 +210,22 @@ def write_combined_results(country: str = None, results_dir: str = None,
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     
     if country is None:
-        country, results_dir = setup_country_environment()
+        country, results_dir = setup_country_environment(None, strategy, sample_size, num_examples)
     elif results_dir is None:
-        results_dir = os.path.join('results', country, strategy, str(sample_size))
+        _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     
-    combined = aggregate_model_results(country, results_dir, strategy, sample_size, verbose)
+    combined = aggregate_model_results(country, results_dir, strategy, sample_size, num_examples, verbose)
     
     if combined.empty:
         if verbose:
             print("No data to write")
         return None
     
-    out_path = get_combined_results_path(country, results_dir, strategy, sample_size)
+    out_path = get_combined_results_path(country, results_dir, strategy, sample_size, num_examples)
     combined.to_csv(out_path, index=False)
     
     if verbose:
@@ -228,6 +247,9 @@ def main():
                        help='Prompting strategy (zero_shot, few_shot, explainable). Default: STRATEGY env var')
     parser.add_argument('--sample-size', default=os.environ.get('SAMPLE_SIZE', None),
                        help='Sample size (e.g., 500, 1000). Default: SAMPLE_SIZE env var')
+    parser.add_argument('--num-examples', type=int, default=None,
+                       help='Number of few-shot examples (1-5). Only used with few_shot strategy. '
+                            'Default: NUM_EXAMPLES env var')
     parser.add_argument('--results-dir', default=None,
                        help='Results directory. Default: results/{country}/{strategy}/{sample_size}')
     parser.add_argument('--list-only', action='store_true',
@@ -240,18 +262,20 @@ def main():
     verbose = not args.quiet
     strategy = args.strategy
     sample_size = args.sample_size
+    num_examples = args.num_examples
     
     if args.list_only:
         country = args.country or os.environ.get('COUNTRY', 'cmr')
-        files = list_per_model_files(country, args.results_dir, strategy, sample_size)
+        files = list_per_model_files(country, args.results_dir, strategy, sample_size, num_examples)
         if files:
-            print(f"Per-model result files for {country} (strategy={strategy or get_strategy()}, sample_size={sample_size or get_sample_size()}):")
+            print(f"Per-model result files for {country} (strategy={strategy or get_strategy()}, sample_size={sample_size or get_sample_size()}):"
+                  + (f", num_examples={num_examples}" if strategy == 'few_shot' and num_examples else "") + ":")
             for slug, path in files:
                 print(f"  {slug}: {path}")
         else:
             print(f"No per-model result files found for {country} (strategy={strategy or get_strategy()}, sample_size={sample_size or get_sample_size()})")
     else:
-        write_combined_results(args.country, args.results_dir, strategy, sample_size, verbose)
+        write_combined_results(args.country, args.results_dir, strategy, sample_size, num_examples, verbose)
 
 
 if __name__ == '__main__':

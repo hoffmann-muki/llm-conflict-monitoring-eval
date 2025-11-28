@@ -8,12 +8,13 @@
 #
 # Usage:
 #   STRATEGY=zero_shot COUNTRY=cmr SAMPLE_SIZE=500 ./experiments/scripts/run_conflibert_experiment.sh
-#   STRATEGY=few_shot COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_conflibert_experiment.sh
+#   STRATEGY=few_shot NUM_EXAMPLES=3 COUNTRY=nga SAMPLE_SIZE=1000 ./experiments/scripts/run_conflibert_experiment.sh
 #   STRATEGY=explainable COUNTRY=cmr ./experiments/scripts/run_conflibert_experiment.sh
 #
 # Environment Variables:
 #   MODEL_PATH           - Path to local ConfliBERT model directory [default: models/conflibert]
 #   STRATEGY             - Prompting strategy (zero_shot, few_shot, explainable) [default: zero_shot]
+#   NUM_EXAMPLES         - Number of few-shot examples (1-5), only for few_shot strategy [default: 3]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   PRIMARY_GROUP        - Event type to oversample [default: none (proportional)]
@@ -35,6 +36,7 @@ set -o pipefail  # Pipeline fails if any command fails
 # Configuration with sensible defaults
 MODEL_PATH="${MODEL_PATH:-models/conflibert}"
 STRATEGY="${STRATEGY:-zero_shot}"
+NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 PRIMARY_GROUP="${PRIMARY_GROUP:-}"
@@ -138,6 +140,9 @@ log_success "ConfliBERT model found at: $MODEL_PATH"
 log_phase "CONFLIBERT EXPERIMENT CONFIGURATION"
 log_info "Model Path:         $MODEL_PATH"
 log_info "Strategy:           $STRATEGY"
+if [ "$STRATEGY" = "few_shot" ]; then
+    log_info "Few-shot Examples:  $NUM_EXAMPLES"
+fi
 log_info "Country:            $COUNTRY"
 log_info "Sample Size:        $SAMPLE_SIZE"
 log_info "Primary Group:      ${PRIMARY_GROUP:-none (proportional sampling)}"
@@ -149,7 +154,14 @@ log_info "Skip Inference:     $SKIP_INFERENCE"
 log_info "Skip Counterfactual: $SKIP_COUNTERFACTUAL"
 log_info "CF Models:          ${CF_MODELS:-all WORKING_MODELS}"
 log_info "CF Events:          $CF_EVENTS"
-log_info "Results Directory:  results/$COUNTRY/$STRATEGY/"
+
+# Build results directory path (includes num_examples for few_shot)
+if [ "$STRATEGY" = "few_shot" ]; then
+    STRATEGY_RESULTS="results/$COUNTRY/$STRATEGY/$SAMPLE_SIZE/$NUM_EXAMPLES"
+else
+    STRATEGY_RESULTS="results/$COUNTRY/$STRATEGY/$SAMPLE_SIZE"
+fi
+log_info "Results Directory:  $STRATEGY_RESULTS"
 echo ""
 
 cd "$REPO_ROOT"
@@ -177,13 +189,20 @@ else
         PRIMARY_ARGS=""
     fi
     
+    # Set num_examples argument for few_shot strategy
+    if [ "$STRATEGY" = "few_shot" ]; then
+        NUM_EXAMPLES_ARG="--num-examples $NUM_EXAMPLES"
+    else
+        NUM_EXAMPLES_ARG=""
+    fi
+    
     eval "\"$VENV_PY\" experiments/pipelines/conflibert/run_conflibert_classification.py \"$COUNTRY\" \
         --model-path \"$MODEL_PATH\" \
         --strategy \"$STRATEGY\" \
         --sample-size \"$SAMPLE_SIZE\" \
         --batch-size \"$BATCH_SIZE\" \
         --max-length \"$MAX_LENGTH\" \
-        $DEVICE_ARG $PRIMARY_ARGS"
+        $DEVICE_ARG $PRIMARY_ARGS $NUM_EXAMPLES_ARG"
     
     log_success "ConfliBERT inference completed with $STRATEGY strategy"
 fi
@@ -192,19 +211,18 @@ fi
 log_phase "PHASE 2: CALIBRATION & CORE METRICS"
 
 # Set strategy-specific results path
-STRATEGY_RESULTS="results/$COUNTRY/$STRATEGY"
 export RESULTS_DIR="$STRATEGY_RESULTS"
 
 log_step "Applying calibration (isotonic + temperature scaling)..."
-COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
     "$VENV_PY" -m lib.analysis.calibration
 
 log_step "Computing classification metrics and fairness analysis..."
-COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
     "$VENV_PY" -m lib.analysis.metrics
 
 log_step "Computing per-class decision thresholds..."
-COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
     "$VENV_PY" -m lib.analysis.thresholds
 
 log_success "Calibration and metrics completed"
@@ -213,15 +231,15 @@ log_success "Calibration and metrics completed"
 log_phase "PHASE 3: BIAS & HARM ANALYSIS"
 
 log_step "Computing false legitimization/illegitimization rates..."
-COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
     "$VENV_PY" -m lib.analysis.harm
 
 log_step "Generating per-class metrics and error case sampling..."
-COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
     "$VENV_PY" -m lib.analysis.per_class_metrics
 
 log_step "Creating visualization plots..."
-COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
     "$VENV_PY" -m lib.analysis.visualize_reports
 
 log_success "Bias and harm analysis completed"
@@ -237,11 +255,11 @@ else
     
     # If CF_MODELS not set, use all WORKING_MODELS from constants
     if [ -n "$CF_MODELS" ]; then
-        COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
             "$VENV_PY" -m lib.analysis.counterfactual \
             --models "$CF_MODELS" --events "$CF_EVENTS"
     else
-        COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
             "$VENV_PY" -m lib.analysis.counterfactual \
             --events "$CF_EVENTS"
     fi
@@ -253,7 +271,7 @@ else
               xargs -0 ls -t 2>/dev/null | head -1)
     
     if [ -n "$CF_FILE" ] && [ -f "$CF_FILE" ]; then
-        COUNTRY="$COUNTRY" RESULTS_DIR="$STRATEGY_RESULTS" \
+        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
             "$VENV_PY" -m lib.analysis.visualize_counterfactual \
             --input "$CF_FILE"
     else
@@ -268,6 +286,9 @@ log_phase "PHASE 5: EXPERIMENT SUMMARY"
 
 echo -e "${CYAN}Model: ConfliBERT${NC}"
 echo -e "${CYAN}Strategy: $STRATEGY${NC}"
+if [ "$STRATEGY" = "few_shot" ]; then
+    echo -e "${CYAN}Few-shot Examples: $NUM_EXAMPLES${NC}"
+fi
 echo -e "${CYAN}Country: $COUNTRY${NC}"
 echo -e "${CYAN}Results directory: $STRATEGY_RESULTS${NC}\n"
 
@@ -303,8 +324,8 @@ fi
 echo ""
 log_phase "CONFLIBERT EXPERIMENT COMPLETED SUCCESSFULLY"
 log_success "All quantitative metrics generated for ConfliBERT with $STRATEGY strategy"
-log_info "Compare with Ollama models by checking results/$COUNTRY/$STRATEGY/"
+log_info "Compare with Ollama models by checking $STRATEGY_RESULTS/"
 log_info "Run different strategies:"
-log_info "  STRATEGY=few_shot COUNTRY=$COUNTRY ./experiments/scripts/run_conflibert_experiment.sh"
+log_info "  STRATEGY=few_shot NUM_EXAMPLES=3 COUNTRY=$COUNTRY ./experiments/scripts/run_conflibert_experiment.sh"
 log_info "  STRATEGY=explainable COUNTRY=$COUNTRY ./experiments/scripts/run_conflibert_experiment.sh"
 echo ""

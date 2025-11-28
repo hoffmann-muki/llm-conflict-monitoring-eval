@@ -83,13 +83,17 @@ def parse_args():
                        help='Maximum sequence length (default: 256)')
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu',
                        help='Device for inference (default: cuda if available, else cpu)')
+    parser.add_argument('--num-examples', type=int, default=None,
+                       help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
+                            'Default: reads from NUM_EXAMPLES env var, or 1 if not set.')
     
     return parser.parse_args()
 
 def run_conflibert_classification(country_code: str, strategy_name: str, 
                                  sample_size: int, model_path: str,
                                  batch_size: int, max_length: int, device: str,
-                                 primary_group: str | None = None, primary_share: float = 0.0):
+                                 primary_group: str | None = None, primary_share: float = 0.0,
+                                 num_examples: int | None = None):
     """Run ConfliBERT classification with independent stratified sampling.
     
     This function:
@@ -107,6 +111,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
         device: Device for inference
         primary_group: Optional event type to oversample (default: None)
         primary_share: Fraction of sample reserved for primary_group (0-1)
+        num_examples: Number of few-shot examples (1-5). Only used when strategy_name='few_shot'.
     """
     if country_code not in COUNTRY_NAMES:
         raise ValueError(
@@ -115,7 +120,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
         )
     
     country_name = COUNTRY_NAMES[country_code]
-    strategy = get_strategy(strategy_name)
+    strategy = get_strategy(strategy_name, num_examples)
     
     if not os.path.exists(CSV_SRC):
         raise SystemExit(f"Source CSV not found: {CSV_SRC}")
@@ -123,6 +128,8 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     print(f"\n{'='*70}")
     print(f"ConfliBERT Classification: {country_name} ({country_code})")
     print(f"Strategy: {strategy_name}")
+    if strategy_name == 'few_shot' and num_examples:
+        print(f"Few-shot examples: {num_examples}")
     print(f"Model path: {model_path}")
     print(f"Sample size: {sample_size}")
     print(f"{'='*70}\n")
@@ -132,7 +139,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     df_country = extract_country_rows(CSV_SRC, country_name)
     
     # Persist extracted country-specific CSV
-    paths = paths_for_country(country_code)
+    paths = paths_for_country(country_code, strategy_name, str(sample_size), num_examples)
     os.makedirs(paths['datasets_dir'], exist_ok=True)
     out_country = os.path.join(
         paths['datasets_dir'],
@@ -288,13 +295,12 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     res_df = pd.DataFrame(results)
     
     # Setup results directory with strategy subfolder (matching Ollama pipeline)
-    _, results_dir = setup_country_environment(country_code)
-    strategy_results_dir = os.path.join(results_dir, strategy_name)
-    os.makedirs(strategy_results_dir, exist_ok=True)
+    _, results_dir = setup_country_environment(country_code, strategy_name, str(sample_size), num_examples)
+    os.makedirs(results_dir, exist_ok=True)
     
     # Save results
     out_path = os.path.join(
-        strategy_results_dir,
+        results_dir,
         f"conflibert_results_acled_{country_code}_state_actors.csv"
     )
     res_df.to_csv(out_path, index=False)
@@ -325,6 +331,13 @@ def main():
     if args.primary_group and args.primary_share == 0:
         raise ValueError('--primary-share must be > 0 when --primary-group is specified')
     
+    # Validate num_examples
+    if args.num_examples is not None:
+        if not 1 <= args.num_examples <= 5:
+            raise ValueError('--num-examples must be between 1 and 5')
+        if args.strategy != 'few_shot':
+            raise ValueError('--num-examples is only valid with --strategy few_shot')
+    
     run_conflibert_classification(
         country_code=args.country,
         strategy_name=args.strategy,
@@ -334,7 +347,8 @@ def main():
         max_length=args.max_length,
         device=args.device,
         primary_group=args.primary_group,
-        primary_share=args.primary_share
+        primary_share=args.primary_share,
+        num_examples=args.num_examples
     )
 
 

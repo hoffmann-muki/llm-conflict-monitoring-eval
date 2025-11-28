@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 def get_strategy() -> str:
     """Get the prompting strategy from environment variable.
@@ -21,43 +21,101 @@ def get_sample_size() -> str:
     return os.environ.get('SAMPLE_SIZE', '500')
 
 
+def get_num_examples() -> Optional[int]:
+    """Get the number of few-shot examples from environment variable.
+    
+    Returns:
+        Number of examples (1-5) for few-shot strategy, or None if not set.
+        Only relevant when strategy is 'few_shot'.
+    """
+    val = os.environ.get('NUM_EXAMPLES')
+    if val is not None:
+        try:
+            n = int(val)
+            if 1 <= n <= 5:
+                return n
+        except ValueError:
+            pass
+    return None
+
+
+def _build_results_dir(country: str, strategy: str, sample_size: str, 
+                       num_examples: Optional[int] = None) -> str:
+    """Build the results directory path.
+    
+    For few_shot strategy with num_examples specified, appends /{num_examples}
+    to create paths like: results/nga/few_shot/1000/3
+    
+    For other strategies or when num_examples is not specified:
+    results/{country}/{strategy}/{sample_size}
+    """
+    base_dir = os.path.join('results', country, strategy, str(sample_size))
+    
+    # For few_shot strategy, add num_examples subdirectory if specified
+    if strategy == 'few_shot' and num_examples is not None:
+        return os.path.join(base_dir, str(num_examples))
+    
+    return base_dir
+
+
 def setup_country_environment(country: str | None = None, strategy: str | None = None,
-                              sample_size: str | None = None) -> Tuple[str, str]:
+                              sample_size: str | None = None,
+                              num_examples: int | None = None) -> Tuple[str, str]:
     """Standard country, strategy, and sample size environment setup used across tools.
+    
+    Args:
+        country: Country code. If None, reads from COUNTRY env var.
+        strategy: Prompting strategy. If None, reads from STRATEGY env var.
+        sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
+        num_examples: Number of few-shot examples (1-5). If None, reads from NUM_EXAMPLES env var.
+                     Only used when strategy is 'few_shot'.
     
     Returns:
         Tuple of (country_code, results_dir_path)
         
-    Note: results_dir is now results/{country}/{strategy}/{sample_size}/
+    Note: 
+        - For most strategies: results/{country}/{strategy}/{sample_size}/
+        - For few_shot with num_examples: results/{country}/few_shot/{sample_size}/{num_examples}/
     """
     country = country or os.environ.get('COUNTRY', 'cmr')
     if strategy is None:
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
-    results_dir = os.path.join('results', country, strategy, str(sample_size))
+    if num_examples is None:
+        num_examples = get_num_examples()
+    
+    results_dir = _build_results_dir(country, strategy, str(sample_size), num_examples)
     os.makedirs(results_dir, exist_ok=True)
     return country, results_dir
 
-def paths_for_country(country: str, strategy: str = None, sample_size: str = None) -> Dict[str, str]:
+
+def paths_for_country(country: str, strategy: str = None, sample_size: str = None,
+                      num_examples: Optional[int] = None) -> Dict[str, str]:
     """Get standard paths for a country, strategy, and sample size.
     
     Args:
         country: Country code (e.g., 'cmr', 'nga')
         strategy: Prompting strategy. If None, reads from STRATEGY env var.
         sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
+        num_examples: Number of few-shot examples (1-5). If None, reads from NUM_EXAMPLES env var.
+                     Only used when strategy is 'few_shot'.
     
     Returns:
         Dictionary with paths for results_dir, datasets_dir, sample_path, calibrated_csv
         
-    Note: results_dir is now results/{country}/{strategy}/{sample_size}/
+    Note: 
+        - For most strategies: results/{country}/{strategy}/{sample_size}/
+        - For few_shot with num_examples: results/{country}/few_shot/{sample_size}/{num_examples}/
     """
     if strategy is None:
         strategy = get_strategy()
     if sample_size is None:
         sample_size = get_sample_size()
+    if num_examples is None:
+        num_examples = get_num_examples()
     
-    results_dir = os.path.join('results', country, strategy, str(sample_size))
+    results_dir = _build_results_dir(country, strategy, str(sample_size), num_examples)
     datasets_dir = os.path.join('datasets', country)
     sample_path = os.path.join(datasets_dir, f'state_actor_sample_{country}.csv')
     calibrated_csv = os.path.join(results_dir, 'ollama_results_calibrated.csv')

@@ -97,6 +97,7 @@ def run_classification_experiment(country_code: str,
                                   strategy_name: str = 'zero_shot',
                                   primary_group: str | None = None,
                                   primary_share: float = 0.0,
+                                  num_examples: int | None = None,
                                   models: list | None = None):
     """Run classification experiment with specified prompting strategy.
     
@@ -106,6 +107,7 @@ def run_classification_experiment(country_code: str,
         strategy_name: Prompting strategy to use
         primary_group: Optional event type to oversample (default: None for proportional sampling)
         primary_share: Fraction of sample reserved for primary_group (0-1, default: 0.0)
+        num_examples: Number of few-shot examples (1-5). Only used when strategy_name='few_shot'.
     """
     if country_code not in COUNTRY_NAMES:
         raise ValueError(
@@ -118,11 +120,13 @@ def run_classification_experiment(country_code: str,
     if not os.path.exists(CSV_SRC):
         raise SystemExit(f"Source CSV not found: {CSV_SRC}")
     
-    # Get prompting strategy
-    strategy = get_strategy(strategy_name)
+    # Get prompting strategy (pass num_examples for few_shot)
+    strategy = get_strategy(strategy_name, num_examples)
     print(f"\n{'='*70}")
     print(f"Running experiment for {country_name} ({country_code})")
     print(f"Strategy: {strategy_name}")
+    if strategy_name == 'few_shot' and num_examples:
+        print(f"Few-shot examples: {num_examples}")
     print(f"Sample size: {sample_size}")
     print(f"{'='*70}\n")
     
@@ -131,8 +135,8 @@ def run_classification_experiment(country_code: str,
     df_country = extract_country_rows(CSV_SRC, country_name)
     
     # Persist extracted country-specific CSV for auditing and reuse
-    # Note: paths_for_country now takes sample_size as string
-    paths = paths_for_country(country_code, strategy_name, str(sample_size))
+    # Note: paths_for_country now takes sample_size as string and num_examples for few_shot
+    paths = paths_for_country(country_code, strategy_name, str(sample_size), num_examples)
     os.makedirs(paths['datasets_dir'], exist_ok=True)
     out_country = os.path.join(
         paths['datasets_dir'], 
@@ -233,8 +237,8 @@ def run_classification_experiment(country_code: str,
     print(f"  - {len(subset)} events")
     print(f"  - {len(models)} models\n")
     
-    # Setup results directory (includes strategy and sample_size subdirectory)
-    _, results_dir = setup_country_environment(country_code, strategy_name, str(sample_size))
+    # Setup results directory (includes strategy, sample_size, and num_examples for few_shot)
+    _, results_dir = setup_country_environment(country_code, strategy_name, str(sample_size), num_examples)
     
     for m in models:
         print(f"Starting model: {m}")
@@ -288,6 +292,9 @@ def main():
     parser.add_argument('--models', default=os.environ.get('OLLAMA_MODELS', None),
                        help='Comma-separated list of Ollama models to run. Overrides WORKING_MODELS. '
                            'Example: --models "llama3.1:8b,mistral:7b"')
+    parser.add_argument('--num-examples', type=int, default=None,
+                       help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
+                            'Default: reads from NUM_EXAMPLES env var, or 1 if not set.')
     
     args = parser.parse_args()
     
@@ -297,6 +304,13 @@ def main():
     
     if args.primary_group and args.primary_share == 0:
         parser.error('--primary-share must be > 0 when --primary-group is specified')
+    
+    # Validate num_examples
+    if args.num_examples is not None:
+        if not 1 <= args.num_examples <= 5:
+            parser.error('--num-examples must be between 1 and 5')
+        if args.strategy != 'few_shot':
+            parser.error('--num-examples is only valid with --strategy few_shot')
     
     # Run the experiment
     models_arg = None
@@ -309,6 +323,7 @@ def main():
         strategy_name=args.strategy,
         primary_group=args.primary_group,
         primary_share=args.primary_share,
+        num_examples=args.num_examples,
         models=models_arg
     )
 
