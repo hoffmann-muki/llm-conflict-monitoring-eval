@@ -253,16 +253,19 @@ else
     
     log_step "Running counterfactual perturbation testing on top-N disagreements..."
     
-    # If CF_MODELS not set, use all WORKING_MODELS from constants
-    if [ -n "$CF_MODELS" ]; then
-        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
-            "$VENV_PY" -m lib.analysis.counterfactual \
-            --models "$CF_MODELS" --events "$CF_EVENTS"
-    else
-        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
-            "$VENV_PY" -m lib.analysis.counterfactual \
-            --events "$CF_EVENTS"
+    # For ConfliBERT experiments, if CF_MODELS is not provided explicitly,
+    # set it to the local conflibert model id (constructed from MODEL_PATH)
+    # so that single-model counterfactual outputs are written into the
+    # corresponding model-specific subdirectory.
+    if [ -z "${CF_MODELS}" ]; then
+        model_base=$(basename "${MODEL_PATH%/}")
+        CF_MODELS="conflibert_${model_base}"
+        log_step "Setting CF_MODELS to single ConfliBERT model for per-model counterfactual: ${CF_MODELS}"
     fi
+
+    COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+        "$VENV_PY" -m lib.analysis.counterfactual \
+        --models "$CF_MODELS" --events "$CF_EVENTS"
     
     log_step "Generating counterfactual visualizations..."
     

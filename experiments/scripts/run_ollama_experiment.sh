@@ -226,6 +226,20 @@ else
     log_phase "PHASE 4: COUNTERFACTUAL PERTURBATION ANALYSIS"
     
     log_step "Running counterfactual perturbation testing on top-N disagreements..."
+
+    # If CF_MODELS not set, prefer using the explicit OLLAMA_MODELS when a
+    # single-model inference was just run. This ensures per-model counterfactual
+    # outputs are written into the model-specific subdirectory instead of the
+    # parent results directory. If OLLAMA_MODELS is empty, fall back to the
+    # default CF_MODELS setting.
+    if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
+        model_count=$(echo "${OLLAMA_MODELS}" | awk -F',' '{print NF}')
+        if [ "$model_count" -eq 1 ]; then
+            CF_MODELS="${OLLAMA_MODELS}"
+            log_step "Setting CF_MODELS to OLLAMA_MODELS for per-model counterfactual: ${CF_MODELS}"
+        fi
+    fi
+
     COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
         "$VENV_PY" -m lib.analysis.counterfactual \
         --models "$CF_MODELS" --events "$CF_EVENTS"
