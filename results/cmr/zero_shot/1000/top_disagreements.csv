@@ -1,1 +1,16 @@
-event_id,true_label,actor_norm,pred_label_mistral:7b,pred_prob_mistral:7b,disagreement_count,max_confidence
+event_id,true_label,actor_norm,pred_label_mistral:7b,pred_label_olmo2:7b,pred_prob_mistral:7b,pred_prob_olmo2:7b,disagreement_count,max_confidence
+CAO12811,S,State forces (Cameroon),V,B,0.9499999999999998,0.85,2,0.9499999999999998
+CAO12793,S,State forces (Cameroon),V,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO5005,S,State forces (Cameroon),V,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO13198,V,State forces (Cameroon),V,B,0.9499999999999998,0.85,2,0.9499999999999998
+CAO2941,V,State forces (Cameroon),V,B,0.9499999999999998,0.85,2,0.9499999999999998
+CAO14085,S,State forces (Cameroon),V,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO11931,S,State forces (Cameroon),V,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO6350,V,State forces (Cameroon),V,B,0.9499999999999998,0.85,2,0.9499999999999998
+CAO5731,S,State forces (Cameroon),V,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO11978,B,State forces (Cameroon),S,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO4061,S,State forces (Cameroon),R,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO4284,B,State forces (Cameroon),E,B,0.9499999999999998,0.85,2,0.9499999999999998
+CAO12795,E,State forces (Cameroon),S,P,0.9499999999999998,0.85,2,0.9499999999999998
+CAO13702,E,State forces (Cameroon),V,E,0.85,0.85,2,0.85
+CAO2947,V,State forces (Cameroon),V,B,0.85,0.85,2,0.85
