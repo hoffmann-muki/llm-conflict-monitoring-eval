@@ -51,7 +51,7 @@ paths = paths_for_country('cmr')
 from lib.core.result_aggregator import (
     aggregate_model_results,    # Combine per-model files
     get_per_model_result_path,  # Get path for specific model
-    model_name_to_slug          # Convert 'llama3.1:8b' → 'llama3.1-8b'
+    model_name_to_slug          # Convert 'llama3.2:3b' → 'llama3.1-3b'
 )
 ```
 

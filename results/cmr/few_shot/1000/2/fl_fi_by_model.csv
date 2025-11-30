@@ -1,2 +1,5 @@
 total,fl,fi,model
 200,5,16,mistral:7b
+200,10,6,olmo2:7b
+200,3,46,gemma3:4b
+200,3,51,llama3.2:3b

@@ -19,7 +19,7 @@
 #   COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot OLLAMA_MODELS="mistral:7b" ./scripts/run_full_analysis.sh
 #
 #   # Run inference with another model (reuses same sample)
-#   COUNTRY=cmr SAMPLE_SIZE=500 OLLAMA_MODELS="llama3.1:8b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
+#   COUNTRY=cmr SAMPLE_SIZE=500 OLLAMA_MODELS="llama3.2:3b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
 #
 #   # Skip inference, just run analysis on existing per-model results
 #   COUNTRY=cmr SAMPLE_SIZE=500 SKIP_INFERENCE=true ./scripts/run_full_analysis.sh

@@ -11,3 +11,15 @@ olmo2:7b,E,0.0
 olmo2:7b,P,0.0
 olmo2:7b,R,0.0
 olmo2:7b,S,0.0
+gemma3:4b,V,0.1
+gemma3:4b,B,0.1
+gemma3:4b,E,0.0
+gemma3:4b,P,0.0
+gemma3:4b,R,0.0
+gemma3:4b,S,0.0
+llama3.2:3b,V,0.30000000000000004
+llama3.2:3b,B,0.30000000000000004
+llama3.2:3b,E,0.30000000000000004
+llama3.2:3b,P,0.0
+llama3.2:3b,R,0.0
+llama3.2:3b,S,0.0

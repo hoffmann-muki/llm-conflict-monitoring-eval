@@ -67,7 +67,7 @@ COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Specific models only
-OLLAMA_MODELS=mistral:7b,llama3.1:8b COUNTRY=nga SAMPLE_SIZE=1000 \
+OLLAMA_MODELS=mistral:7b,llama3.2:3b COUNTRY=nga SAMPLE_SIZE=1000 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Skip inference, analyze existing results
@@ -130,7 +130,7 @@ The pipeline uses a **per-model-then-aggregate** workflow:
 
 ## Supported Models
 
-**Ollama Models:** `llama3.1:8b`, `qwen3:8b`, `mistral:7b`, `gemma3:7b`, `olmo2:7b`
+**Ollama Models:** `llama3.2:3b`, `mistral:7b`, `gemma3:4b`, `olmo2:7b`
 
 **ConfliBERT:** Fine-tuned BERT for conflict events (~437 MB download)
 

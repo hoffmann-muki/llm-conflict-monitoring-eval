@@ -29,7 +29,7 @@ COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
   python experiments/pipelines/ollama/run_ollama_classification.py
 
 # Specific models
-OLLAMA_MODELS="mistral:7b,llama3.1:8b" COUNTRY=nga SAMPLE_SIZE=1000 \
+OLLAMA_MODELS="mistral:7b,llama3.2:3b" COUNTRY=nga SAMPLE_SIZE=1000 \
   python experiments/pipelines/ollama/run_ollama_classification.py
 ```
 

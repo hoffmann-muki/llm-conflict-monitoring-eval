@@ -27,7 +27,7 @@ def model_name_to_slug(model_name: str) -> str:
     
     Examples:
         'mistral:7b' -> 'mistral-7b'
-        'llama3.1:8b' -> 'llama3.1-8b'
+        'llama3.2:3b' -> 'llama3.1-3b'
     """
     return model_name.replace(':', '-').replace('/', '_')
 
@@ -37,7 +37,7 @@ def slug_to_model_name(slug: str) -> str:
     
     Examples:
         'mistral-7b' -> 'mistral:7b'
-        'llama3.1-8b' -> 'llama3.1:8b'
+        'llama3.1-3b' -> 'llama3.2:3b'
     """
     # Find the last dash followed by a size indicator (e.g., 7b, 8b, 1.7b)
     # and replace it with a colon

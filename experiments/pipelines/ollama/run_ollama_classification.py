@@ -291,7 +291,7 @@ def main():
                             'Default: 0.0')
     parser.add_argument('--models', default=os.environ.get('OLLAMA_MODELS', None),
                        help='Comma-separated list of Ollama models to run. Overrides WORKING_MODELS. '
-                           'Example: --models "llama3.1:8b,mistral:7b"')
+                           'Example: --models "llama3.2:3b,mistral:7b"')
     parser.add_argument('--num-examples', type=int, default=None,
                        help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
                             'Default: reads from NUM_EXAMPLES env var, or 1 if not set.')

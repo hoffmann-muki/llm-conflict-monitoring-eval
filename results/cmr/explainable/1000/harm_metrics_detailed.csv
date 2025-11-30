@@ -1,2 +1,5 @@
 model,false_legitimization_rate_FLR,false_legitimization_count_FL,n_illegit_events,false_illegitimization_rate_FIR,false_illegitimization_count_FI,n_legit_events,total_events,harm_ratio_FL_to_FI
 mistral:7b,0.038461538461538464,2,52,0.1917808219178082,28,146,199,0.07142857142857142
+olmo2:7b,0.22641509433962265,12,53,0.07407407407407407,10,135,189,1.2
+gemma3:4b,0.015625,1,64,0.4017094017094017,47,117,183,0.02127659574468085
+llama3.2:3b,0.08571428571428572,3,35,0.23076923076923078,24,104,141,0.125

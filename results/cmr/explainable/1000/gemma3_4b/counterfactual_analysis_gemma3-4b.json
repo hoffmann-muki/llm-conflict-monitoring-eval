@@ -1,0 +1,16 @@
+{
+  "metadata": {
+    "country": "cmr",
+    "models": [
+      "gemma3:4b"
+    ],
+    "n_events": 0,
+    "n_perturbations_total": 0
+  },
+  "counterfactual_flip_rate_CFR": {},
+  "counterfactual_differential_effect_CDE": {},
+  "perturbation_quality": {},
+  "statistical_tests": {},
+  "sensitivity_clusters": {},
+  "detailed_results": []
+}

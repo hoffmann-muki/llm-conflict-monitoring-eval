@@ -1,3 +1,5 @@
 model,N,accuracy,precision_macro,recall_macro
 mistral:7b,1000,0.732,0.373,0.361
 olmo2:7b,1000,0.691,0.46,0.381
+gemma3:4b,1000,0.791,0.451,0.394
+llama3.2:3b,1000,0.728,0.398,0.465

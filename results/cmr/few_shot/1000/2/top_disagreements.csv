@@ -1,1 +1,21 @@
-event_id,true_label,actor_norm,pred_label_mistral:7b,pred_prob_mistral:7b,disagreement_count,max_confidence
+event_id,true_label,actor_norm,pred_label_gemma3:4b,pred_label_llama3.2:3b,pred_label_mistral:7b,pred_label_olmo2:7b,pred_prob_gemma3:4b,pred_prob_llama3.2:3b,pred_prob_mistral:7b,pred_prob_olmo2:7b,disagreement_count,max_confidence
+CAO12596,B,State forces (Cameroon),V,V,B,B,0.85,0.92,0.98,0.93,2,0.98
+CAO13978,S,State forces (Cameroon),S,E,E,E,0.8,0.8999999999999999,0.98,0.8999999999999999,2,0.98
+CAO4953,B,State forces (Cameroon),V,V,B,B,0.8800000000000001,0.92,0.98,0.93,2,0.98
+CAO9963,S,State forces (Cameroon),E,V,E,E,0.97,0.85,0.98,0.9499999999999998,2,0.98
+CAO2871,B,State forces (Cameroon),B,V,B,B,0.92,0.92,0.98,0.8800000000000001,2,0.98
+CAO8950,B,State forces (Cameroon),V,V,V,B,0.85,0.92,0.98,0.93,2,0.98
+CAO13117,B,State forces (Cameroon),B,V,B,B,0.92,0.92,0.98,0.8800000000000001,2,0.98
+CAO9208,B,State forces (Cameroon),V,V,B,B,0.85,0.85,0.98,0.85,2,0.98
+CAO9991,V,State forces (Cameroon),V,V,B,V,0.85,0.85,0.98,0.85,2,0.98
+CAO14078,B,State forces (Cameroon),B,V,B,B,0.92,0.92,0.98,0.8800000000000001,2,0.98
+CAO3869,B,State forces (Cameroon),B,V,B,B,0.92,0.85,0.98,0.8800000000000001,2,0.98
+CAO12122,V,State forces (Cameroon),V,V,B,B,0.85,0.92,0.98,0.85,2,0.98
+CAO6193,B,State forces (Cameroon),B,V,B,B,0.92,0.92,0.98,0.93,2,0.98
+CAO12471,B,State forces (Cameroon),V,V,B,V,0.8899999999999999,0.92,0.98,0.8999999999999999,2,0.98
+CAO5844,B,State forces (Cameroon),B,V,B,B,0.92,0.92,0.98,0.8800000000000001,2,0.98
+CAO13702,E,State forces (Cameroon),V,E,E,E,0.8,0.9499999999999998,0.8999999999999999,0.9499999999999998,2,0.9499999999999998
+CAO15046,S,State forces (Cameroon),V,V,S,S,0.85,0.92,0.9499999999999998,0.85,2,0.9499999999999998
+CAO12795,E,State forces (Cameroon),B,S,S,S,0.8800000000000001,0.8,0.9499999999999998,0.85,2,0.9499999999999998
+CAO11454,S,State forces (Cameroon),V,V,S,S,0.85,0.92,0.9499999999999998,0.75,2,0.9499999999999998
+CAO10410,S,State forces (Cameroon),V,E,R,E,0.8,0.85,0.75,0.9499999999999998,3,0.9499999999999998
