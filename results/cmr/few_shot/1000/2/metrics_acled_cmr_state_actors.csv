@@ -1,0 +1,2 @@
+model,N,accuracy,precision_macro,recall_macro
+mistral:7b,1000,0.745,0.413,0.431

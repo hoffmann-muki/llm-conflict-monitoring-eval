@@ -1,0 +1,6 @@
+event_id,model,true_label,pred_label,pred_conf_temp,actor_norm,annotation_provenance,annotation_ambiguous_actor,annotation_verb_intensity,annotation_casualty_counts,annotation_passive_voice,annotation_notes
+CAO2947,mistral:7b,V,S,0.75,State forces (Cameroon),,,,,,
+CAO9991,mistral:7b,V,B,0.98,State forces (Cameroon),,,,,,
+CAO10782,mistral:7b,V,B,0.98,State forces (Cameroon),,,,,,
+CAO12441,mistral:7b,V,B,0.98,State forces (Cameroon),,,,,,
+CAO12122,mistral:7b,V,B,0.98,State forces (Cameroon),,,,,,

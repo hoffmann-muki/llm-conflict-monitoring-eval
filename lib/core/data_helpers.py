@@ -1,5 +1,35 @@
 import os
+import re
 from typing import Dict, Tuple, Optional
+
+
+def model_name_to_dir_slug(model_name: str) -> str:
+    """Convert model name to directory-safe slug using underscores.
+    
+    Examples:
+        "mistral:7b" -> "mistral_7b"
+        "gemma3:4b" -> "gemma3_4b"
+        "qwen3:1.7b" -> "qwen3_1.7b"
+    
+    This differs from model_name_to_slug() in result_aggregator which uses 
+    hyphens for filenames. Underscores are more conventional for directory names.
+    """
+    return re.sub(r'[^a-zA-Z0-9._]', '_', model_name)
+
+
+def get_model_results_dir(results_dir: str, model_name: str) -> str:
+    """Get the model-specific subdirectory within a results directory.
+    
+    Args:
+        results_dir: Base results directory (e.g., results/cmr/zero_shot/1000/)
+        model_name: Model name (e.g., 'mistral:7b')
+        
+    Returns:
+        Path to model subdirectory (e.g., results/cmr/zero_shot/1000/mistral_7b/)
+    """
+    model_dir_slug = model_name_to_dir_slug(model_name)
+    return os.path.join(results_dir, model_dir_slug)
+
 
 def get_strategy() -> str:
     """Get the prompting strategy from environment variable.

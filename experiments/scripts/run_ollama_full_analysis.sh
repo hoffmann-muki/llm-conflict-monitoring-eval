@@ -38,7 +38,8 @@
 # Directory Structure:
 #   results/{country}/{strategy}/{sample_size}/              (for zero_shot, explainable)
 #   results/{country}/few_shot/{sample_size}/{num_examples}/ (for few_shot)
-#     ├── ollama_results_*_acled_{country}_state_actors.csv  (per-model)
+#     ├── {model_slug}/                                      (per-model subdirectory)
+#     │   └── ollama_results_{model}_acled_{country}_state_actors.csv
 #     ├── ollama_results_acled_{country}_state_actors.csv    (combined)
 #     ├── ollama_results_calibrated.csv
 #     └── ... (metrics, harm, counterfactual outputs)
@@ -124,8 +125,8 @@ run_inference() {
     if [ "$SKIP_INFERENCE" = "true" ]; then
         log_warn "Skipping inference phase (SKIP_INFERENCE=true)"
         
-        # Check if any per-model results exist (in strategy/sample_size subdirectory)
-        PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+        # Check if any per-model results exist (in model subdirectories)
+        PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -mindepth 2 -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
         if [ "$PER_MODEL_COUNT" -eq 0 ]; then
             log_error "No per-model prediction files found. Cannot skip inference."
             exit 1
@@ -161,8 +162,8 @@ run_inference() {
 run_aggregation() {
     log_phase "[Phase 1.5/5] Aggregating Per-Model Results"
     
-    log_step "Scanning for per-model result files in ${RESULTS_DIR}/..."
-    PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+    log_step "Scanning for per-model result files in ${RESULTS_DIR}/*/..."
+    PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -mindepth 2 -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
     
     if [ "$PER_MODEL_COUNT" -eq 0 ]; then
         log_error "No per-model result files found in ${RESULTS_DIR}/"
@@ -295,10 +296,13 @@ generate_summary() {
     echo "====================================================================="
     echo ""
     
-    # Per-model inference results
+    # Per-model inference results (in model subdirectories)
     echo "📁 Per-Model Inference Results:"
-    for f in "${RESULTS_DIR}"/ollama_results_*_acled_${COUNTRY}_state_actors.csv; do
-        [ -f "$f" ] && echo "  ✓ $(basename "$f")"
+    for f in "${RESULTS_DIR}"/*/ollama_results_*_acled_${COUNTRY}_state_actors.csv; do
+        if [ -f "$f" ]; then
+            MODEL_DIR=$(basename "$(dirname "$f")")
+            echo "  ✓ ${MODEL_DIR}/$(basename "$f")"
+        fi
     done
     
     # Core outputs

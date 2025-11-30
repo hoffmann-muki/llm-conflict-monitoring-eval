@@ -1,0 +1,2 @@
+model,false_legitimization_rate_FLR,false_legitimization_count_FL,n_illegit_events,false_illegitimization_rate_FIR,false_illegitimization_count_FI,n_legit_events,total_events,harm_ratio_FL_to_FI
+mistral:7b,0.09090909090909091,5,55,0.11267605633802817,16,142,200,0.3125
