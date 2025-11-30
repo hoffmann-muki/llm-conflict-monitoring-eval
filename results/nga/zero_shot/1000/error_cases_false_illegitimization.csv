@@ -1,9 +1,0 @@
-event_id,model,true_label,pred_label,pred_conf_temp,actor_norm,annotation_provenance,annotation_ambiguous_actor,annotation_verb_intensity,annotation_casualty_counts,annotation_passive_voice,annotation_notes
-NIG30663,mistral:7b,S,V,0.9499999999999998,Other Actors,,,,,,
-NIG28349,mistral:7b,B,V,0.9499999999999998,Other Actors,,,,,,
-NIG25420,mistral:7b,B,V,0.9499999999999998,Other Actors,,,,,,
-NIG32842,mistral:7b,S,V,0.9499999999999998,Other Actors,,,,,,
-NIG35620,mistral:7b,S,V,0.9499999999999998,Other Actors,,,,,,
-NIG36154,mistral:7b,S,V,0.9499999999999998,Other Actors,,,,,,
-NIG35644,mistral:7b,B,V,0.85,Other Actors,,,,,,
-NIG21043,mistral:7b,B,V,0.9499999999999998,Other Actors,,,,,,

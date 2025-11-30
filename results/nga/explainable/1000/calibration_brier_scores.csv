@@ -1,2 +1,0 @@
-model,n_samples,brier_score_raw,brier_score_isotonic,brier_score_temperature,brier_improvement_iso,brier_improvement_temp
-mistral:7b,200,0.23869999999999997,0.1933054222797928,0.23869999999999997,0.04539457772020716,0.0
