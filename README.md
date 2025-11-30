@@ -108,7 +108,7 @@ The pipeline uses a **per-model-then-aggregate** workflow:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ Sample Creation                                                              │
+│ Sample Creation                                                             │
 │   Unified sample: datasets/{country}/state_actor_sample_{country}_{n}.csv   │
 │   Same sample reused across all models (random_state=42)                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
