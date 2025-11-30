@@ -229,6 +229,20 @@ run_counterfactual_analysis() {
     
     log_phase "[Phase 4/5] Counterfactual Perturbation Analysis"
     
+    # If CF_MODELS not set, prefer using the explicit OLLAMA_MODELS when a
+    # single-model inference was just run. This ensures per-model counterfactual
+    # outputs are written into the model-specific subdirectory instead of the
+    # parent results directory. If OLLAMA_MODELS is empty, we fall back to
+    # running counterfactual with all WORKING_MODELS (multi-model report).
+    if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
+        # Count comma-separated entries
+        model_count=$(echo "${OLLAMA_MODELS}" | awk -F',' '{print NF}')
+        if [ "$model_count" -eq 1 ]; then
+            CF_MODELS="${OLLAMA_MODELS}"
+            log_step "Setting CF_MODELS to OLLAMA_MODELS for per-model counterfactual: ${CF_MODELS}"
+        fi
+    fi
+
     # If CF_MODELS not set, use all WORKING_MODELS from constants
     if [ -n "$CF_MODELS" ]; then
         log_step "Running counterfactual analysis with models: ${CF_MODELS}"

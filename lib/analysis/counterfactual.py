@@ -26,7 +26,7 @@ from scipy.stats import chi2
 from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
-from lib.core.data_helpers import paths_for_country, get_strategy, setup_country_environment
+from lib.core.data_helpers import paths_for_country, get_strategy, setup_country_environment, get_model_results_dir
 from lib.core.constants import WORKING_MODELS
 from experiments.prompting_strategies import ZeroShotStrategy
 import sys
@@ -884,7 +884,21 @@ def main():
     
     # Generate report
     models_slug = '_'.join(m.replace(':', '-').replace('.', '_') for m in models)
-    output_path = args.output or os.path.join(paths['results_dir'], f"counterfactual_analysis_{models_slug}.json")
+    # If user provided explicit --output, use it. Otherwise, place per-model
+    # counterfactual outputs inside that model's subdirectory when analyzing a
+    # single model. For multi-model analyses, write to the parent results dir
+    # (cross-model report).
+    if args.output:
+        output_path = args.output
+    else:
+        if len(models) == 1:
+            # single-model: write into model-specific subdirectory
+            model_results_dir = get_model_results_dir(paths['results_dir'], models[0])
+            os.makedirs(model_results_dir, exist_ok=True)
+            output_path = os.path.join(model_results_dir, f"counterfactual_analysis_{models_slug}.json")
+        else:
+            # multi-model: keep at parent level for cross-model analysis
+            output_path = os.path.join(paths['results_dir'], f"counterfactual_analysis_{models_slug}.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     analyzer.generate_report(results, output_path)
