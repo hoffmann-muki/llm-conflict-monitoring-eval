@@ -31,7 +31,7 @@
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   OLLAMA_MODELS        - Models for inference (single or comma-separated) [default: all WORKING_MODELS]
 #   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
-#   CF_EVENTS            - Number of events for counterfactual [default: 50]
+#   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
 #
@@ -57,7 +57,7 @@ COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 OLLAMA_MODELS="${OLLAMA_MODELS:-}"
 CF_MODELS="${CF_MODELS:-}"
-CF_EVENTS="${CF_EVENTS:-50}"
+CF_EVENTS="${CF_EVENTS:-20}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
 
@@ -210,7 +210,10 @@ run_bias_and_harm_analysis() {
     log_success "Harm metrics computed"
     
     log_step "Generating per-class reports and sampling error cases..."
-    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
+    # Set TOP_N_DISAGREEMENTS to match CF_EVENTS so enough disagreements are available for counterfactual analysis
+    COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+        TOP_N_DISAGREEMENTS="${CF_EVENTS}" \
+        "${VENV_PY:-python}" -m lib.analysis.per_class_metrics
     log_success "Error case sampling complete"
     
     log_step "Creating visualization plots..."

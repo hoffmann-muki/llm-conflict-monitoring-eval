@@ -25,7 +25,7 @@
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   OLLAMA_MODELS        - Comma-separated models for inference [default: all WORKING_MODELS]
 #   CF_MODELS            - Models for counterfactual analysis [default: llama3.2,mistral:7b]
-#   CF_EVENTS            - Number of events for counterfactual [default: 50]
+#   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
 #
@@ -42,7 +42,7 @@ COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 OLLAMA_MODELS="${OLLAMA_MODELS:-}"
 CF_MODELS="${CF_MODELS:-llama3.2,mistral:7b}"
-CF_EVENTS="${CF_EVENTS:-50}"
+CF_EVENTS="${CF_EVENTS:-20}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
 
@@ -209,7 +209,9 @@ COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES=
     "$VENV_PY" -m lib.analysis.harm
 
 log_step "Generating per-class metrics and error case sampling..."
+# Set TOP_N_DISAGREEMENTS to match CF_EVENTS so enough disagreements are available for counterfactual analysis
 COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+    TOP_N_DISAGREEMENTS="$CF_EVENTS" \
     "$VENV_PY" -m lib.analysis.per_class_metrics
 
 log_step "Creating visualization plots..."

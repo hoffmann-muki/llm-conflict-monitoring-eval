@@ -121,10 +121,19 @@ def setup_country_environment(country: str | None = None, strategy: str | None =
         Tuple of (country_code, results_dir_path)
         
     Note: 
+        - If RESULTS_DIR env var is set, it takes precedence over computed path
         - For most strategies: results/{country}/{strategy}/{sample_size}/
         - For few_shot with num_examples: results/{country}/few_shot/{sample_size}/{num_examples}/
     """
     country = country if country is not None else os.environ.get('COUNTRY', 'cmr')
+    
+    # Check if RESULTS_DIR is explicitly provided via environment
+    results_dir_env = os.environ.get('RESULTS_DIR')
+    if results_dir_env:
+        os.makedirs(results_dir_env, exist_ok=True)
+        return country, results_dir_env
+    
+    # Otherwise build from components
     strategy = get_strategy(strategy)
     sample_size = get_sample_size(sample_size)
     num_examples = get_num_examples(num_examples)

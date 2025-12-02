@@ -11,12 +11,7 @@ import numpy as np
 import pandas as pd
 from lib.core.data_helpers import setup_country_environment
 
-COUNTRY, RESULTS_DIR = setup_country_environment()
-
-CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
-OUT_CSV = os.path.join(RESULTS_DIR, 'selected_thresholds_per_class.csv')
-OUT_JSON = os.path.join(RESULTS_DIR, 'selected_thresholds.json')
-
+# Module-level constants (no side effects)
 labels = ['V','B','E','P','R','S']
 candidates = np.concatenate((np.linspace(0,0.9,10), [0.95,0.97,0.99]))
 
@@ -39,6 +34,13 @@ def choose_threshold_for_label(sub, prob_col, label, target_acc=0.8):
     return best
 
 def main():
+    # Setup paths at runtime (not import time)
+    COUNTRY, RESULTS_DIR = setup_country_environment()
+    
+    CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+    OUT_CSV = os.path.join(RESULTS_DIR, 'selected_thresholds_per_class.csv')
+    OUT_JSON = os.path.join(RESULTS_DIR, 'selected_thresholds.json')
+    
     if not os.path.exists(CAL_CSV):
         raise SystemExit(f"Missing {CAL_CSV}")
     df = pd.read_csv(CAL_CSV)

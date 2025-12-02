@@ -75,7 +75,7 @@ See [experiments/README.md](experiments/README.md) for detailed usage and option
 | `NUM_EXAMPLES` | Few-shot examples per category (1-5, only for few_shot) | None |
 | `OLLAMA_MODELS` | Comma-separated model list for inference | All WORKING_MODELS |
 | `CF_MODELS` | Models for counterfactual analysis | All WORKING_MODELS |
-| `CF_EVENTS` | Number of events for counterfactual analysis | 50 |
+| `CF_EVENTS` | Number of events for counterfactual analysis | 20 |
 | `SKIP_INFERENCE` | Skip inference phase | false |
 | `SKIP_COUNTERFACTUAL` | Skip counterfactual phase | false |
 

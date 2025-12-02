@@ -5,6 +5,9 @@ from experiments.prompting_strategies import ZeroShotStrategy
 # Valid ACLED event type labels
 VALID_LABELS = {'V', 'B', 'E', 'P', 'R', 'S'}
 
+# Canonical label order for logits (must match calibration.py)
+CANONICAL_LABEL_ORDER = ['V', 'B', 'E', 'P', 'R', 'S']
+
 
 def normalize_label(raw_label: str) -> str:
     """Normalize a raw label to a valid ACLED event type code.
@@ -28,15 +31,58 @@ def normalize_label(raw_label: str) -> str:
 
 # Shared JSON schema for structured classification responses
 # Uses enum constraint to ensure model only outputs valid labels
+# Request logits as a dictionary with label keys for deterministic ordering
 SCHEMA = {
     "type": "object",
     "properties": {
         "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
         "confidence": {"type": "number"},
-        "logits": {"type": "array", "items": {"type": "number"}}
+        "logits": {
+            "type": "object",
+            "description": "Log-probabilities or scores for each label",
+            "properties": {
+                "V": {"type": "number"},
+                "B": {"type": "number"},
+                "E": {"type": "number"},
+                "P": {"type": "number"},
+                "R": {"type": "number"},
+                "S": {"type": "number"}
+            }
+        }
     },
     "required": ["label", "confidence"]
 }
+
+
+def normalize_logits(raw_logits) -> list | None:
+    """Normalize logits to canonical order [V, B, E, P, R, S].
+    
+    Handles both:
+    - Dictionary format: {"V": 1.2, "B": 0.5, ...}
+    - Array format: [1.2, 0.5, ...] (assumed to be in canonical order)
+    
+    Returns:
+        List of logits in canonical order [V, B, E, P, R, S], or None if invalid
+    """
+    if raw_logits is None:
+        return None
+    
+    # Handle dictionary format (preferred)
+    if isinstance(raw_logits, dict):
+        try:
+            return [float(raw_logits.get(lab, 0.0)) for lab in CANONICAL_LABEL_ORDER]
+        except (TypeError, ValueError):
+            return None
+    
+    # Handle array format (assume canonical order if length matches)
+    if isinstance(raw_logits, (list, tuple)):
+        if len(raw_logits) == len(CANONICAL_LABEL_ORDER):
+            try:
+                return [float(x) for x in raw_logits]
+            except (TypeError, ValueError):
+                return None
+    
+    return None
 
 def run_ollama_structured(model: str, prompt: str, system_msg: str | None = None, schema=None, timeout: int = 120):
     """Run a single structured request against local Ollama and return parsed JSON.
@@ -158,6 +204,8 @@ def run_model_on_rows(model_name: str, rows, note_col: str = 'notes', event_id_c
             label = "ERROR"
             conf = 0.0
             logits = None
+        # Normalize logits to canonical order [V, B, E, P, R, S]
+        logits = normalize_logits(logits)
         elapsed = round(time.time() - t0, 2)
         # resolve event_id and true_label from possible fields
         event_id = None

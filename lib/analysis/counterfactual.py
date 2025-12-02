@@ -453,7 +453,8 @@ class CounterfactualAnalyzer:
         """Analyze a single event with all perturbations."""
         event_id = event_row['event_id']
         original_text = event_row['notes']
-        true_label = event_row['gold_label']
+        # Support both gold_label (legacy) and true_label (current)
+        true_label = event_row.get('gold_label') or event_row.get('true_label')
         
         print(f"Analyzing event {event_id}...")
         
@@ -776,12 +777,15 @@ class CounterfactualAnalyzer:
             'detailed_results': results
         }
         
-        # Save full report
+        # Save full report (JSON stays in model subdir for single-model runs)
         with open(output_path, 'w') as f:
             json.dump(report, f, indent=2)
         
-        # Generate summary CSV
-        summary_path = output_path.replace('.json', '_summary.csv')
+        # Generate summary CSV - always write to parent results_dir (cross-model artifact)
+        # Extract the base filename and write to parent directory
+        # Generate summary CSV - always write to parent results_dir with generic name
+        # This file accumulates results across models (merge with existing)
+        summary_path = os.path.join(self.paths['results_dir'], 'counterfactual_analysis_summary.csv')
         self.generate_summary_csv(flip_metrics, cde_metrics, summary_path)
         
         print(f"Report saved to: {output_path}")
@@ -790,7 +794,11 @@ class CounterfactualAnalyzer:
         return report
     
     def generate_summary_csv(self, flip_metrics: Dict, cde_metrics: Dict, output_path: str):
-        """Generate CSV summary of flip metrics and CDE."""
+        """Generate CSV summary of flip metrics and CDE.
+        
+        Merges with existing file if present - updates rows for models in current run,
+        preserves rows from previous runs with other models.
+        """
         rows = []
         for pert_type, model_data in flip_metrics.items():
             for model, metrics in model_data.items():
@@ -815,8 +823,25 @@ class CounterfactualAnalyzer:
                 
                 rows.append(row)
         
-        df = pd.DataFrame(rows)
-        df.to_csv(output_path, index=False)
+        new_df = pd.DataFrame(rows)
+        
+        # Merge with existing file if present and non-empty
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 1:
+            try:
+                existing_df = pd.read_csv(output_path)
+                # Get models in current run
+                current_models = set(new_df['model'].unique()) if not new_df.empty else set()
+                # Keep rows from other models, drop rows for models we're updating
+                if not existing_df.empty and current_models:
+                    existing_df = existing_df[~existing_df['model'].isin(current_models)]
+                # Concatenate: existing (other models) + new (current models)
+                combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+                combined_df.to_csv(output_path, index=False)
+            except pd.errors.EmptyDataError:
+                # File exists but is empty/corrupt - overwrite
+                new_df.to_csv(output_path, index=False)
+        else:
+            new_df.to_csv(output_path, index=False)
 
 
 def main():
@@ -859,6 +884,14 @@ def main():
     # Ensure required columns exist
     if 'event_id' not in events_df.columns:
         raise ValueError(f"'event_id' column not found in {top_disagreements_path}")
+    
+    # Check for 'notes' column required for perturbation generation
+    if 'notes' not in events_df.columns:
+        raise ValueError(
+            f"'notes' column not found in {top_disagreements_path}\n"
+            f"The 'notes' column is required for counterfactual perturbation analysis.\n"
+            f"Please re-run inference (to include notes) and per_class_metrics (to propagate notes to top_disagreements.csv)."
+        )
     
     # Validate mutually exclusive options
     if args.events is not None and args.top_percent is not None:

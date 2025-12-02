@@ -8,21 +8,9 @@ from sklearn.metrics import brier_score_loss
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from lib.core.data_helpers import setup_country_environment
+from lib.inference import CANONICAL_LABEL_ORDER
 
-COUNTRY, RESULTS_DIR = setup_country_environment()
-
-# Input/raw predictions CSV (combined from aggregator)
-RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
-# Calibration params (written by calibrate_confidences)
-CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_acled_{COUNTRY}_state_actors.json')
-# Combined outputs
-OUT_CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
-OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')
-OUT_BRIER_CSV = os.path.join(RESULTS_DIR, 'calibration_brier_scores.csv')
-OUT_PLOT_REL = os.path.join(RESULTS_DIR, 'reliability_diagrams.png')
-OUT_PLOT_ACC = os.path.join(RESULTS_DIR, 'accuracy_vs_coverage.png')
-OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
-
+# Module-level constants (no side effects)
 labels = ['V','B','E','P','R','S']
 thresholds = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
 RANDOM_SEED = 42  # For reproducible train/test splits
@@ -99,7 +87,7 @@ def compute_brier_scores(df, mappings, cal_params):
     
     return pd.DataFrame(brier_results)
 
-def reliability_curve_plot(df, mappings, cal_params):
+def reliability_curve_plot(df, mappings, cal_params, out_path):
     # For each model, plot before and after calibration reliability diagram
     n_models = len(df['model'].unique())
     fig, axes = plt.subplots(n_models, 1, figsize=(6,4*n_models))
@@ -132,10 +120,22 @@ def reliability_curve_plot(df, mappings, cal_params):
         ax.set_ylabel('Fraction positive')
         ax.legend()
     plt.tight_layout()
-    fig.savefig(OUT_PLOT_REL)
+    fig.savefig(out_path)
     plt.close(fig)
 
 def main():
+    # Setup paths at runtime (not import time)
+    COUNTRY, RESULTS_DIR = setup_country_environment()
+    
+    RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
+    CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_acled_{COUNTRY}_state_actors.json')
+    OUT_CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+    OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')
+    OUT_BRIER_CSV = os.path.join(RESULTS_DIR, 'calibration_brier_scores.csv')
+    OUT_PLOT_REL = os.path.join(RESULTS_DIR, 'reliability_diagrams.png')
+    OUT_PLOT_ACC = os.path.join(RESULTS_DIR, 'accuracy_vs_coverage.png')
+    OUT_ISO_MAP = os.path.join(RESULTS_DIR, 'isotonic_mappings.json')
+    
     if not os.path.exists(RESULTS_CSV):
         print('Missing', RESULTS_CSV); return
     df = pd.read_csv(RESULTS_CSV)
@@ -219,8 +219,11 @@ def main():
             # parse JSON lists and compute softmax(logits / T_multi)
             def compute_probs_json(x):
                 try:
-                    arr = json.loads(x)
-                    arr = np.asarray(arr, dtype=float)
+                    raw = json.loads(x)
+                    if isinstance(raw, dict):
+                        arr = np.asarray([float(raw.get(lab, 0.0)) for lab in CANONICAL_LABEL_ORDER], dtype=float)
+                    else:
+                        arr = np.asarray(raw, dtype=float)
                     # ensure shape matches labels
                     if arr.size != len(labels):
                         return [np.nan]*len(labels)
@@ -260,7 +263,7 @@ def main():
     print(f'\nSaved Brier scores to {OUT_BRIER_CSV}')
     
     # Plots (on TEST set only)
-    reliability_curve_plot(df_test, iso_mappings, cal_params)
+    reliability_curve_plot(df_test, iso_mappings, cal_params, OUT_PLOT_REL)
     print('\nSaved reliability diagrams (test set) to', OUT_PLOT_REL)
     # Accuracy vs coverage plots
     fig, ax = plt.subplots(figsize=(8,6))

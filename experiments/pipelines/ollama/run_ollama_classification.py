@@ -19,7 +19,7 @@ from lib.core.constants import COUNTRY_NAMES
 
 # Import from lib structure
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-from lib.data_preparation import extract_country_rows, get_actor_norm_series, extract_state_actor, build_stratified_sample
+from lib.data_preparation import extract_country_rows, get_actor_norm_series, extract_state_actor, build_stratified_sample, build_balanced_actor_sample
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_MODELS, COUNTRY_NAMES as _COUNTRY_NAMES
 from lib.inference.ollama_client import run_ollama_structured
 from lib.core.data_helpers import paths_for_country, resolve_columns, write_sample, setup_country_environment
@@ -86,7 +86,8 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
             "pred_conf": conf,
             "logits": json.dumps(logits) if logits is not None else None,
             "latency_sec": elapsed,
-            "actor_norm": getattr(r, actor_norm_col, None)
+            "actor_norm": getattr(r, actor_norm_col, None),
+            "notes": note  # Include notes for downstream counterfactual analysis
         })
     
     return results
@@ -148,12 +149,13 @@ def run_classification_experiment(country_code: str,
     # Resolve column names case-insensitively
     cols = resolve_columns(
         df_country, 
-        ['actor1', 'notes', 'event_type', 'event_id_cnty']
+        ['actor1', 'notes', 'event_type', 'event_id_cnty', 'inter1']
     )
     col_actor = cols.get('actor1') or 'actor1'
     col_notes = cols.get('notes') or 'notes'
     col_event_type = cols.get('event_type') or 'event_type'
     col_event_id = cols.get('event_id_cnty') or 'event_id_cnty'
+    col_inter1 = cols.get('inter1') or 'INTER1'
     
     # Create normalized actor column
     df_country["actor_norm"] = get_actor_norm_series(
@@ -196,29 +198,35 @@ def run_classification_experiment(country_code: str,
         df_test = pd.read_csv(sample_path)
         print(f"Loaded {len(df_test)} events from existing sample")
     else:
-        # Build stratified sample
+        # Build balanced actor sample for fairness analysis
         n_total = min(sample_size, len(usable))
         
         # Log sampling configuration
         if primary_group:
-            print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
-                  f"{(1-primary_share)*100:.0f}% proportional to other classes")
+            print(f"Using balanced actor sampling with primary event: {primary_group}")
+            print(f"  {primary_share*100:.0f}% {primary_group}, {(1-primary_share)*100:.0f}% other classes")
+            print(f"  Ensuring equal representation of state and non-state actors")
         else:
-            print("Using proportional sampling: sample reflects natural class distribution")
+            print("Using balanced actor sampling: 50% state actors, 50% non-state actors")
+            print("  Sample stratified by event type within each actor group")
         
-        df_test = build_stratified_sample(
-            usable,
-            stratify_col='event_type',
+        df_test = build_balanced_actor_sample(
+            df_country,
             n_total=n_total,
-            primary_group=primary_group,
-            primary_share=primary_share,
+            balance_ratio=0.5,
+            event_types=EVENT_CLASSES_FULL,
+            event_col=col_event_type,
+            actor_code_col=col_inter1,  # ACLED INTER1 column (resolved)
+            min_per_cell=10,
+            primary_event=primary_group,
+            primary_share=primary_share if primary_group else None,
             label_map=LABEL_MAP,
             random_state=42,
-            replace=False
+            verbose=True
         )
         
         sample_path = write_sample(country_code, df_test, sample_size=str(sample_size))
-        print(f"Wrote stratified sample to {sample_path}")
+        print(f"Wrote balanced actor sample to {sample_path}")
     
     print(df_test.head())
     
@@ -273,15 +281,25 @@ def run_classification_experiment(country_code: str,
 
 def main():
     """Main entry point - accepts country, strategy from command line or environment."""
+    # Read environment variable defaults (shell script sets these)
+    env_country = os.environ.get('COUNTRY', 'cmr')
+    env_sample_size = int(os.environ.get('SAMPLE_SIZE', '100'))
+    env_strategy = os.environ.get('STRATEGY', 'zero_shot')
+    # Only read NUM_EXAMPLES from env if strategy is few_shot (shell always sets it)
+    env_num_examples = None
+    if env_strategy == 'few_shot':
+        env_num_examples_str = os.environ.get('NUM_EXAMPLES')
+        env_num_examples = int(env_num_examples_str) if env_num_examples_str else None
+
     parser = argparse.ArgumentParser(
         description='Run classification experiment with configurable sampling'
     )
-    parser.add_argument('country', nargs='?', default='cmr',
-                       help='Country code (e.g., cmr, nga). Default: cmr')
-    parser.add_argument('--sample-size', type=int, default=100,
-                       help='Number of events to sample (default: 100)')
-    parser.add_argument('--strategy', default='zero_shot',
-                       help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
+    parser.add_argument('country', nargs='?', default=env_country,
+                       help=f'Country code (e.g., cmr, nga). Default: {env_country} (from COUNTRY env var)')
+    parser.add_argument('--sample-size', type=int, default=env_sample_size,
+                       help=f'Number of events to sample (default: {env_sample_size} from SAMPLE_SIZE env var)')
+    parser.add_argument('--strategy', default=env_strategy,
+                       help=f'Prompting strategy: zero_shot, few_shot, explainable (default: {env_strategy} from STRATEGY env var)')
     parser.add_argument('--primary-group', default=None,
                        help='Event type to oversample (e.g., "Violence against civilians"). '
                             'Default: None (proportional sampling)')
@@ -291,9 +309,9 @@ def main():
     parser.add_argument('--models', default=None,
                        help='Comma-separated list of Ollama models to run. Overrides WORKING_MODELS. '
                            'Example: --models "llama3.2:3b,mistral:7b"')
-    parser.add_argument('--num-examples', type=int, default=None,
+    parser.add_argument('--num-examples', type=int, default=env_num_examples,
                        help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
-                            'Default: 1 for few_shot strategy.')
+                            'Default: from NUM_EXAMPLES env var (only when strategy=few_shot).')
     
     args = parser.parse_args()
     
@@ -304,7 +322,7 @@ def main():
     if args.primary_group and args.primary_share == 0:
         parser.error('--primary-share must be > 0 when --primary-group is specified')
     
-    # Validate num_examples
+    # Validate num_examples - only check if explicitly provided
     if args.num_examples is not None:
         if not 1 <= args.num_examples <= 5:
             parser.error('--num-examples must be between 1 and 5')

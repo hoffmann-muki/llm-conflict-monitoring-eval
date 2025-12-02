@@ -4,6 +4,7 @@
 Includes qualitative error case sampling for annotation:
 - Samples N=200 false legitimization errors (true=V, pred=B/S) 
 - Samples N=200 false illegitimization errors (true=B/S, pred=V)
+- Auto-generates annotations for provenance, verb intensity, casualties, passive voice
 
 Reads: country-specific results/{country}/{strategy}/ollama_results_calibrated.csv
 Writes: country-specific results/{country}/{strategy}/per_class_report.csv, top_disagreements.csv,
@@ -15,19 +16,23 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 from lib.core.data_helpers import setup_country_environment
+from lib.analysis.auto_annotate import auto_annotate_dataframe
 
-COUNTRY, RESULTS_DIR = setup_country_environment()
-
-INPUT_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
-OUT_PER_CLASS = os.path.join(RESULTS_DIR, 'per_class_report.csv')
-OUT_TOP = os.path.join(RESULTS_DIR, 'top_disagreements.csv')
-OUT_FL_ERRORS = os.path.join(RESULTS_DIR, 'error_cases_false_legitimization.csv')
-OUT_FI_ERRORS = os.path.join(RESULTS_DIR, 'error_cases_false_illegitimization.csv')
-
-TOP_N = 20
+# Module-level constants (no side effects)
+# TOP_N can be overridden via environment variable for counterfactual analysis
+TOP_N = int(os.environ.get('TOP_N_DISAGREEMENTS', '20'))
 ERROR_SAMPLE_SIZE = 200  # N=200 as specified
 
 def main():
+    # Setup paths at runtime (not import time)
+    COUNTRY, RESULTS_DIR = setup_country_environment()
+    
+    INPUT_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
+    OUT_PER_CLASS = os.path.join(RESULTS_DIR, 'per_class_report.csv')
+    OUT_TOP = os.path.join(RESULTS_DIR, 'top_disagreements.csv')
+    OUT_FL_ERRORS = os.path.join(RESULTS_DIR, 'error_cases_false_legitimization.csv')
+    OUT_FI_ERRORS = os.path.join(RESULTS_DIR, 'error_cases_false_illegitimization.csv')
+    
     os.makedirs("results", exist_ok=True)
     df = pd.read_csv(INPUT_CSV)
 
@@ -57,8 +62,11 @@ def main():
     piv_label = df.pivot(index="event_id", columns="model", values="pred_label")
     piv_prob = df.pivot(index="event_id", columns="model", values="pred_conf_temp")
 
-    # Retrieve canonical event-level columns
-    event_meta = df.drop_duplicates(subset=["event_id"]).set_index("event_id")[ ["true_label", "actor_norm"] ]
+    # Retrieve canonical event-level columns (include notes for downstream counterfactual analysis)
+    meta_cols = ["true_label", "actor_norm"]
+    if "notes" in df.columns:
+        meta_cols.append("notes")
+    event_meta = df.drop_duplicates(subset=["event_id"]).set_index("event_id")[meta_cols]
 
     # Align
     wide = event_meta.join(piv_label.add_prefix("pred_label_")).join(piv_prob.add_prefix("pred_prob_"))
@@ -84,13 +92,13 @@ def main():
     print(f"Wrote top-{TOP_N} disagreements: {OUT_TOP} ({len(topn)} rows)")
     
     # Sample error cases for qualitative annotation
-    sample_error_cases(df)
+    sample_error_cases(df, COUNTRY, OUT_FL_ERRORS, OUT_FI_ERRORS)
 
-def sample_error_cases(df: pd.DataFrame):
+def sample_error_cases(df: pd.DataFrame, COUNTRY: str, OUT_FL_ERRORS: str, OUT_FI_ERRORS: str):
     """Sample N=200 errors of each harm type for qualitative annotation.
     
     Samples false legitimization and false illegitimization errors with metadata
-    for manual annotation of causal factors: provenance, ambiguous actor role,
+    and auto-generated annotations for causal factors: provenance, ambiguous actor role,
     verb intensity, casualty counts, passive voice usage.
     """
     # Define legitimate and illegitimate labels
@@ -125,7 +133,61 @@ def sample_error_cases(df: pd.DataFrame):
     else:
         fi_sample = fi_errors
     
-    # Add annotation columns
+    # Try to load original ACLED data for additional metadata (NOTES, SOURCE, FATALITIES)
+    original_data = None
+    country_code = COUNTRY.lower()[:3]
+    country_names = {
+        'cmr': 'Cameroon',
+        'nga': 'Nigeria',
+    }
+    country_name = country_names.get(country_code, COUNTRY.title())
+    possible_paths = [
+        f'datasets/{country_code}/{country_name}_lagged_data_up_to-2024-10-24.csv',
+        f'datasets/{country_code.upper()}/{country_name}_lagged_data_up_to-2024-10-24.csv',
+        f'datasets/2014-01-01-2024-12-31-{country_name}.csv',
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                original_data = pd.read_csv(path)
+                print(f"  Loaded ACLED metadata from: {path}")
+                break
+            except Exception as e:
+                print(f"  Warning: Could not load {path}: {e}")
+    
+    # Merge NOTES, SOURCE, FATALITIES from original data if available
+    if original_data is not None:
+        # Normalize column names
+        orig_cols_map = {c.upper(): c for c in original_data.columns}
+        event_id_col = orig_cols_map.get('EVENT_ID_CNTY') or orig_cols_map.get('EVENT_ID')
+        
+        if event_id_col:
+            # Select columns to merge
+            merge_cols = [event_id_col]
+            for col_upper in ['NOTES', 'SOURCE', 'SOURCE_SCALE', 'FATALITIES']:
+                if col_upper in orig_cols_map:
+                    merge_cols.append(orig_cols_map[col_upper])
+            
+            orig_subset = original_data[merge_cols].drop_duplicates(subset=[event_id_col])
+            
+            # Merge into error samples
+            if len(fl_sample) > 0:
+                fl_sample = fl_sample.merge(orig_subset, left_on='event_id', right_on=event_id_col, how='left')
+                # Normalize column names for auto_annotate
+                if 'NOTES' in fl_sample.columns:
+                    fl_sample['notes'] = fl_sample['NOTES']
+            if len(fi_sample) > 0:
+                fi_sample = fi_sample.merge(orig_subset, left_on='event_id', right_on=event_id_col, how='left')
+                if 'NOTES' in fi_sample.columns:
+                    fi_sample['notes'] = fi_sample['NOTES']
+    
+    # Apply automated annotations (data already merged above, so pass None)
+    if len(fl_sample) > 0:
+        fl_sample = auto_annotate_dataframe(fl_sample, None)
+    if len(fi_sample) > 0:
+        fi_sample = auto_annotate_dataframe(fi_sample, None)
+    
+    # Ensure all annotation columns exist
     annotation_columns = [
         'annotation_provenance',  # State media, independent, etc.
         'annotation_ambiguous_actor',  # Yes/No if actor role unclear
@@ -157,7 +219,7 @@ def sample_error_cases(df: pd.DataFrame):
     print(f"\nQualitative Error Case Sampling:")
     print(f"  False Legitimization errors: {len(fl_sample)} cases -> {OUT_FL_ERRORS}")
     print(f"  False Illegitimization errors: {len(fi_sample)} cases -> {OUT_FI_ERRORS}")
-    print(f"  Ready for manual annotation with causal factor analysis")
+    print(f"  Annotations auto-generated (review and refine as needed)")
 
 if __name__ == "__main__":
     main()

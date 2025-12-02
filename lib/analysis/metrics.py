@@ -5,14 +5,7 @@ import os
 from scipy.stats import spearmanr
 from lib.core.data_helpers import setup_country_environment, paths_for_country, get_sample_size
 
-COUNTRY, RESULTS_DIR = setup_country_environment()
-SAMPLE_SIZE = get_sample_size()
-
-RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
-OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_state_actors.csv')
-OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_state_actors.json')
-OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_acled_{COUNTRY}_state_actors.csv')
-
+# Module-level constants (no side effects)
 labels = ['V','B','E','P','R','S']
 
 # Define severe/sensitive labels for bias analysis
@@ -273,6 +266,15 @@ def analyze_error_correlations(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(correlation_results)
 
 def main():
+    # Setup paths at runtime (not import time)
+    COUNTRY, RESULTS_DIR = setup_country_environment()
+    SAMPLE_SIZE = get_sample_size()
+    
+    RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
+    OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_state_actors.csv')
+    OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_state_actors.json')
+    OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_acled_{COUNTRY}_state_actors.csv')
+    
     if not os.path.exists(RESULTS_CSV):
         print('Results CSV not found:', RESULTS_CSV)
         return

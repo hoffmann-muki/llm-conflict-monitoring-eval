@@ -26,7 +26,8 @@ from lib.data_preparation import (
     extract_country_rows,
     get_actor_norm_series,
     extract_state_actor,
-    build_stratified_sample
+    build_stratified_sample,
+    build_balanced_actor_sample
 )
 
 # We'll produce a stable ID mapping for the model classes
@@ -149,13 +150,14 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     
     # Resolve column names case-insensitively
     cols = resolve_columns(
-        df_country,
-        ['actor1', 'notes', 'event_type', 'event_id_cnty']
+        df_country, 
+        ['actor1', 'notes', 'event_type', 'event_id_cnty', 'inter1']
     )
     col_actor = cols.get('actor1') or 'actor1'
     col_notes = cols.get('notes') or 'notes'
     col_event_type = cols.get('event_type') or 'event_type'
     col_event_id = cols.get('event_id_cnty') or 'event_id_cnty'
+    col_inter1 = cols.get('inter1') or 'INTER1'
     
     # Create normalized actor column
     df_country["actor_norm"] = get_actor_norm_series(
@@ -199,35 +201,43 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
         df = pd.read_csv(sample_path)
         print(f"Loaded {len(df)} events from existing sample")
     else:
-        # Build stratified sample
+        # Build balanced actor sample for fairness analysis
         n_total = min(sample_size, len(usable))
         
         if primary_group:
-            print(f"Using targeted sampling: {primary_share*100:.0f}% {primary_group}, "
-                  f"{(1-primary_share)*100:.0f}% proportional to other classes")
+            print(f"Using balanced actor sampling with primary event: {primary_group}")
+            print(f"  {primary_share*100:.0f}% {primary_group}, {(1-primary_share)*100:.0f}% other classes")
+            print(f"  Ensuring equal representation of state and non-state actors")
         else:
-            print("Using proportional sampling: sample reflects natural class distribution")
+            print("Using balanced actor sampling: 50% state actors, 50% non-state actors")
+            print("  Sample stratified by event type within each actor group")
         
-        df = build_stratified_sample(
-            usable,
-            stratify_col='event_type',
+        df = build_balanced_actor_sample(
+            df_country,
             n_total=n_total,
-            primary_group=primary_group,
-            primary_share=primary_share,
+            balance_ratio=0.5,
+            event_types=EVENT_CLASSES_FULL,
+            event_col=col_event_type,
+            actor_code_col=col_inter1,
+            min_per_cell=10,
+            primary_event=primary_group,
+            primary_share=primary_share if primary_group else None,
             label_map=LABEL_MAP,
             random_state=42,
-            replace=False
+            verbose=True
         )
         
         # Save sample for reproducibility (unified path for cross-pipeline comparison)
         df.to_csv(sample_path, index=False)
-        print(f"Wrote stratified sample to {sample_path}")
+        print(f"Wrote balanced actor sample to {sample_path}")
         print(f"Sample size: {len(df)} events")
     
     # Extract data
     texts = df['notes'].astype(str).tolist()
     event_ids = df['event_id_cnty'].tolist()
-    true_labels = df['event_type'].tolist()
+    # Use gold_label_full if available (from balanced sampler), else event_type (legacy)
+    true_label_col = 'gold_label_full' if 'gold_label_full' in df.columns else 'event_type'
+    true_labels = df[true_label_col].tolist()
     actor_norms = df['actor_norm'].tolist()
     
     # Map labels to codes

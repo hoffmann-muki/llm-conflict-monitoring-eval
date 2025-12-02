@@ -25,7 +25,7 @@
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
 #   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
-#   CF_EVENTS            - Number of events for counterfactual [default: 50]
+#   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #
 ###############################################################################
 
@@ -47,7 +47,7 @@ DEVICE="${DEVICE:-auto}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
 CF_MODELS="${CF_MODELS:-}"
-CF_EVENTS="${CF_EVENTS:-50}"
+CF_EVENTS="${CF_EVENTS:-20}"
 
 # Determine repository root (two levels up from this script)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -235,7 +235,9 @@ COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES=
     "$VENV_PY" -m lib.analysis.harm
 
 log_step "Generating per-class metrics and error case sampling..."
+# Set TOP_N_DISAGREEMENTS to match CF_EVENTS so enough disagreements are available for counterfactual analysis
 COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+    TOP_N_DISAGREEMENTS="$CF_EVENTS" \
     "$VENV_PY" -m lib.analysis.per_class_metrics
 
 log_step "Creating visualization plots..."
