@@ -5,27 +5,6 @@ from experiments.prompting_strategies import ZeroShotStrategy
 # Valid ACLED event type labels
 VALID_LABELS = {'V', 'B', 'E', 'P', 'R', 'S'}
 
-# Map numeric/common misreadings to valid labels
-LABEL_MAP = {
-    '1': 'V',  # Violence against civilians
-    '2': 'B',  # Battles
-    '3': 'E',  # Explosions
-    '4': 'P',  # Protests
-    '5': 'R',  # Riots
-    '6': 'S',  # Strategic developments
-    # Common typos/alternatives
-    'VIOLENCE': 'V',
-    'BATTLES': 'B',
-    'BATTLE': 'B',
-    'EXPLOSIONS': 'E',
-    'EXPLOSION': 'E',
-    'PROTESTS': 'P',
-    'PROTEST': 'P',
-    'RIOTS': 'R',
-    'RIOT': 'R',
-    'STRATEGIC': 'S',
-}
-
 
 def normalize_label(raw_label: str) -> str:
     """Normalize a raw label to a valid ACLED event type code.
@@ -34,24 +13,15 @@ def normalize_label(raw_label: str) -> str:
         raw_label: Raw label string from model output
         
     Returns:
-        Valid label code (V/B/E/P/R/S) or 'INVALID' if unmappable
+        Valid label code (V/B/E/P/R/S) or 'INVALID' if not recognized
     """
     if not raw_label:
         return 'INVALID'
     
     upper = raw_label.strip().upper()
     
-    # Already valid
     if upper in VALID_LABELS:
         return upper
-    
-    # Try mapping
-    if upper in LABEL_MAP:
-        return LABEL_MAP[upper]
-    
-    # Check if first character is valid (e.g., "Violence" -> "V")
-    if upper and upper[0] in VALID_LABELS:
-        return upper[0]
     
     return 'INVALID'
 
