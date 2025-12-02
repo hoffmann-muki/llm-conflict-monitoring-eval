@@ -32,8 +32,8 @@ This repository provides tools to test whether LLMs exhibit systematic bias when
 
 | Document | Description |
 |----------|-------------|
-| [experiments/README.md](experiments/README.md) | Running experiments, pipelines, and shell scripts |
-| [lib/README.md](lib/README.md) | Library API, analysis modules, and output files |
+| [experiments/README.md](experiments/README.md) | Running experiments, pipelines, shell scripts, sampling |
+| [lib/README.md](lib/README.md) | Python API, analysis modules, output files |
 | [experiments/prompting_strategies/README.md](experiments/prompting_strategies/README.md) | Creating custom prompting strategies |
 | [tests/README.md](tests/README.md) | Test suite and validation |
 
@@ -58,24 +58,12 @@ python experiments/pipelines/conflibert/download_conflibert_model.py \
 ## Quick Start
 
 ```bash
-# Full analysis pipeline (zero-shot, all models)
+# Full analysis pipeline
 COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-
-# Few-shot with 3 examples per category
-COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-
-# Specific models only
-OLLAMA_MODELS=mistral:7b,llama3.2:3b COUNTRY=nga SAMPLE_SIZE=1000 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
-
-# Skip inference, analyze existing results
-SKIP_INFERENCE=true COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 ```
 
-See [experiments/README.md](experiments/README.md) for detailed pipeline documentation.
+See [experiments/README.md](experiments/README.md) for detailed usage and options.
 
 ## Environment Variables
 
@@ -85,13 +73,15 @@ See [experiments/README.md](experiments/README.md) for detailed pipeline documen
 | `STRATEGY` | Prompting strategy (zero_shot, few_shot, explainable) | zero_shot |
 | `SAMPLE_SIZE` | Number of events to sample | 500 |
 | `NUM_EXAMPLES` | Few-shot examples per category (1-5, only for few_shot) | None |
-| `OLLAMA_MODELS` | Comma-separated model list | All WORKING_MODELS |
+| `OLLAMA_MODELS` | Comma-separated model list for inference | All WORKING_MODELS |
+| `CF_MODELS` | Models for counterfactual analysis | All WORKING_MODELS |
+| `CF_EVENTS` | Number of events for counterfactual analysis | 50 |
 | `SKIP_INFERENCE` | Skip inference phase | false |
 | `SKIP_COUNTERFACTUAL` | Skip counterfactual phase | false |
 
 ## Event Categories
 
-All pipelines classify events into ACLED categories. Labels are enforced via JSON schema enum constraints:
+Events are classified into ACLED categories (labels enforced via JSON schema enum):
 
 | Code | Category |
 |------|----------|
@@ -102,24 +92,6 @@ All pipelines classify events into ACLED categories. Labels are enforced via JSO
 | R | Riots |
 | S | Strategic developments |
 
-**Note:** The inference pipeline uses Ollama's structured output feature with enum constraints to ensure models only produce valid labels.
-
-## Workflow Architecture
-
-The pipeline uses a **per-model-then-aggregate** workflow:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Sample Creation                                                             │
-│   Unified sample: datasets/{country}/state_actor_sample_{country}_{n}.csv   │
-│   Same sample reused across all models (random_state=42)                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ Per-Model Inference → Aggregation → Analysis (Calibration, Metrics, Harm)   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Benefits:** Fair comparison across models, incremental runs, reproducibility, strategy isolation.
-
 ## Analysis Metrics
 
 | Category | Metrics |
@@ -129,7 +101,7 @@ The pipeline uses a **per-model-then-aggregate** workflow:
 | **Fairness** | Statistical Parity Difference (SPD), Equalized Odds |
 | **Harm** | False Legitimization Rate (FLR), False Illegitimization Rate (FIR) |
 | **Robustness** | Counterfactual Flip Rate (CFR) |
-| **Error Analysis** | Error correlation with event notes text features |
+| **Error Analysis** | Error correlation with event text features |
 
 ## Supported Models
 
