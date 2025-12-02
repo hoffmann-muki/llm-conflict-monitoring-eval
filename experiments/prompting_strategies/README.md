@@ -39,11 +39,14 @@ class MyStrategy(PromptingStrategy):
         return f"Classify this event: {note}"
     
     def get_schema(self) -> Dict[str, Any]:
-        """JSON schema for structured response."""
+        """JSON schema for structured response.
+        
+        IMPORTANT: Use enum constraint on label field to ensure valid outputs.
+        """
         return {
             "type": "object",
             "properties": {
-                "label": {"type": "string"},
+                "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
                 "confidence": {"type": "number"}
             },
             "required": ["label", "confidence"]
@@ -57,6 +60,13 @@ class MyStrategy(PromptingStrategy):
         """Strategy name for results organization."""
         return "my_strategy"
 ```
+
+### Prompt Best Practices
+
+To ensure models output valid labels:
+1. List categories with letter codes (V, B, E, P, R, S) - avoid numbered lists
+2. Include explicit instruction: "CRITICAL: The label must be exactly one of: V, B, E, P, R, S"
+3. Use enum constraint in JSON schema (enforced by Ollama structured output)
 
 ## Base Class Interface
 

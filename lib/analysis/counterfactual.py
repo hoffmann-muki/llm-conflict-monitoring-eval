@@ -406,12 +406,15 @@ class PerturbationGenerator:
 class CounterfactualAnalyzer:
     """Main analyzer for counterfactual model behavior."""
     
-    def __init__(self, country: str, models: List[str], strategy: str = None):
+    def __init__(self, country: str, models: List[str], strategy: str = None, 
+                 sample_size: str = None, num_examples: int = None):
         self.country = country
         self.models = models
-        self.strategy = strategy or get_strategy()
+        self.strategy = strategy if strategy is not None else 'zero_shot'
+        self.sample_size = sample_size if sample_size is not None else '500'
+        self.num_examples = num_examples
         self.perturbation_generator = PerturbationGenerator()
-        self.paths = paths_for_country(country, self.strategy)
+        self.paths = paths_for_country(country, self.strategy, self.sample_size, self.num_examples)
         
         # Load original results
         self.original_results = self.load_original_results()
@@ -818,16 +821,21 @@ class CounterfactualAnalyzer:
 
 def main():
     parser = argparse.ArgumentParser(description='Counterfactual analysis for model disagreements')
+    parser.add_argument('--country', default=os.environ.get('COUNTRY', 'cmr'), help='Country code (default: cmr)')
+    parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'), help='Prompting strategy (default: zero_shot)')
+    parser.add_argument('--sample-size', default=os.environ.get('SAMPLE_SIZE', '500'), help='Sample size (default: 500)')
+    parser.add_argument('--num-examples', type=int, default=int(os.environ.get('NUM_EXAMPLES')) if os.environ.get('NUM_EXAMPLES') else None, help='Few-shot examples (1-5)')
     parser.add_argument('--models', default=None, help='Comma-separated list of models to analyze (default: all WORKING_MODELS)')
     parser.add_argument('--events', type=int, default=None, help='Number of top-N disagreements to analyze (default: all available)')
     parser.add_argument('--top-percent', type=float, default=None, help='Use top X%% of available disagreements (mutually exclusive with --events)')
     parser.add_argument('--output', default=None, help='Output file path')
-    parser.add_argument('--strategy', default=None, help='Strategy name to include in output filename (default: from STRATEGY env var)')
     
     args = parser.parse_args()
     
-    country, _ = setup_country_environment()
-    strategy = args.strategy or get_strategy()
+    country = args.country
+    strategy = args.strategy
+    sample_size = args.sample_size
+    num_examples = args.num_examples
     
     # Use WORKING_MODELS if --models not provided
     if args.models:
@@ -837,7 +845,7 @@ def main():
         print(f"No --models specified, using all WORKING_MODELS: {models}")
     
     # Load top-N disagreements (required input)
-    paths = paths_for_country(country, strategy)
+    paths = paths_for_country(country, strategy, sample_size, num_examples)
     top_disagreements_path = os.path.join(paths['results_dir'], 'top_disagreements.csv')
     
     if not os.path.exists(top_disagreements_path):
@@ -871,7 +879,7 @@ def main():
     print(f"Using top-N disagreements where models disagree on classification\n")
     
     # Run analysis
-    analyzer = CounterfactualAnalyzer(country, models, strategy)
+    analyzer = CounterfactualAnalyzer(country, models, strategy, sample_size, num_examples)
     
     results = []
     for idx, event_row in events_df.iterrows():

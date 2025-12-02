@@ -31,40 +31,58 @@ def get_model_results_dir(results_dir: str, model_name: str) -> str:
     return os.path.join(results_dir, model_dir_slug)
 
 
-def get_strategy() -> str:
-    """Get the prompting strategy from environment variable.
+def get_strategy(strategy: str = None) -> str:
+    """Get the prompting strategy.
+    
+    Args:
+        strategy: Strategy name. If None, checks STRATEGY env var, then defaults to 'zero_shot'.
     
     Returns:
         Strategy name (e.g., 'zero_shot', 'few_shot', 'explainable').
-        Defaults to 'zero_shot' if STRATEGY env var is not set.
     """
+    if strategy is not None:
+        return strategy
     return os.environ.get('STRATEGY', 'zero_shot')
 
 
-def get_sample_size() -> str:
-    """Get the sample size from environment variable.
+def get_sample_size(sample_size: str = None) -> str:
+    """Get the sample size.
+    
+    Args:
+        sample_size: Sample size as string. If None, checks SAMPLE_SIZE env var, then defaults to '500'.
     
     Returns:
         Sample size as string (e.g., '500', '1000').
-        Defaults to '500' if SAMPLE_SIZE env var is not set.
     """
+    if sample_size is not None:
+        return sample_size
     return os.environ.get('SAMPLE_SIZE', '500')
 
 
-def get_num_examples() -> Optional[int]:
-    """Get the number of few-shot examples from environment variable.
+def get_num_examples(num_examples: int = None) -> Optional[int]:
+    """Get the number of few-shot examples.
+    
+    Args:
+        num_examples: Number of examples (1-5). If None, checks NUM_EXAMPLES env var.
     
     Returns:
         Number of examples (1-5) for few-shot strategy, or None if not set.
         Only relevant when strategy is 'few_shot'.
     """
-    val = os.environ.get('NUM_EXAMPLES')
-    if val is not None:
+    if num_examples is None:
+        env_val = os.environ.get('NUM_EXAMPLES')
+        if env_val:
+            try:
+                num_examples = int(env_val)
+            except (ValueError, TypeError):
+                pass
+    
+    if num_examples is not None:
         try:
-            n = int(val)
+            n = int(num_examples)
             if 1 <= n <= 5:
                 return n
-        except ValueError:
+        except (ValueError, TypeError):
             pass
     return None
 
@@ -94,11 +112,10 @@ def setup_country_environment(country: str | None = None, strategy: str | None =
     """Standard country, strategy, and sample size environment setup used across tools.
     
     Args:
-        country: Country code. If None, reads from COUNTRY env var.
-        strategy: Prompting strategy. If None, reads from STRATEGY env var.
-        sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
-        num_examples: Number of few-shot examples (1-5). If None, reads from NUM_EXAMPLES env var.
-                     Only used when strategy is 'few_shot'.
+        country: Country code. If None, checks COUNTRY env var, then defaults to 'cmr'.
+        strategy: Prompting strategy. If None, checks STRATEGY env var, then defaults to 'zero_shot'.
+        sample_size: Sample size. If None, checks SAMPLE_SIZE env var, then defaults to '500'.
+        num_examples: Number of few-shot examples (1-5). If None, checks NUM_EXAMPLES env var.
     
     Returns:
         Tuple of (country_code, results_dir_path)
@@ -107,13 +124,10 @@ def setup_country_environment(country: str | None = None, strategy: str | None =
         - For most strategies: results/{country}/{strategy}/{sample_size}/
         - For few_shot with num_examples: results/{country}/few_shot/{sample_size}/{num_examples}/
     """
-    country = country or os.environ.get('COUNTRY', 'cmr')
-    if strategy is None:
-        strategy = get_strategy()
-    if sample_size is None:
-        sample_size = get_sample_size()
-    if num_examples is None:
-        num_examples = get_num_examples()
+    country = country if country is not None else os.environ.get('COUNTRY', 'cmr')
+    strategy = get_strategy(strategy)
+    sample_size = get_sample_size(sample_size)
+    num_examples = get_num_examples(num_examples)
     
     results_dir = _build_results_dir(country, strategy, str(sample_size), num_examples)
     os.makedirs(results_dir, exist_ok=True)
@@ -126,10 +140,9 @@ def paths_for_country(country: str, strategy: str = None, sample_size: str = Non
     
     Args:
         country: Country code (e.g., 'cmr', 'nga')
-        strategy: Prompting strategy. If None, reads from STRATEGY env var.
-        sample_size: Sample size. If None, reads from SAMPLE_SIZE env var.
-        num_examples: Number of few-shot examples (1-5). If None, reads from NUM_EXAMPLES env var.
-                     Only used when strategy is 'few_shot'.
+        strategy: Prompting strategy. Defaults to 'zero_shot' if None.
+        sample_size: Sample size. Defaults to '500' if None.
+        num_examples: Number of few-shot examples (1-5). Only used when strategy is 'few_shot'.
     
     Returns:
         Dictionary with paths for results_dir, datasets_dir, sample_path, calibrated_csv
@@ -138,12 +151,9 @@ def paths_for_country(country: str, strategy: str = None, sample_size: str = Non
         - For most strategies: results/{country}/{strategy}/{sample_size}/
         - For few_shot with num_examples: results/{country}/few_shot/{sample_size}/{num_examples}/
     """
-    if strategy is None:
-        strategy = get_strategy()
-    if sample_size is None:
-        sample_size = get_sample_size()
-    if num_examples is None:
-        num_examples = get_num_examples()
+    strategy = get_strategy(strategy)
+    sample_size = get_sample_size(sample_size)
+    num_examples = get_num_examples(num_examples)
     
     results_dir = _build_results_dir(country, strategy, str(sample_size), num_examples)
     datasets_dir = os.path.join('datasets', country)
@@ -176,14 +186,13 @@ def write_sample(country: str, sample_df, sample_size: str = None,
     Args:
         country: Country code (e.g., 'cmr', 'nga')
         sample_df: DataFrame containing the sample
-        sample_size: Sample size (included in filename for fair comparison)
+        sample_size: Sample size (included in filename for fair comparison). Defaults to '500'.
         sample_name: Base name for the sample file
     
     Returns:
         Path to the written sample file
     """
-    if sample_size is None:
-        sample_size = get_sample_size()
+    sample_size = get_sample_size(sample_size)
     paths = paths_for_country(country, sample_size=sample_size)
     os.makedirs(paths['datasets_dir'], exist_ok=True)
     # Use sample_path which already includes sample_size

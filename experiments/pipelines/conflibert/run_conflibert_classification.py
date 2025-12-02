@@ -62,12 +62,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='ConfliBERT classification with prompting strategies'
     )
-    parser.add_argument('country', nargs='?', default=os.environ.get('COUNTRY', 'cmr'),
-                       help='Country code (e.g., cmr, nga)')
-    parser.add_argument('--sample-size', type=int,
-                       default=int(os.environ.get('SAMPLE_SIZE', '100')),
+    parser.add_argument('country', nargs='?', default='cmr',
+                       help='Country code (e.g., cmr, nga). Default: cmr')
+    parser.add_argument('--sample-size', type=int, default=100,
                        help='Number of events to sample (default: 100)')
-    parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'),
+    parser.add_argument('--strategy', default='zero_shot',
                        help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
     parser.add_argument('--model-path', required=True,
                        help='Path to local ConfliBERT model directory (use download_conflibert_model.py to obtain)')
@@ -85,7 +84,7 @@ def parse_args():
                        help='Device for inference (default: cuda if available, else cpu)')
     parser.add_argument('--num-examples', type=int, default=None,
                        help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
-                            'Default: reads from NUM_EXAMPLES env var, or 1 if not set.')
+                            'Default: 1 for few_shot strategy.')
     
     return parser.parse_args()
 

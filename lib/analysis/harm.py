@@ -14,19 +14,16 @@ Definitions:
 - Other labels (E, P, R) are neutral/ambiguous
 
 This aligns with bias-in-conflict-data literature on societal harm proxies.
+
+Usage:
+    python -m lib.analysis.harm --country cmr --strategy zero_shot --sample-size 1000
 """
 import os
+import argparse
 import pandas as pd
 import numpy as np
 from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
 from lib.core.data_helpers import setup_country_environment
-
-COUNTRY, RESULTS_DIR = setup_country_environment()
-os.makedirs(RESULTS_DIR, exist_ok=True)
-
-CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
-OUT_CSV = os.path.join(RESULTS_DIR, 'fl_fi_by_model.csv')
-OUT_DETAILED_CSV = os.path.join(RESULTS_DIR, 'harm_metrics_detailed.csv')
 
 
 def compute_harm_rates(df: pd.DataFrame) -> pd.DataFrame:
@@ -68,22 +65,39 @@ def compute_harm_rates(df: pd.DataFrame) -> pd.DataFrame:
     
     return pd.DataFrame(results)
 
+
 def main():
-    if not os.path.exists(CAL_CSV):
-        raise SystemExit(f"Missing {CAL_CSV}")
+    parser = argparse.ArgumentParser(description='Compute FL/FI harm metrics')
+    parser.add_argument('--country', default=os.environ.get('COUNTRY', 'cmr'), help='Country code (default: cmr)')
+    parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'), help='Prompting strategy (default: zero_shot)')
+    parser.add_argument('--sample-size', default=os.environ.get('SAMPLE_SIZE', '500'), help='Sample size (default: 500)')
+    parser.add_argument('--num-examples', type=int, default=int(os.environ.get('NUM_EXAMPLES')) if os.environ.get('NUM_EXAMPLES') else None, help='Few-shot examples (1-5)')
+    args = parser.parse_args()
     
-    df = pd.read_csv(CAL_CSV)
+    country, results_dir = setup_country_environment(
+        args.country, args.strategy, args.sample_size, args.num_examples
+    )
+    os.makedirs(results_dir, exist_ok=True)
+    
+    cal_csv = os.path.join(results_dir, 'ollama_results_calibrated.csv')
+    out_csv = os.path.join(results_dir, 'fl_fi_by_model.csv')
+    out_detailed_csv = os.path.join(results_dir, 'harm_metrics_detailed.csv')
+    
+    if not os.path.exists(cal_csv):
+        raise SystemExit(f"Missing {cal_csv}")
+    
+    df = pd.read_csv(cal_csv)
     
     # Compute traditional FL/FI aggregates
     out = aggregate_fl_fi(df, by='model')
-    out.to_csv(OUT_CSV, index=False)
-    print('Wrote traditional FL/FI metrics to', OUT_CSV)
+    out.to_csv(out_csv, index=False)
+    print('Wrote traditional FL/FI metrics to', out_csv)
     print(out.to_string(index=False))
     
     # Compute detailed harm-aware rates
     harm_df = compute_harm_rates(df)
-    harm_df.to_csv(OUT_DETAILED_CSV, index=False)
-    print(f'\nWrote detailed harm metrics to {OUT_DETAILED_CSV}')
+    harm_df.to_csv(out_detailed_csv, index=False)
+    print(f'\nWrote detailed harm metrics to {out_detailed_csv}')
     
     print('\n=== Harm-Aware Metrics (False Legitimization & Illegitimization Rates) ===')
     print(harm_df[['model', 'false_legitimization_rate_FLR', 'false_illegitimization_rate_FIR', 'harm_ratio_FL_to_FI']].to_string(index=False))

@@ -276,12 +276,11 @@ def main():
     parser = argparse.ArgumentParser(
         description='Run classification experiment with configurable sampling'
     )
-    parser.add_argument('country', nargs='?', default=os.environ.get('COUNTRY', 'cmr'),
-                       help='Country code (e.g., cmr, nga)')
-    parser.add_argument('--sample-size', type=int, 
-                       default=int(os.environ.get('SAMPLE_SIZE', '100')),
+    parser.add_argument('country', nargs='?', default='cmr',
+                       help='Country code (e.g., cmr, nga). Default: cmr')
+    parser.add_argument('--sample-size', type=int, default=100,
                        help='Number of events to sample (default: 100)')
-    parser.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'),
+    parser.add_argument('--strategy', default='zero_shot',
                        help='Prompting strategy: zero_shot, few_shot, explainable (default: zero_shot)')
     parser.add_argument('--primary-group', default=None,
                        help='Event type to oversample (e.g., "Violence against civilians"). '
@@ -289,12 +288,12 @@ def main():
     parser.add_argument('--primary-share', type=float, default=0.0,
                        help='Fraction for primary group (0-1). Only used if --primary-group is set. '
                             'Default: 0.0')
-    parser.add_argument('--models', default=os.environ.get('OLLAMA_MODELS', None),
+    parser.add_argument('--models', default=None,
                        help='Comma-separated list of Ollama models to run. Overrides WORKING_MODELS. '
                            'Example: --models "llama3.2:3b,mistral:7b"')
     parser.add_argument('--num-examples', type=int, default=None,
                        help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
-                            'Default: reads from NUM_EXAMPLES env var, or 1 if not set.')
+                            'Default: 1 for few_shot strategy.')
     
     args = parser.parse_args()
     

@@ -27,13 +27,13 @@ class ExplainableStrategy(PromptingStrategy):
 
 Classify the following event into one of six categories: {event_note}
 
-Categories (fixed order):
-1. V - Violence against civilians
-2. B - Battles
-3. E - Explosions
-4. P - Protests
-5. R - Riots
-6. S - Strategic developments
+Categories (use ONLY these single-letter codes):
+- V = Violence against civilians
+- B = Battles
+- E = Explosions/Remote violence
+- P = Protests
+- R = Riots
+- S = Strategic developments
 
 Step 1 — Brief structured reasoning (exactly three short items):
 - Provide three-numbered, one-line observations only:
@@ -47,19 +47,13 @@ Step 2 — Final answer (valid JSON only):
 Return ONLY valid JSON with this structure:
 {{
   "reasoning": [<three strings>],
-  "label": "<category code>",
-  "confidence": <decimal>,
-  "logits": [<six decimals>]
+  "label": "<V, B, E, P, R, or S>",
+  "confidence": <decimal between 0 and 1>,
+  "logits": [<six decimals summing to 1.0>]
 }}
 
-JSON rules:
-- No extra text before or after the JSON.
-- "reasoning" must be an array of three short strings exactly matching Step 1.
-- "label" must be one of the six category codes.
-- "confidence" must be a decimal between 0 and 1.
-- "logits" must be six decimal numbers summing to 1.0 in the same order as the category list.
-- If unsure about confidence, use a low confidence (e.g. 0.10) rather than inventing details.
-- If unsure about logits, use approximate scores.
+CRITICAL: The "label" field must be exactly one of: V, B, E, P, R, S
+Do not use numbers, full words, or any other values.
 """
     
     def get_schema(self) -> Dict[str, Any]:
@@ -72,7 +66,7 @@ JSON rules:
             "type": "object",
             "properties": {
                 "reasoning": {"type": "array", "items": {"type": "string"}},
-                "label": {"type": "string"},
+                "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
                 "confidence": {"type": "number"},
                 "logits": {"type": "array", "items": {"type": "number"}}
             },

@@ -9,7 +9,6 @@ API
 - `STRATEGY_REGISTRY`: mapping from strategy name to strategy class
 - `get_strategy(name, num_examples)`: instantiate a strategy by name
 """
-import os
 from typing import Any, Dict, Optional
 
 # Import strategy classes at module import time. These modules are lightweight
@@ -35,7 +34,7 @@ def get_strategy(strategy_name: str, num_examples: Optional[int] = None) -> Any:
     Args:
         strategy_name: Name of the strategy ('zero_shot', 'few_shot', 'explainable')
         num_examples: Number of few-shot examples (1-5). Only used for 'few_shot' strategy.
-                     If None, reads from NUM_EXAMPLES or EXAMPLES_PER_CATEGORY env vars.
+                     Defaults to 1 if not provided for few_shot.
 
     Returns an instance of the selected strategy class.
     """
@@ -44,15 +43,8 @@ def get_strategy(strategy_name: str, num_examples: Optional[int] = None) -> Any:
 
     config = None
     if strategy_name == 'few_shot':
-        # Priority: explicit argument -> NUM_EXAMPLES env -> EXAMPLES_PER_CATEGORY env -> default 1
-        if num_examples is not None:
-            examples_per_category = num_examples
-        else:
-            env_val = os.environ.get('NUM_EXAMPLES') or os.environ.get('EXAMPLES_PER_CATEGORY', '1')
-            try:
-                examples_per_category = int(env_val)
-            except ValueError:
-                examples_per_category = 1
+        # Use explicit argument or default to 1
+        examples_per_category = num_examples if num_examples is not None else 1
         config = {'examples_per_category': examples_per_category}
 
     cls = STRATEGY_REGISTRY[strategy_name]

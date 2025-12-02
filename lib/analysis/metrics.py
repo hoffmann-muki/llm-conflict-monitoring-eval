@@ -3,9 +3,10 @@ import numpy as np
 import json
 import os
 from scipy.stats import spearmanr
-from lib.core.data_helpers import setup_country_environment
+from lib.core.data_helpers import setup_country_environment, paths_for_country, get_sample_size
 
 COUNTRY, RESULTS_DIR = setup_country_environment()
+SAMPLE_SIZE = get_sample_size()
 
 RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
 OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_state_actors.csv')
@@ -276,6 +277,20 @@ def main():
         print('Results CSV not found:', RESULTS_CSV)
         return
     df = pd.read_csv(RESULTS_CSV)
+    
+    # Join notes from sample file for error correlation analysis
+    paths = paths_for_country(COUNTRY, sample_size=SAMPLE_SIZE)
+    sample_path = paths['sample_path']
+    if os.path.exists(sample_path):
+        sample_df = pd.read_csv(sample_path)
+        # Rename event_id_cnty to event_id for join
+        if 'event_id_cnty' in sample_df.columns:
+            sample_df = sample_df.rename(columns={'event_id_cnty': 'event_id'})
+        # Join notes column
+        if 'notes' in sample_df.columns and 'notes' not in df.columns:
+            notes_df = sample_df[['event_id', 'notes']].drop_duplicates()
+            df = df.merge(notes_df, on='event_id', how='left')
+            print(f'Joined notes from {sample_path}')
     
     # Compute standard metrics
     metrics, cms = compute_metrics(df)

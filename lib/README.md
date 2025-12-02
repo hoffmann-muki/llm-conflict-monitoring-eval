@@ -20,9 +20,9 @@ lib/
 from lib.core.data_helpers import (
     setup_country_environment,  # Returns (country, results_dir)
     paths_for_country,          # Returns dict with all standard paths
-    get_strategy,               # Get STRATEGY env var
-    get_sample_size,            # Get SAMPLE_SIZE env var
-    get_num_examples,           # Get NUM_EXAMPLES env var
+    get_strategy,               # Get strategy (default: 'zero_shot')
+    get_sample_size,            # Get sample size (default: '500')
+    get_num_examples,           # Get num_examples (default: None)
     write_sample                # Write sample file for cross-model reuse
 )
 ```
@@ -30,13 +30,16 @@ from lib.core.data_helpers import (
 **Usage:**
 
 ```python
-# Get country and results directory from environment
-country, results_dir = setup_country_environment()
+# Get country and results directory with explicit arguments
+country, results_dir = setup_country_environment('cmr', 'zero_shot', '500')
 # Returns: ('cmr', 'results/cmr/zero_shot/500')
-# For few_shot with NUM_EXAMPLES=3: ('cmr', 'results/cmr/few_shot/500/3')
+
+# For few_shot with num_examples:
+country, results_dir = setup_country_environment('cmr', 'few_shot', '500', 3)
+# Returns: ('cmr', 'results/cmr/few_shot/500/3')
 
 # Get all standard paths
-paths = paths_for_country('cmr')
+paths = paths_for_country('cmr', 'zero_shot', '500')
 # Returns: {
 #   'results_dir': 'results/cmr/zero_shot/500',
 #   'datasets_dir': 'datasets/cmr',
@@ -69,14 +72,32 @@ from lib.data_preparation import (
     extract_country_rows,      # Extract country-specific rows
     get_actor_norm_series,     # Normalize actor names
     extract_state_actor,       # Identify state actors
-    build_stratified_sample    # Create stratified samples
+    build_stratified_sample,   # Create stratified samples
+    build_balanced_actor_sample  # Create balanced state/non-state samples
+)
+```
+
+### Balanced Actor Sampling
+
+For fairness analysis, use balanced sampling to ensure equal representation:
+
+```python
+from lib.data_preparation.sample_builder import build_balanced_actor_sample
+
+# Create 50/50 state vs non-state actor sample
+sample = build_balanced_actor_sample(
+    df,                    # Source DataFrame
+    n_total=1000,          # Total sample size
+    balance_ratio=0.5,     # 50% state actors
+    event_types=['Violence against civilians', 'Battles'],
+    min_per_cell=10        # Minimum per event_type × actor_type
 )
 ```
 
 ## Inference
 
 ```python
-from lib.inference.ollama_client import run_ollama_structured
+from lib.inference.ollama_client import run_ollama_structured, VALID_LABELS
 from experiments.prompting_strategies import ZeroShotStrategy
 
 strategy = ZeroShotStrategy()
@@ -86,28 +107,41 @@ result = run_ollama_structured(
     strategy.get_system_message()
 )
 # Returns: {"label": "V", "confidence": 0.9}
+# Label is guaranteed to be one of VALID_LABELS: V, B, E, P, R, S
 ```
+
+### Label Validation
+
+The inference client enforces valid labels via:
+1. **Ollama structured output** with JSON schema enum constraint
+2. **Prompt clarity** with explicit valid label list
+3. **Fallback normalization** mapping common invalid outputs to valid labels
 
 ## Analysis Modules
 
-All modules are runnable via `python -m`:
+All modules are runnable via `python -m` with CLI arguments:
 
 ```bash
-# Set environment
-export COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500
+# Run individual analyses with explicit arguments
+python -m lib.analysis.calibration --country cmr --strategy zero_shot --sample-size 500
+python -m lib.analysis.metrics --country cmr --strategy zero_shot --sample-size 500
+python -m lib.analysis.harm --country cmr --strategy zero_shot --sample-size 500
+python -m lib.analysis.per_class_metrics --country cmr --strategy zero_shot --sample-size 500
+python -m lib.analysis.visualize_reports --country cmr --strategy zero_shot --sample-size 500
+python -m lib.analysis.thresholds --country cmr --strategy zero_shot --sample-size 500
 
-# Run individual analyses
-python -m lib.analysis.calibration      # Isotonic + temperature scaling
-python -m lib.analysis.metrics          # Classification + fairness metrics
-python -m lib.analysis.harm             # FL/FI rates
-python -m lib.analysis.per_class_metrics
-python -m lib.analysis.visualize_reports
-python -m lib.analysis.thresholds
-python -m lib.analysis.compare_models --family gemma --sizes 2b,7b
+# Model comparison
+python -m lib.analysis.compare_models --country cmr --strategy zero_shot --sample-size 500 \
+  --family gemma --sizes 2b,7b
 
 # Counterfactual analysis
-python -m lib.analysis.counterfactual --events 20
-python -m lib.analysis.counterfactual --models llama3.2,mistral:7b --top-percent 10
+python -m lib.analysis.counterfactual --country cmr --strategy zero_shot --sample-size 500 \
+  --events 20
+python -m lib.analysis.counterfactual --country cmr --strategy zero_shot --sample-size 500 \
+  --models llama3.2,mistral:7b --top-percent 10
+
+# Result aggregation
+python -m lib.core.result_aggregator --country cmr --strategy zero_shot --sample-size 500
 ```
 
 ## Output Files
@@ -148,6 +182,7 @@ All output is written to `results/{country}/{strategy}/{sample_size}/`:
 | `top_disagreements.csv` | Model disagreements |
 | `error_cases_false_legitimization.csv` | Sampled FL errors |
 | `error_cases_false_illegitimization.csv` | Sampled FI errors |
+| `error_correlations_acled_{country}_state_actors.csv` | Text feature correlations with errors |
 
 ### Counterfactual
 | File | Description |

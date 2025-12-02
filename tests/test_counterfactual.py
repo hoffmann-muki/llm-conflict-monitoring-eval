@@ -21,7 +21,7 @@ def test_counterfactual_pipeline():
     
     # Use the sample dataset with actual text data
     # Try the new format first (with sample_size), fall back to old format for backwards compatibility
-    sample_size = os.environ.get('SAMPLE_SIZE', '1000')
+    sample_size = '1000'  # Default sample size for testing
     sample_data_path = Path(f"datasets/nga/state_actor_sample_nga_{sample_size}.csv")
     if not sample_data_path.exists():
         # Fallback: look for any sample file matching pattern

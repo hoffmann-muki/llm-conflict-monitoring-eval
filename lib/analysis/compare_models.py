@@ -2,8 +2,8 @@
 """Compare FL/FI across model sizes (e.g., gemma:2b vs gemma:7b).
 
 Usage: 
-  COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 python -m lib.analysis.compare_models \
-    --family gemma --sizes 2b,7b
+  python -m lib.analysis.compare_models --country cmr --strategy zero_shot \
+    --sample-size 500 --family gemma --sizes 2b,7b
 
 What it does:
 - Reads results from the appropriate strategy/sample_size directory
@@ -27,16 +27,14 @@ from lib.core.metrics_helpers import aggregate_fl_fi, LEGIT, ILLEG
 from lib.core.constants import LABEL_MAP
 from lib.inference.ollama_client import run_model_on_rows
 
-# Use setup_country_environment to get proper paths including strategy/sample_size
-COUNTRY, RESULTS_DIR = setup_country_environment()
-STRATEGY = get_strategy()
-SAMPLE_SIZE = get_sample_size()
-NUM_EXAMPLES = get_num_examples()
-
 LABELS = list(LABEL_MAP.values())
 
 def parse_args():
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description='Compare FL/FI across model sizes')
+    p.add_argument('--country', default=os.environ.get('COUNTRY', 'cmr'), help='Country code (default: cmr)')
+    p.add_argument('--strategy', default=os.environ.get('STRATEGY', 'zero_shot'), help='Prompting strategy (default: zero_shot)')
+    p.add_argument('--sample-size', default=os.environ.get('SAMPLE_SIZE', '500'), help='Sample size (default: 500)')
+    p.add_argument('--num-examples', type=int, default=int(os.environ.get('NUM_EXAMPLES')) if os.environ.get('NUM_EXAMPLES') else None, help='Few-shot examples (1-5)')
     p.add_argument('--family', required=True, help='Model family prefix (e.g., gemma)')
     p.add_argument('--sizes', required=True, help='Comma-separated sizes to compare, e.g. 2b,7b')
     p.add_argument('--run-missing', default='true', choices=['true','false'], help="Run inference for missing models on the sample and append to calibrated CSV (true/false). Defaults to 'true'.")
@@ -82,14 +80,21 @@ def main():
     sizes = [s.strip() for s in args.sizes.split(',') if s.strip()]
     models = [f"{family}:{s}" for s in sizes]
     
+    # Setup environment from CLI arguments
+    COUNTRY = args.country
+    STRATEGY = args.strategy
+    SAMPLE_SIZE = args.sample_size
+    NUM_EXAMPLES = args.num_examples
+    _, RESULTS_DIR = setup_country_environment(COUNTRY, STRATEGY, SAMPLE_SIZE, NUM_EXAMPLES)
+    
     # Print comparison context for clarity
-    print(f"\\n{'='*70}")
+    print(f"\n{'='*70}")
     print(f"Cross-Model Comparison: {family} family")
     print(f"Context: {COUNTRY}, {STRATEGY}, sample_size={SAMPLE_SIZE}" + 
           (f", num_examples={NUM_EXAMPLES}" if STRATEGY == 'few_shot' and NUM_EXAMPLES else ""))
     print(f"Models: {', '.join(models)}")
     print(f"Results directory: {RESULTS_DIR}")
-    print(f"{'='*70}\\n")
+    print(f"{'='*70}\n")
 
     # Load calibrated CSV from the correct strategy/sample_size directory
     cal_csv_path = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
@@ -105,7 +110,7 @@ def main():
         sample_path = os.path.join('datasets', COUNTRY, f'state_actor_sample_{COUNTRY}_{SAMPLE_SIZE}.csv')
         if not os.path.exists(sample_path):
             raise SystemExit(
-                f"Missing sample file for inference: {sample_path}\\n"
+                f"Missing sample file for inference: {sample_path}\n"
                 f"Run the main pipeline first to create the sample, or check SAMPLE_SIZE={SAMPLE_SIZE}"
             )
         sample = pd.read_csv(sample_path)

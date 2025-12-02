@@ -2,11 +2,66 @@ import json, time, re, subprocess, shlex, sys, os
 from typing import Iterable, List
 from experiments.prompting_strategies import ZeroShotStrategy
 
+# Valid ACLED event type labels
+VALID_LABELS = {'V', 'B', 'E', 'P', 'R', 'S'}
+
+# Map numeric/common misreadings to valid labels
+LABEL_MAP = {
+    '1': 'V',  # Violence against civilians
+    '2': 'B',  # Battles
+    '3': 'E',  # Explosions
+    '4': 'P',  # Protests
+    '5': 'R',  # Riots
+    '6': 'S',  # Strategic developments
+    # Common typos/alternatives
+    'VIOLENCE': 'V',
+    'BATTLES': 'B',
+    'BATTLE': 'B',
+    'EXPLOSIONS': 'E',
+    'EXPLOSION': 'E',
+    'PROTESTS': 'P',
+    'PROTEST': 'P',
+    'RIOTS': 'R',
+    'RIOT': 'R',
+    'STRATEGIC': 'S',
+}
+
+
+def normalize_label(raw_label: str) -> str:
+    """Normalize a raw label to a valid ACLED event type code.
+    
+    Args:
+        raw_label: Raw label string from model output
+        
+    Returns:
+        Valid label code (V/B/E/P/R/S) or 'INVALID' if unmappable
+    """
+    if not raw_label:
+        return 'INVALID'
+    
+    upper = raw_label.strip().upper()
+    
+    # Already valid
+    if upper in VALID_LABELS:
+        return upper
+    
+    # Try mapping
+    if upper in LABEL_MAP:
+        return LABEL_MAP[upper]
+    
+    # Check if first character is valid (e.g., "Violence" -> "V")
+    if upper and upper[0] in VALID_LABELS:
+        return upper[0]
+    
+    return 'INVALID'
+
+
 # Shared JSON schema for structured classification responses
+# Uses enum constraint to ensure model only outputs valid labels
 SCHEMA = {
     "type": "object",
     "properties": {
-        "label": {"type": "string"},
+        "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
         "confidence": {"type": "number"},
         "logits": {"type": "array", "items": {"type": "number"}}
     },
@@ -36,11 +91,15 @@ def run_ollama_structured(model: str, prompt: str, system_msg: str | None = None
         messages.append({"role": "system", "content": system_msg})
     messages.append({"role": "user", "content": prompt})
     
+    # Use provided schema or default
+    output_schema = schema if schema is not None else SCHEMA
+    
     payload = {
         "model": model,
         "stream": False,
         "options": {"temperature": 0.0},
-        "messages": messages
+        "messages": messages,
+        "format": output_schema  # Ollama structured output - enforces JSON schema
     }
     cmd = (
         'curl -sS -X POST http://localhost:11434/api/chat '
@@ -117,7 +176,8 @@ def run_model_on_rows(model_name: str, rows, note_col: str = 'notes', event_id_c
             prompt = strategy.make_prompt(note)
             system_msg = strategy.get_system_message()
             resp = run_ollama_structured(model_name, prompt, system_msg)
-            label = str(resp.get("label", "FAIL")).strip()
+            raw_label = str(resp.get("label", "FAIL")).strip()
+            label = normalize_label(raw_label)
             conf = float(resp.get("confidence", 0))
             logits = None
             for k in ("logits", "log_probs", "scores", "label_scores"):

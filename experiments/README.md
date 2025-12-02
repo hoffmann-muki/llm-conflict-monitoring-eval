@@ -20,17 +20,17 @@ experiments/
 Classification using local Ollama models (Mistral, Llama, Gemma, etc.):
 
 ```bash
-# Basic usage
-COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
-  python experiments/pipelines/ollama/run_ollama_classification.py
+# Basic usage with CLI arguments
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
+  --sample-size 500 --strategy zero_shot
 
 # Few-shot with 3 examples per category
-COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
-  python experiments/pipelines/ollama/run_ollama_classification.py
+python experiments/pipelines/ollama/run_ollama_classification.py cmr \
+  --sample-size 500 --strategy few_shot --num-examples 3
 
 # Specific models
-OLLAMA_MODELS="mistral:7b,llama3.2:3b" COUNTRY=nga SAMPLE_SIZE=1000 \
-  python experiments/pipelines/ollama/run_ollama_classification.py
+python experiments/pipelines/ollama/run_ollama_classification.py nga \
+  --sample-size 1000 --models "mistral:7b,llama3.2:3b"
 ```
 
 ### ConfliBERT Pipeline
@@ -43,9 +43,8 @@ python experiments/pipelines/conflibert/download_conflibert_model.py \
   --out-dir models/conflibert
 
 # Run classification
-COUNTRY=cmr SAMPLE_SIZE=500 \
-  python experiments/pipelines/conflibert/run_conflibert_classification.py \
-    --model-path models/conflibert
+python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
+  --sample-size 500 --strategy zero_shot --model-path models/conflibert
 ```
 
 ## Prompting Strategies

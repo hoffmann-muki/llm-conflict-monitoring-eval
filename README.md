@@ -91,7 +91,7 @@ See [experiments/README.md](experiments/README.md) for detailed pipeline documen
 
 ## Event Categories
 
-All pipelines classify events into ACLED categories:
+All pipelines classify events into ACLED categories. Labels are enforced via JSON schema enum constraints:
 
 | Code | Category |
 |------|----------|
@@ -101,6 +101,8 @@ All pipelines classify events into ACLED categories:
 | P | Protests |
 | R | Riots |
 | S | Strategic developments |
+
+**Note:** The inference pipeline uses Ollama's structured output feature with enum constraints to ensure models only produce valid labels.
 
 ## Workflow Architecture
 
@@ -127,6 +129,7 @@ The pipeline uses a **per-model-then-aggregate** workflow:
 | **Fairness** | Statistical Parity Difference (SPD), Equalized Odds |
 | **Harm** | False Legitimization Rate (FLR), False Illegitimization Rate (FIR) |
 | **Robustness** | Counterfactual Flip Rate (CFR) |
+| **Error Analysis** | Error correlation with event notes text features |
 
 ## Supported Models
 
