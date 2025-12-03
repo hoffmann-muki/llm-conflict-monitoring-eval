@@ -24,7 +24,6 @@
 #   DEVICE               - Device (cuda, mps, cpu) [default: auto]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
-#   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #
 ###############################################################################
@@ -46,7 +45,6 @@ MAX_LENGTH="${MAX_LENGTH:-256}"
 DEVICE="${DEVICE:-auto}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
-CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-20}"
 
 # Determine repository root (two levels up from this script)
@@ -152,7 +150,6 @@ log_info "Max Length:         $MAX_LENGTH"
 log_info "Device:             $DEVICE"
 log_info "Skip Inference:     $SKIP_INFERENCE"
 log_info "Skip Counterfactual: $SKIP_COUNTERFACTUAL"
-log_info "CF Models:          ${CF_MODELS:-all WORKING_MODELS}"
 log_info "CF Events:          $CF_EVENTS"
 
 # Build results directory path (includes num_examples for few_shot)
@@ -255,19 +252,11 @@ else
     
     log_step "Running counterfactual perturbation testing on top-N disagreements..."
     
-    # For ConfliBERT experiments, if CF_MODELS is not provided explicitly,
-    # set it to the local conflibert model id (constructed from MODEL_PATH)
-    # so that single-model counterfactual outputs are written into the
-    # corresponding model-specific subdirectory.
-    if [ -z "${CF_MODELS}" ]; then
-        model_base=$(basename "${MODEL_PATH%/}")
-        CF_MODELS="conflibert_${model_base}"
-        log_step "Setting CF_MODELS to single ConfliBERT model for per-model counterfactual: ${CF_MODELS}"
-    fi
-
+    # ConfliBERT is the only model in this pipeline, so we always use it for counterfactual analysis.
+    # Cross-model comparison (ConfliBERT vs Ollama models) happens at the reporting/visualization level.
     COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
         "$VENV_PY" -m lib.analysis.counterfactual \
-        --models "$CF_MODELS" --events "$CF_EVENTS"
+        --models "conflibert" --events "$CF_EVENTS"
     
     log_step "Generating counterfactual visualizations..."
     
