@@ -1,0 +1,2 @@
+model,n_samples,brier_score_raw,brier_score_isotonic,brier_score_temperature,brier_improvement_iso,brier_improvement_temp
+llama3.2:3b,200,0.22044999999999998,0.19119873728875036,0.22044999999999,0.029251262711249615,9.992007221626409e-15

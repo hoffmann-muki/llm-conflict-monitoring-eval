@@ -1,0 +1,2 @@
+model,false_legitimization_rate_FLR,false_legitimization_count_FL,n_illegit_events,false_illegitimization_rate_FIR,false_illegitimization_count_FI,n_legit_events,total_events,harm_ratio_FL_to_FI
+llama3.2:3b,0.013333333333333334,1,75,0.26126126126126126,29,111,200,0.034482758620689655
