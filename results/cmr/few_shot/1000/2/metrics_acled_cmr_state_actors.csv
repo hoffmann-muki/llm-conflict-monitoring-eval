@@ -1,0 +1,5 @@
+model,N,accuracy,precision_macro,recall_macro
+llama3.2:3b,1000,0.646,0.544,0.693
+mistral:7b,1000,0.549,0.565,0.714
+gemma3:4b,1000,0.614,0.614,0.554
+olmo2:7b,1000,0.633,0.62,0.714
