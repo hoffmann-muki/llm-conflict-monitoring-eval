@@ -23,7 +23,7 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Tuple
 
 from lib.core.data_helpers import setup_country_environment
 from lib.analysis.metrics import compute_metrics, compute_fairness_metrics
