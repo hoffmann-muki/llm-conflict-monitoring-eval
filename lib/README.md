@@ -151,8 +151,8 @@ All output is written to `results/{country}/{strategy}/{sample_size}/`:
 ### Inference
 | File | Description |
 |------|-------------|
-| `ollama_results_{model}_acled_{country}_state_actors.csv` | Per-model results |
-| `ollama_results_acled_{country}_state_actors.csv` | Combined results |
+| `ollama_results_{model}_acled_{country}_actors.csv` | Per-model results |
+| `ollama_results_acled_{country}_actors.csv` | Combined results |
 
 ### Calibration
 | File | Description |
@@ -165,9 +165,9 @@ All output is written to `results/{country}/{strategy}/{sample_size}/`:
 ### Metrics
 | File | Description |
 |------|-------------|
-| `metrics_acled_{country}_state_actors.csv` | Classification metrics |
-| `fairness_metrics_acled_{country}_state_actors.csv` | SPD, Equalized Odds |
-| `confusion_matrices_acled_{country}_state_actors.json` | Confusion matrices |
+| `metrics_acled_{country}_actors.csv` | Classification metrics |
+| `fairness_metrics_acled_{country}_actors.csv` | SPD, Equalized Odds |
+| `confusion_matrices_acled_{country}_actors.json` | Confusion matrices |
 
 ### Harm Analysis
 | File | Description |
@@ -182,7 +182,7 @@ All output is written to `results/{country}/{strategy}/{sample_size}/`:
 | `top_disagreements.csv` | Model disagreements |
 | `error_cases_false_legitimization.csv` | Sampled FL errors |
 | `error_cases_false_illegitimization.csv` | Sampled FI errors |
-| `error_correlations_acled_{country}_state_actors.csv` | Text feature correlations with errors |
+| `error_correlations_acled_{country}_actors.csv` | Text feature correlations with errors |
 
 ### Counterfactual
 | File | Description |

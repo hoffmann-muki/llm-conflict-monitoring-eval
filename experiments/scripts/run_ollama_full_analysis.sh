@@ -9,7 +9,7 @@
 # WORKFLOW: Per-Model-Then-Aggregate
 # ----------------------------------
 # 1. Run inference one model at a time (saves disk space)
-# 2. Each model produces: ollama_results_{model-slug}_acled_{country}_state_actors.csv
+# 2. Each model produces: ollama_results_{model-slug}_acled_{country}_actors.csv
 # 3. The sample file is created once and reused for all models (fair comparison)
 # 4. Before analysis phases, aggregator combines per-model files into one
 # 5. Analysis phases produce both combined and per-model output files
@@ -39,8 +39,8 @@
 #   results/{country}/{strategy}/{sample_size}/              (for zero_shot, explainable)
 #   results/{country}/few_shot/{sample_size}/{num_examples}/ (for few_shot)
 #     ├── {model_slug}/                                      (per-model subdirectory)
-#     │   └── ollama_results_{model}_acled_{country}_state_actors.csv
-#     ├── ollama_results_acled_{country}_state_actors.csv    (combined)
+#     │   └── ollama_results_{model}_acled_{country}_actors.csv
+#     ├── ollama_results_acled_{country}_actors.csv    (combined)
 #     ├── ollama_results_calibrated.csv
 #     └── ... (metrics, harm, counterfactual outputs)
 #
@@ -126,7 +126,7 @@ run_inference() {
         log_warn "Skipping inference phase (SKIP_INFERENCE=true)"
         
         # Check if any per-model results exist (in model subdirectories)
-        PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -mindepth 2 -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+        PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -mindepth 2 -name "ollama_results_*_acled_${COUNTRY}_actors.csv" -type f 2>/dev/null | wc -l)
         if [ "$PER_MODEL_COUNT" -eq 0 ]; then
             log_error "No per-model prediction files found. Cannot skip inference."
             exit 1
@@ -163,7 +163,7 @@ run_aggregation() {
     log_phase "[Phase 1.5/5] Aggregating Per-Model Results"
     
     log_step "Scanning for per-model result files in ${RESULTS_DIR}/*/..."
-    PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -mindepth 2 -name "ollama_results_*_acled_${COUNTRY}_state_actors.csv" -type f 2>/dev/null | wc -l)
+    PER_MODEL_COUNT=$(find "${RESULTS_DIR}" -mindepth 2 -name "ollama_results_*_acled_${COUNTRY}_actors.csv" -type f 2>/dev/null | wc -l)
     
     if [ "$PER_MODEL_COUNT" -eq 0 ]; then
         log_error "No per-model result files found in ${RESULTS_DIR}/"
@@ -174,7 +174,7 @@ run_aggregation() {
     COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" "${VENV_PY:-python}" -m lib.core.result_aggregator
     
     # Verify combined file was created (now in strategy/sample_size subdirectory)
-    if [ ! -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_state_actors.csv" ]; then
+    if [ ! -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_actors.csv" ]; then
         log_error "Aggregation failed - combined results file not created"
         exit 1
     fi
@@ -315,7 +315,7 @@ generate_summary() {
     
     # Per-model inference results (in model subdirectories)
     echo "📁 Per-Model Inference Results:"
-    for f in "${RESULTS_DIR}"/*/ollama_results_*_acled_${COUNTRY}_state_actors.csv; do
+    for f in "${RESULTS_DIR}"/*/ollama_results_*_acled_${COUNTRY}_actors.csv; do
         if [ -f "$f" ]; then
             MODEL_DIR=$(basename "$(dirname "$f")")
             echo "  ✓ ${MODEL_DIR}/$(basename "$f")"
@@ -325,8 +325,8 @@ generate_summary() {
     # Core outputs
     echo ""
     echo "📊 Core Predictions & Calibration (combined + per-model):"
-    [ -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " ollama_results_acled_${COUNTRY}_state_actors.csv (raw predictions)"
+    [ -f "${RESULTS_DIR}/ollama_results_acled_${COUNTRY}_actors.csv" ] && \
+        echo " ollama_results_acled_${COUNTRY}_actors.csv (raw predictions)"
     [ -f "${RESULTS_DIR}/ollama_results_calibrated.csv" ] && \
         echo " ollama_results_calibrated.csv (calibrated predictions)"
     [ -f "${RESULTS_DIR}/calibration_brier_scores.csv" ] && \
@@ -336,17 +336,17 @@ generate_summary() {
     
     echo ""
     echo "Classification Metrics:"
-    [ -f "${RESULTS_DIR}/metrics_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " metrics_acled_${COUNTRY}_state_actors.csv (P/R/F1, accuracy)"
-    [ -f "${RESULTS_DIR}/confusion_matrices_acled_${COUNTRY}_state_actors.json" ] && \
-        echo " confusion_matrices_acled_${COUNTRY}_state_actors.json"
+    [ -f "${RESULTS_DIR}/metrics_acled_${COUNTRY}_actors.csv" ] && \
+        echo " metrics_acled_${COUNTRY}_actors.csv (P/R/F1, accuracy)"
+    [ -f "${RESULTS_DIR}/confusion_matrices_acled_${COUNTRY}_actors.json" ] && \
+        echo " confusion_matrices_acled_${COUNTRY}_actors.json"
     [ -f "${RESULTS_DIR}/per_class_report.csv" ] && \
         echo " per_class_report.csv (per-class performance)"
     
     echo ""
     echo "Fairness & Bias Metrics:"
-    [ -f "${RESULTS_DIR}/fairness_metrics_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " fairness_metrics_acled_${COUNTRY}_state_actors.csv (SPD, Equalized Odds)"
+    [ -f "${RESULTS_DIR}/fairness_metrics_acled_${COUNTRY}_actors.csv" ] && \
+        echo " fairness_metrics_acled_${COUNTRY}_actors.csv (SPD, Equalized Odds)"
     [ -f "${RESULTS_DIR}/harm_metrics_detailed.csv" ] && \
         echo " harm_metrics_detailed.csv (False Legitimization/Illegitimization rates)"
     [ -f "${RESULTS_DIR}/fl_fi_by_model.csv" ] && \
@@ -354,8 +354,8 @@ generate_summary() {
     
     echo ""
     echo "Source & Error Analysis:"
-    [ -f "${RESULTS_DIR}/error_correlations_acled_${COUNTRY}_state_actors.csv" ] && \
-        echo " error_correlations_acled_${COUNTRY}_state_actors.csv (notes length correlation)"
+    [ -f "${RESULTS_DIR}/error_correlations_acled_${COUNTRY}_actors.csv" ] && \
+        echo " error_correlations_acled_${COUNTRY}_actors.csv (notes length correlation)"
     [ -f "${RESULTS_DIR}/top_disagreements.csv" ] && \
         echo " top_disagreements.csv (high-confidence disagreements)"
     [ -f "${RESULTS_DIR}/error_cases_false_legitimization.csv" ] && \

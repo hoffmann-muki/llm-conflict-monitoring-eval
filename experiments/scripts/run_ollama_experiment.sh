@@ -276,15 +276,15 @@ check_file() {
     fi
 }
 
-check_file "$STRATEGY_RESULTS/ollama_results_acled_${COUNTRY}_state_actors.csv"
+check_file "$STRATEGY_RESULTS/ollama_results_acled_${COUNTRY}_actors.csv"
 check_file "$STRATEGY_RESULTS/ollama_results_calibrated.csv"
 check_file "$STRATEGY_RESULTS/calibration_brier_scores.csv"
-check_file "$STRATEGY_RESULTS/metrics_acled_${COUNTRY}_state_actors.csv"
-check_file "$STRATEGY_RESULTS/fairness_metrics_acled_${COUNTRY}_state_actors.csv"
+check_file "$STRATEGY_RESULTS/metrics_acled_${COUNTRY}_actors.csv"
+check_file "$STRATEGY_RESULTS/fairness_metrics_acled_${COUNTRY}_actors.csv"
 check_file "$STRATEGY_RESULTS/harm_metrics_detailed.csv"
 check_file "$STRATEGY_RESULTS/error_cases_false_legitimization.csv"
 check_file "$STRATEGY_RESULTS/error_cases_false_illegitimization.csv"
-check_file "$STRATEGY_RESULTS/error_correlations_acled_${COUNTRY}_state_actors.csv"
+check_file "$STRATEGY_RESULTS/error_correlations_acled_${COUNTRY}_actors.csv"
 
 if [ "$SKIP_COUNTERFACTUAL" = "false" ]; then
     check_file "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"

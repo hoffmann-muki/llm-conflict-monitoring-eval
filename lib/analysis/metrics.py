@@ -270,10 +270,10 @@ def main():
     COUNTRY, RESULTS_DIR = setup_country_environment()
     SAMPLE_SIZE = get_sample_size()
     
-    RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_state_actors.csv')
-    OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_state_actors.csv')
-    OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_state_actors.json')
-    OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_acled_{COUNTRY}_state_actors.csv')
+    RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_actors.csv')
+    OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_actors.csv')
+    OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_actors.json')
+    OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_acled_{COUNTRY}_actors.csv')
     
     if not os.path.exists(RESULTS_CSV):
         print('Results CSV not found:', RESULTS_CSV)
@@ -316,7 +316,7 @@ def main():
     # Analyze error correlations with text features
     correlation_df = analyze_error_correlations(df)
     if not correlation_df.empty:
-        out_corr_path = os.path.join(RESULTS_DIR, f'error_correlations_acled_{COUNTRY}_state_actors.csv')
+        out_corr_path = os.path.join(RESULTS_DIR, f'error_correlations_acled_{COUNTRY}_actors.csv')
         correlation_df.to_csv(out_corr_path, index=False)
         print(f'\nWrote error correlation analysis to {out_corr_path}')
         

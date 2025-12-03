@@ -6,10 +6,10 @@ combined file for cross-model analysis (calibration, metrics, harm, disagreement
 
 Directory structure: results/{country}/{strategy}/{sample_size}/{model_slug}/
 Per-model files follow the pattern:
-    {model_slug}/ollama_results_{model_slug}_acled_{country}_state_actors.csv
+    {model_slug}/ollama_results_{model_slug}_acled_{country}_actors.csv
 
 Combined file (for downstream analysis, at parent level):
-    ollama_results_acled_{country}_state_actors.csv
+    ollama_results_acled_{country}_actors.csv
 """
 
 import os
@@ -57,7 +57,7 @@ def get_per_model_results_pattern(country: str, results_dir: str = None,
     if results_dir is None:
         _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     # Pattern matches model subdirectories: results_dir/*/ollama_results_*_...
-    return os.path.join(results_dir, '*', f'ollama_results_*_acled_{country}_state_actors.csv')
+    return os.path.join(results_dir, '*', f'ollama_results_*_acled_{country}_actors.csv')
 
 
 def get_combined_results_path(country: str, results_dir: str = None,
@@ -69,7 +69,7 @@ def get_combined_results_path(country: str, results_dir: str = None,
     num_examples = get_num_examples(num_examples)
     if results_dir is None:
         _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
-    return os.path.join(results_dir, f'ollama_results_acled_{country}_state_actors.csv')
+    return os.path.join(results_dir, f'ollama_results_acled_{country}_actors.csv')
 
 
 def get_per_model_result_path(country: str, model_name: str, results_dir: str = None,
@@ -87,7 +87,7 @@ def get_per_model_result_path(country: str, model_name: str, results_dir: str = 
     os.makedirs(model_results_dir, exist_ok=True)
     
     slug = model_name_to_slug(model_name)
-    return os.path.join(model_results_dir, f'ollama_results_{slug}_acled_{country}_state_actors.csv')
+    return os.path.join(model_results_dir, f'ollama_results_{slug}_acled_{country}_actors.csv')
 
 
 def list_per_model_files(country: str, results_dir: str = None,
@@ -109,11 +109,11 @@ def list_per_model_files(country: str, results_dir: str = None,
     files = glob.glob(pattern)
     
     # Extract model slug from filename (consistent with how we write them)
-    # Pattern: {model_dir}/ollama_results_{slug}_acled_{country}_state_actors.csv
+    # Pattern: {model_dir}/ollama_results_{slug}_acled_{country}_actors.csv
     results = []
     for f in files:
         basename = os.path.basename(f)
-        match = re.match(rf'ollama_results_(.+)_acled_{country}_state_actors\.csv', basename)
+        match = re.match(rf'ollama_results_(.+)_acled_{country}_actors\.csv', basename)
         if match:
             slug = match.group(1)
             results.append((slug, f))

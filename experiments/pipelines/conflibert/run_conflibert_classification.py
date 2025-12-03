@@ -317,7 +317,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     # Save results
     out_path = os.path.join(
         results_dir,
-        f"conflibert_results_acled_{country_code}_state_actors.csv"
+        f"conflibert_results_acled_{country_code}_actors.csv"
     )
     res_df.to_csv(out_path, index=False)
     

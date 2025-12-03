@@ -71,10 +71,13 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
                 if k in resp:
                     logits = resp.get(k)
                     break
+            # Capture reasoning for explainable strategy
+            reasoning = resp.get("reasoning") if "reasoning" in resp else None
         except Exception as e:
             label = "ERROR"
             conf = 0.0
             logits = None
+            reasoning = None
             print(f"Error classifying event: {e}")
         
         elapsed = round(time.time() - t0, 2)
@@ -85,6 +88,7 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
             "pred_label": label,
             "pred_conf": conf,
             "logits": json.dumps(logits) if logits is not None else None,
+            "reasoning": json.dumps(reasoning) if reasoning is not None else None,
             "latency_sec": elapsed,
             "actor_norm": getattr(r, actor_norm_col, None),
             "notes": note  # Include notes for downstream counterfactual analysis
@@ -271,7 +275,7 @@ def run_classification_experiment(country_code: str,
     
     print(f"\n{'='*70}")
     print(f"Experiment completed!")
-    print(f"Per-model results saved to: {results_dir}/ollama_results_*_acled_{country_code}_state_actors.csv")
+    print(f"Per-model results saved to: {results_dir}/ollama_results_*_acled_{country_code}_actors.csv")
     print(f"Run 'python -m lib.core.result_aggregator' to combine results for analysis.")
     print(f"{'='*70}\n")
     print(res_df.head(5))
