@@ -1,6 +1,6 @@
 # Experiments
 
-Pipelines, prompting strategies, and shell scripts for running classification experiments.
+Pipelines, prompting strategies, and shell scripts for running classification experiments. Scripts reuse the shared samples plus the JSON schema so that Ollama and ConfliBERT always see the same rows and structured outputs.
 
 ## Structure
 
@@ -15,7 +15,7 @@ experiments/
 
 ## Workflow Architecture
 
-The pipeline uses a **per-model-then-aggregate** workflow:
+The pipeline follows a **per-model-then-aggregate** design so the various models share the same sample, aggregation, and analysis flow:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -27,7 +27,7 @@ The pipeline uses a **per-model-then-aggregate** workflow:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Benefits:** Fair comparison across models, incremental runs, reproducibility, strategy isolation.
+**Benefits:** Fair comparison, reproducibility, and consistent per-strategy isolation.
 
 ## Shell Scripts
 
@@ -63,7 +63,7 @@ SKIP_COUNTERFACTUAL=true COUNTRY=cmr SAMPLE_SIZE=500 \
 
 ### run_calibrate_then_apply.sh
 
-Two-stage calibration: calibrate on small sample, apply to larger sample.
+Two-stage calibration: calibrate on a small sample and apply the mapping to the larger inference dataset.
 
 ```bash
 COUNTRY=cmr STRATEGY=zero_shot SMALL_SAMPLE=20 LARGE_SAMPLE=50 \
@@ -72,7 +72,7 @@ COUNTRY=cmr STRATEGY=zero_shot SMALL_SAMPLE=20 LARGE_SAMPLE=50 \
 
 ### run_conflibert_experiment.sh
 
-ConfliBERT experiment with same interface as Ollama scripts.
+ConfliBERT experiment with the same interface as the Ollama scripts.
 
 ```bash
 COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
@@ -121,7 +121,7 @@ See [prompting_strategies/README.md](prompting_strategies/README.md) for creatin
 
 ## Sample Reuse
 
-For fair cross-model comparison, sample files are created once and reused:
+For fair comparison, sample files are created once and reused:
 
 ```
 datasets/{country}/state_actor_sample_{country}_{sample_size}.csv
@@ -143,6 +143,8 @@ python experiments/pipelines/ollama/run_ollama_classification.py \
 
 ## Output
 
-Results are written to `results/{country}/{strategy}/{sample_size}/`. For few-shot, an additional subdirectory `{num_examples}/` is created.
+Results are written to `results/{country}/{strategy}/{sample_size}/`. For few-shot, an extra `{num_examples}/` folder is created.
 
-See [lib/README.md](../lib/README.md) for complete output file documentation.
+Every per-model results CSV now includes a `reasoning` column, so explainable prompts remain auditable as they flow through aggregation, calibration, and metrics. After running both Ollama and ConfliBERT experiments, execute `python -m lib.analysis.compare_all_models` to fill `results/.../comparison/` with the combined metrics, fairness, harm tables, and comparison PNGs.
+
+See [lib/README.md](../lib/README.md) for detailed output documentation.

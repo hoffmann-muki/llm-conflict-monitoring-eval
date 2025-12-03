@@ -70,6 +70,12 @@ Tests use standard paths from the main codebase:
 
 Tests respect environment variables: `COUNTRY`, `STRATEGY`, `SAMPLE_SIZE`, `NUM_EXAMPLES`
 
+## Comparison Validation
+
+When tests generate results for both Ollama and ConfliBERT, expect:
+- `reasoning` column in every per-model CSV so explainable prompts remain auditable.
+- `results/{country}/{strategy}/{sample_size}/comparison/` with `all_models_metrics.csv`, `all_models_fairness.csv`, `all_models_harm.csv`, and PNGs produced by `python -m lib.analysis.compare_all_models`.
+
 ## Pre-Commit Validation
 
 ```bash

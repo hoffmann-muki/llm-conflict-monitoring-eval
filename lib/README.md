@@ -132,13 +132,14 @@ python -m lib.analysis.thresholds --country cmr --strategy zero_shot --sample-si
 
 # Model comparison
 python -m lib.analysis.compare_models --country cmr --strategy zero_shot --sample-size 500 \
-  --family gemma --sizes 2b,7b
+    --family gemma --sizes 2b,7b
+python -m lib.analysis.compare_all_models --country cmr --strategy zero_shot --sample-size 500
 
 # Counterfactual analysis
 python -m lib.analysis.counterfactual --country cmr --strategy zero_shot --sample-size 500 \
-  --events 20
+    --events 20
 python -m lib.analysis.counterfactual --country cmr --strategy zero_shot --sample-size 500 \
-  --models llama3.2,mistral:7b --top-percent 10
+    --models llama3.2,mistral:7b --top-percent 10
 
 # Result aggregation
 python -m lib.core.result_aggregator --country cmr --strategy zero_shot --sample-size 500
@@ -153,6 +154,7 @@ All output is written to `results/{country}/{strategy}/{sample_size}/`:
 |------|-------------|
 | `ollama_results_{model}_acled_{country}_actors.csv` | Per-model results |
 | `ollama_results_acled_{country}_actors.csv` | Combined results |
+| `reasoning` column added to every CSV | Keeps explainable prompts auditable across aggregation/metrics |
 
 ### Calibration
 | File | Description |
@@ -195,6 +197,14 @@ All output is written to `results/{country}/{strategy}/{sample_size}/`:
 |------|-------------|
 | `compare_{family}_sizes.csv` | FL/FI with metadata |
 | `compare_{family}_pairwise.csv` | McNemar test results |
+
+### Comparison Folder
+| File/Folder | Description |
+|-------------|-------------|
+| `comparison/all_models_metrics.csv` | Combined accuracy/metric table for Ollama + ConfliBERT |
+| `comparison/all_models_harm.csv` | Harm metrics from `lib.analysis.compare_all_models` |
+| `comparison/all_models_fairness.csv` | Fairness breakdown for each model |
+| `comparison/*.png` | Visualization comparing Ollama and ConfliBERT runs |
 
 ## Directory Structure
 

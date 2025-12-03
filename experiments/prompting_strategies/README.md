@@ -68,6 +68,8 @@ To ensure models output valid labels:
 2. Include explicit instruction: "CRITICAL: The label must be exactly one of: V, B, E, P, R, S"
 3. Use enum constraint in JSON schema (enforced by Ollama structured output)
 
+`explainable` and `few_shot` strategies also provide a `reasoning` property in the response schema. The downstream pipeline writes this field into every per-model CSV so you can trace how the model justified each prediction.
+
 ## Base Class Interface
 
 | Method | Returns | Required |
