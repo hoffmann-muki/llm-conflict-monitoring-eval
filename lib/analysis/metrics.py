@@ -270,7 +270,11 @@ def main():
     COUNTRY, RESULTS_DIR = setup_country_environment()
     SAMPLE_SIZE = get_sample_size()
     
-    RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_actors.csv')
+    # Allow override via RESULTS_CSV env var (for ConfliBERT or other models)
+    # Default: ollama_results_acled_{country}_actors.csv
+    RESULTS_CSV = os.environ.get('RESULTS_CSV') or os.path.join(
+        RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_actors.csv'
+    )
     OUT_METRICS = os.path.join(RESULTS_DIR, f'metrics_acled_{COUNTRY}_actors.csv')
     OUT_CMS = os.path.join(RESULTS_DIR, f'confusion_matrices_acled_{COUNTRY}_actors.json')
     OUT_FAIRNESS = os.path.join(RESULTS_DIR, f'fairness_metrics_acled_{COUNTRY}_actors.csv')
