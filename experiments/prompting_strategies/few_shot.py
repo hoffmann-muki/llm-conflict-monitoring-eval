@@ -107,9 +107,12 @@ class FewShotStrategy(PromptingStrategy):
 
         return f"""Examples:
 
-{examples}
-Event: {event_note}
-"""
+    {examples}
+    --- Now classify the following event in the same format ---
+    Final Answer: JSON matching the examples above.
+
+    Event: {event_note}
+    """
     
     def get_schema(self) -> Dict[str, Any]:
         """Get JSON schema for few-shot responses.
