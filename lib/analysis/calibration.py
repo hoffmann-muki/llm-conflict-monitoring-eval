@@ -127,7 +127,11 @@ def main():
     # Setup paths at runtime (not import time)
     COUNTRY, RESULTS_DIR = setup_country_environment()
     
-    RESULTS_CSV = os.path.join(RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_actors.csv')
+    # Allow override via RESULTS_CSV env var (for ConfliBERT or other models)
+    # Default: ollama_results_acled_{country}_actors.csv
+    RESULTS_CSV = os.environ.get('RESULTS_CSV') or os.path.join(
+        RESULTS_DIR, f'ollama_results_acled_{COUNTRY}_actors.csv'
+    )
     CAL_PARAMS = os.path.join(RESULTS_DIR, f'calibration_params_acled_{COUNTRY}_actors.json')
     OUT_CAL_CSV = os.path.join(RESULTS_DIR, 'ollama_results_calibrated.csv')
     OUT_METRICS_CSV = os.path.join(RESULTS_DIR, 'metrics_thresholds_calibrated.csv')

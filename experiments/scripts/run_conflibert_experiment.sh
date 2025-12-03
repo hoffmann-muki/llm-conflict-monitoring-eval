@@ -210,12 +210,19 @@ log_phase "PHASE 2: CALIBRATION & CORE METRICS"
 # Set strategy-specific results path
 export RESULTS_DIR="$STRATEGY_RESULTS"
 
+# Point analysis modules to ConfliBERT results (instead of default ollama_results_*.csv)
+CONFLIBERT_RESULTS_CSV="$STRATEGY_RESULTS/conflibert_results_acled_${COUNTRY}_actors.csv"
+export RESULTS_CSV="$CONFLIBERT_RESULTS_CSV"
+log_info "Using results file: $RESULTS_CSV"
+
 log_step "Applying calibration (isotonic + temperature scaling)..."
 COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+    RESULTS_CSV="$CONFLIBERT_RESULTS_CSV" \
     "$VENV_PY" -m lib.analysis.calibration
 
 log_step "Computing classification metrics and fairness analysis..."
 COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+    RESULTS_CSV="$CONFLIBERT_RESULTS_CSV" \
     "$VENV_PY" -m lib.analysis.metrics
 
 log_step "Computing per-class decision thresholds..."
