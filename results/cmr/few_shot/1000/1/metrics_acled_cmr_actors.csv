@@ -1,0 +1,2 @@
+model,N,accuracy,precision_macro,recall_macro
+llama3.2:3b,1000,0.549,0.425,0.669

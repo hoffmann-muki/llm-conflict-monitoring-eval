@@ -62,7 +62,8 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
             resp = run_ollama_structured(
                 model_name, 
                 prompt=prompt,
-                system_msg=system_msg
+                system_msg=system_msg,
+                schema=strategy.get_schema()
             )
             label = str(resp.get("label", "FAIL")).strip()
             conf = float(resp.get("confidence", 0))

@@ -1,0 +1,7 @@
+model,feature,feature_value,n_samples,error_rate,error_rate_diff_from_overall
+llama3.2:3b,notes_length,very_short,2,1.0,0.5489999999999999
+llama3.2:3b,notes_length,short,388,0.40463917525773196,-0.04636082474226805
+llama3.2:3b,notes_length,medium,470,0.46170212765957447,0.010702127659574456
+llama3.2:3b,notes_length,long,138,0.5362318840579711,0.08523188405797105
+llama3.2:3b,notes_length,very_long,2,0.5,0.04899999999999999
+llama3.2:3b,notes_length_continuous,correlation,1000,0.10248519698147344,0.0011730151669654373
