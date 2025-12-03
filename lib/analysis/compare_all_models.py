@@ -207,7 +207,7 @@ def plot_model_comparison(metrics_df: pd.DataFrame, output_dir: str):
     # 1. Accuracy comparison
     fig, ax = plt.subplots(figsize=(10, max(6, len(models) * 0.5)))
     y_pos = np.arange(len(models))
-    ax.barh(y_pos, metrics_df['accuracy'].values, color=colors)
+    ax.barh(y_pos, metrics_df['accuracy'].to_numpy(), color=colors)
     ax.set_yticks(y_pos)
     ax.set_yticklabels(models)
     ax.set_xlabel('Accuracy')
@@ -225,7 +225,7 @@ def plot_model_comparison(metrics_df: pd.DataFrame, output_dir: str):
     # 2. F1 Score comparison (macro)
     if 'macro_f1' in metrics_df.columns:
         fig, ax = plt.subplots(figsize=(10, max(6, len(models) * 0.5)))
-        ax.barh(y_pos, metrics_df['macro_f1'].values, color=colors)
+        ax.barh(y_pos, metrics_df['macro_f1'].to_numpy(), color=colors)
         ax.set_yticks(y_pos)
         ax.set_yticklabels(models)
         ax.set_xlabel('Macro F1 Score')
@@ -251,8 +251,7 @@ def plot_model_comparison(metrics_df: pd.DataFrame, output_dir: str):
         
         for i, col in enumerate(available_cols):
             offset = (i - len(available_cols) / 2 + 0.5) * width
-            bars = ax.barh(x + offset, metrics_df[col].values, width, 
-                          label=col.replace('_', ' ').title())
+            bars = ax.barh(x + offset, metrics_df[col].to_numpy(), width, label=col.replace('_', ' ').title())
         
         ax.set_yticks(x)
         ax.set_yticklabels(models)
