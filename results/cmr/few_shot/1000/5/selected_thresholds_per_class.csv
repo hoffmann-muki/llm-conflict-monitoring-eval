@@ -11,3 +11,15 @@ mistral:7b,E,0.1
 mistral:7b,P,0.30000000000000004
 mistral:7b,R,0.0
 mistral:7b,S,0.0
+olmo2:7b,V,0.30000000000000004
+olmo2:7b,B,0.0
+olmo2:7b,E,0.2
+olmo2:7b,P,0.0
+olmo2:7b,R,0.0
+olmo2:7b,S,0.2
+gemma3:4b,V,0.0
+gemma3:4b,B,0.0
+gemma3:4b,E,0.0
+gemma3:4b,P,0.0
+gemma3:4b,R,0.0
+gemma3:4b,S,0.0

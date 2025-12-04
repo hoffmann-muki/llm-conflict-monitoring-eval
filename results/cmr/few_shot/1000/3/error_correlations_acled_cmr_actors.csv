@@ -11,3 +11,9 @@ mistral:7b,notes_length,medium,470,0.2723404255319149,-0.020659574468085085
 mistral:7b,notes_length,long,138,0.30434782608695654,0.011347826086956558
 mistral:7b,notes_length,very_long,2,0.0,-0.293
 mistral:7b,notes_length_continuous,correlation,1000,-0.033181150133390416,0.2945204964860693
+olmo2:7b,notes_length,very_short,2,1.0,0.65
+olmo2:7b,notes_length,short,388,0.36855670103092786,0.01855670103092788
+olmo2:7b,notes_length,medium,470,0.32127659574468087,-0.028723404255319107
+olmo2:7b,notes_length,long,138,0.391304347826087,0.041304347826086996
+olmo2:7b,notes_length,very_long,2,0.0,-0.35
+olmo2:7b,notes_length_continuous,correlation,1000,-0.028633818787915495,0.36571241067469173
