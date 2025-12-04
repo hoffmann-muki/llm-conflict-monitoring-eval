@@ -5,3 +5,9 @@ llama3.2:3b,notes_length,medium,470,0.4,0.018000000000000016
 llama3.2:3b,notes_length,long,138,0.37681159420289856,-0.0051884057971014474
 llama3.2:3b,notes_length,very_long,2,0.5,0.118
 llama3.2:3b,notes_length_continuous,correlation,1000,0.0345292241946587,0.2753302820860685
+mistral:7b,notes_length,very_short,2,0.5,0.20500000000000002
+mistral:7b,notes_length,short,388,0.3118556701030928,0.0168556701030928
+mistral:7b,notes_length,medium,470,0.2851063829787234,-0.009893617021276557
+mistral:7b,notes_length,long,138,0.2826086956521739,-0.012391304347826093
+mistral:7b,notes_length,very_long,2,0.0,-0.295
+mistral:7b,notes_length_continuous,correlation,1000,-0.03277732476389503,0.30043926281630995
