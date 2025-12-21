@@ -34,7 +34,10 @@ set -o pipefail  # Pipeline fails if any command fails
 
 # Configuration with sensible defaults
 MODEL_PATH="${MODEL_PATH:-models/conflibert}"
-STRATEGY="${STRATEGY:-zero_shot}"
+# ConfliBERT is a supervised, fine-tuned classifier. We run it only as a
+# supervised baseline (zero-shot equivalent in our evaluation matrix).
+# Force strategy to zero_shot to avoid mixing prompting modalities.
+STRATEGY="zero_shot"
 NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"

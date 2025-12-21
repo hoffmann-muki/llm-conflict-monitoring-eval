@@ -302,6 +302,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                     "pred_label": pred_code,
                     "pred_conf": confidence,
                     "logits": json.dumps([float(x) for x in prob_vec]),
+                    "notes": texts[idx],
                     "latency_sec": round(batch_latency, 3),
                     "actor_norm": actor_norms[idx]
                 })
@@ -353,7 +354,16 @@ def main():
             raise ValueError('--num-examples must be between 1 and 5')
         if args.strategy != 'few_shot':
             raise ValueError('--num-examples is only valid with --strategy few_shot')
-    
+
+    # ConfliBERT is a supervised, fine-tuned classifier. For evaluation clarity
+    # we force it to run only as the supervised baseline. If a different
+    # strategy was requested via CLI, override it and warn the user.
+    if args.strategy != 'zero_shot':
+        print(f"Note: overriding requested strategy '{args.strategy}' to 'zero_shot' for ConfliBERT (supervised baseline).")
+    args.strategy = 'zero_shot'
+    # Ignore num_examples when forcing zero_shot
+    args.num_examples = None
+
     run_conflibert_classification(
         country_code=args.country,
         strategy_name=args.strategy,
