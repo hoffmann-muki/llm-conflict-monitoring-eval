@@ -1,0 +1,7 @@
+Model,Actor,True V,True B,FL Count,FL %,FI Count,FI %,NBS
+llama3.2_3b,Police,6,0,0,0.00%,0,0.00%,0.000
+llama3.2_3b,Military,146,227,7,4.79%,37,16.30%,0.545
+llama3.2_3b,Total,362,339,32,8.84%,46,13.57%,0.211
+mistral_7b,Police,6,0,0,0.00%,0,0.00%,0.000
+mistral_7b,Military,146,227,2,1.37%,42,18.50%,0.862
+mistral_7b,Total,362,339,5,1.38%,56,16.52%,0.846
