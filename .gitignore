@@ -8,6 +8,3 @@ __pycache__/
 .DS_Store
 # Local models
 models/
-
-# Local models
-models/
