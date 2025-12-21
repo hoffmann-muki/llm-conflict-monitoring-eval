@@ -1,5 +1,7 @@
 model,n_violence,n_non_violence,false_legitimization_count,false_illegitimization_count,false_legitimization_rate,false_illegitimization_rate
+ConfliBERT,273,727,273,0,1.0,0.0
 llama3.2:3b,273,727,7,82,0.0256,0.1128
 mistral:7b,273,727,53,25,0.1941,0.0344
 olmo2:7b,273,727,94,22,0.3443,0.0303
 gemma3:4b,273,727,2,267,0.0073,0.3673
+conflibert_conflibert,273,727,273,0,1.0,0.0

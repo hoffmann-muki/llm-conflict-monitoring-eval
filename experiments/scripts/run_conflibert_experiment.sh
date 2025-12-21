@@ -220,8 +220,47 @@ log_info "Using results file: $RESULTS_CSV"
 
 log_step "Applying calibration (isotonic + temperature scaling)..."
 COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
-    RESULTS_CSV="$CONFLIBERT_RESULTS_CSV" \
-    "$VENV_PY" -m lib.analysis.calibration
+    # Build a combined raw results CSV so calibration runs on all available models
+    # This avoids overwriting an existing multi-model calibrated file when ConfliBERT
+    # is run after Ollama models. The combined file will be written to
+    # $STRATEGY_RESULTS/ollama_results_acled_${COUNTRY}_actors.csv and then passed
+    # to the calibration module via RESULTS_CSV.
+    # Export shell variables so the embedded Python can access them via os.environ
+    export STRATEGY_RESULTS="$STRATEGY_RESULTS"
+    export CONFLIBERT_RESULTS_CSV="$CONFLIBERT_RESULTS_CSV"
+    "$VENV_PY" - <<PY
+import sys
+import os, glob, pandas as pd
+results_dir = os.environ.get('STRATEGY_RESULTS')
+country = os.environ.get('COUNTRY')
+conf_csv = os.environ.get('CONFLIBERT_RESULTS_CSV')
+files = []
+if conf_csv and os.path.exists(conf_csv):
+    files.append(conf_csv)
+# Look for per-model Ollama raw output files under model subdirectories
+files.extend(glob.glob(os.path.join(results_dir, '*/ollama_results_*_acled_{}_actors.csv'.format(country))))
+files = [f for f in files if os.path.exists(f)]
+if not files:
+    print('No raw result files found to combine; using', conf_csv)
+    combined_path = conf_csv
+else:
+    dfs = []
+    for f in files:
+        try:
+            dfs.append(pd.read_csv(f))
+        except Exception as e:
+            print('Warning: could not read', f, e)
+    if not dfs:
+        combined_path = conf_csv
+    else:
+        combined = pd.concat(dfs, ignore_index=True)
+        combined_path = os.path.join(results_dir, f'ollama_results_acled_{country}_actors.csv')
+        combined.to_csv(combined_path, index=False)
+        print('Wrote combined raw results to', combined_path)
+print('Running calibration on:', combined_path)
+os.environ['RESULTS_CSV'] = combined_path
+os.execv(sys.executable, [sys.executable, '-m', 'lib.analysis.calibration'])
+PY
 
 log_step "Computing classification metrics and fairness analysis..."
 COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \

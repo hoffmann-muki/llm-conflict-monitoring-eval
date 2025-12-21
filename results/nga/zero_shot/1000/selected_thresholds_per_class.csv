@@ -1,4 +1,10 @@
 model,label,threshold
+conflibert_conflibert,V,0.0
+conflibert_conflibert,B,0.0
+conflibert_conflibert,E,0.0
+conflibert_conflibert,P,0.0
+conflibert_conflibert,R,0.0
+conflibert_conflibert,S,0.0
 llama3.2:3b,V,0.30000000000000004
 llama3.2:3b,B,0.30000000000000004
 llama3.2:3b,E,0.30000000000000004

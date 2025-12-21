@@ -1,4 +1,5 @@
 model,false_legitimization_rate_FLR,false_legitimization_count_FL,n_illegit_events,false_illegitimization_rate_FIR,false_illegitimization_count_FI,n_legit_events,total_events,harm_ratio_FL_to_FI
+conflibert_conflibert,0.8571428571428571,48,56,0.0,0,101,200,inf
 llama3.2:3b,0.0,0,56,0.13861386138613863,14,101,200,0.0
 mistral:7b,0.05357142857142857,3,56,0.039603960396039604,4,101,200,0.75
 olmo2:7b,0.07142857142857142,4,56,0.0297029702970297,3,101,200,1.3333333333333333

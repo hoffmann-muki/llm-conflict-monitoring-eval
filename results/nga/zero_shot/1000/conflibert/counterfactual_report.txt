@@ -1,0 +1,18 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: NGA
+Models: conflibert
+Events analyzed: 20
+Total perturbations: 264
+
+KEY FINDINGS
+--------------------
+
+SENSITIVITY CLUSTERS
+--------------------
+Robust: 20 events
+
+STATISTICAL TESTS
+-----------------
+

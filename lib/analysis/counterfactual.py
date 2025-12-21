@@ -26,6 +26,7 @@ from scipy.stats import chi2
 from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
+from lib.inference import conflibert_client
 from lib.core.data_helpers import paths_for_country, get_strategy, setup_country_environment, get_model_results_dir
 from lib.core.constants import WORKING_MODELS
 from experiments.prompting_strategies import ZeroShotStrategy
@@ -424,18 +425,44 @@ class CounterfactualAnalyzer:
         calibrated_path = self.paths['calibrated_csv']
         if os.path.exists(calibrated_path):
             df = pd.read_csv(calibrated_path)
-            # Filter to selected models
-            return df[df['model'].isin(self.models)]
+            # Filter to selected models. Try exact match first, then substring match
+            mask = df['model'].isin(self.models)
+            if not mask.any():
+                # Try substring matching: requested model token may be a prefix
+                for m in self.models:
+                    mask = mask | df['model'].str.contains(m, na=False)
+
+            filtered = df[mask]
+            if filtered.empty:
+                # If still empty, return full df but warn — downstream code will fail clearly
+                print(f"Warning: no matching models found in calibrated CSV for requested models: {self.models}")
+                return df
+
+            return filtered
         else:
             raise FileNotFoundError(f"Calibrated results not found: {calibrated_path}")
     
     def run_model_on_perturbation(self, model: str, text: str) -> Dict[str, Any]:
         """Run a single model on perturbed text."""
         try:
+            # Dispatch by model type: conflibert models are run via local transformers helper
+            if isinstance(model, str) and model.lower().startswith('conflibert'):
+                # Use local conflibert client to get label/confidence
+                res = conflibert_client.run_conflibert_single(model, text)
+                if not res:
+                    return {'label': 'ERROR', 'confidence': 0.0, 'success': False, 'error': 'Conflibert inference failed'}
+                return {'label': res.get('label', 'ERROR'), 'confidence': res.get('confidence', 0.0), 'success': True}
+
+            # Default: use Ollama structured client
             strategy = ZeroShotStrategy()
             prompt = strategy.make_prompt(text)
             system_msg = strategy.get_system_message()
             result = run_ollama_structured(model, prompt, system_msg)
+
+            # If Ollama returned no structured JSON, treat as failure
+            if not result or 'label' not in result:
+                return {'label': 'ERROR', 'confidence': 0.0, 'success': False, 'error': 'No structured response from Ollama'}
+
             return {
                 'label': result.get('label', 'ERROR'),
                 'confidence': result.get('confidence', 0.0),
@@ -776,6 +803,24 @@ class CounterfactualAnalyzer:
             'sensitivity_clusters': clusters,
             'detailed_results': results
         }
+
+        # Backwards-compatible alias expected by visualization utilities.
+        # The visualizer expects a structure `flip_metrics[pert_type][model]` with
+        # keys: 'flip_rate', 'n_perturbations', 'mean_confidence_delta', 'mean_abs_confidence_delta'.
+        # Our internal `flip_metrics` uses 'counterfactual_flip_rate_CFR' for the flip rate.
+        # Build a converted alias to avoid breaking visualizations.
+        aliased = {}
+        for pert_type, model_data in flip_metrics.items():
+            aliased[pert_type] = {}
+            for model, metrics in model_data.items():
+                aliased[pert_type][model] = {
+                    'flip_rate': metrics.get('counterfactual_flip_rate_CFR', metrics.get('flip_rate', 0.0)),
+                    'n_perturbations': metrics.get('n_perturbations', 0),
+                    'mean_confidence_delta': metrics.get('mean_confidence_delta', 0.0),
+                    'mean_abs_confidence_delta': metrics.get('mean_abs_confidence_delta', metrics.get('mean_abs_confidence_delta', 0.0))
+                }
+
+        report['flip_metrics'] = aliased
         
         # Save full report (JSON stays in model subdir for single-model runs)
         with open(output_path, 'w') as f:
