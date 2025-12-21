@@ -46,14 +46,18 @@ Step 1 — Brief structured reasoning (exactly three short items):
 Step 2 — Final answer (valid JSON only):
 Return ONLY valid JSON with this structure:
 {{
-  "reasoning": [<three strings>],
-  "label": "<V, B, E, P, R, or S>",
-  "confidence": <decimal between 0 and 1>,
-  "logits": [<six decimals summing to 1.0>]
+    "reasoning": [<three strings>],
+    "label": "<V, B, E, P, R, or S>",
+    "confidence": <decimal between 0 and 1>,
+    "logits": {{"V": <num>, "B": <num>, "E": <num>, "P": <num>, "R": <num>, "S": <num>}}
 }}
 
 CRITICAL: The "label" field must be exactly one of: V, B, E, P, R, S
 Do not use numbers, full words, or any other values.
+
+Additional requirements for `logits`:
+- Each value in the `logits` object must be a decimal probability between 0 and 1.
+- The six logits (V, B, E, P, R, S) must sum to 1.0.
 """
     
     def get_schema(self) -> Dict[str, Any]:
@@ -63,14 +67,24 @@ Do not use numbers, full words, or any other values.
             JSON schema expecting reasoning, label, confidence, and logits
         """
         return {
-            "type": "object",
-            "properties": {
-                "reasoning": {"type": "array", "items": {"type": "string"}},
-                "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
-                "confidence": {"type": "number"},
-                "logits": {"type": "array", "items": {"type": "number"}}
-            },
-            "required": ["reasoning", "label", "confidence", "logits"]
+                "type": "object",
+                "properties": {
+                    "reasoning": {"type": "array", "items": {"type": "string"}},
+                    "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
+                    "confidence": {"type": "number"},
+                    "logits": {
+                        "type": "object",
+                        "properties": {
+                            "V": {"type": "number"},
+                            "B": {"type": "number"},
+                            "E": {"type": "number"},
+                            "P": {"type": "number"},
+                            "R": {"type": "number"},
+                            "S": {"type": "number"}
+                        }
+                    }
+                },
+                "required": ["reasoning", "label", "confidence", "logits"]
         }
     
     def get_system_message(self) -> Optional[str]:

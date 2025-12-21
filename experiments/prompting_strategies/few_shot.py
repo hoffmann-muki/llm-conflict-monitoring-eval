@@ -111,6 +111,19 @@ class FewShotStrategy(PromptingStrategy):
     --- Now classify the following event in the same format ---
     Final Answer: JSON matching the examples above.
 
+        Return ONLY valid JSON with this structure:
+        {{
+            "label": "<V, B, E, P, R, or S>",
+            "confidence": <decimal between 0 and 1>,
+            "logits": {{
+                "V": <num>, "B": <num>, "E": <num>, "P": <num>, "R": <num>, "S": <num>
+            }}
+        }}
+
+        Additional requirements for `logits`:
+        - Each value in the `logits` object must be a decimal probability between 0 and 1.
+        - The six logits (V, B, E, P, R, S) must sum to 1.0.
+
     Event: {event_note}
     """
     
@@ -125,7 +138,17 @@ class FewShotStrategy(PromptingStrategy):
             "properties": {
                 "label": {"type": "string", "enum": ["V", "B", "E", "P", "R", "S"]},
                 "confidence": {"type": "number"},
-                "logits": {"type": "array", "items": {"type": "number"}}
+                "logits": {
+                    "type": "object",
+                    "properties": {
+                        "V": {"type": "number"},
+                        "B": {"type": "number"},
+                        "E": {"type": "number"},
+                        "P": {"type": "number"},
+                        "R": {"type": "number"},
+                        "S": {"type": "number"}
+                    }
+                }
             },
             "required": ["label", "confidence", "logits"]
         }
