@@ -16,43 +16,48 @@ This directory contains tools for generating False Legitimacy (FL) and False Ill
 ## Files
 
 - `generate_fl_fi_analysis.py` - Main reusable script for generating FL/FI tables
-- `fl_fi_analysis_*.csv` - Generated analysis tables
+- `cmr/` - Cameroon analysis results
+- `nga/` - Nigeria analysis results
 
 ## Usage
 
 ### Basic Usage (Zero-Shot)
 
 ```bash
+# Cameroon (default)
 python generate_fl_fi_analysis.py --strategy zero_shot
+
+# Nigeria
+python generate_fl_fi_analysis.py --strategy zero_shot --country nga
 ```
 
 ### Few-Shot Analysis
 
 ```bash
 # Analyze specific shot counts
-python generate_fl_fi_analysis.py --strategy few_shot --shots 1 3 5
+python generate_fl_fi_analysis.py --strategy few_shot --shots 1 3 5 --country cmr
 
 # Analyze single shot count
-python generate_fl_fi_analysis.py --strategy few_shot --shots 3
+python generate_fl_fi_analysis.py --strategy few_shot --shots 3 --country nga
 ```
 
 ### Explainable Strategy
 
 ```bash
-python generate_fl_fi_analysis.py --strategy explainable
+python generate_fl_fi_analysis.py --strategy explainable --country cmr
 ```
 
 ### Custom Options
 
 ```bash
 # Analyze specific actors
-python generate_fl_fi_analysis.py --strategy zero_shot --actors Police Military Gendarmerie
+python generate_fl_fi_analysis.py --strategy zero_shot --actors Police Military Gendarmerie --country nga
 
 # Analyze specific models
-python generate_fl_fi_analysis.py --strategy zero_shot --models mistral_7b llama3.2_3b
+python generate_fl_fi_analysis.py --strategy zero_shot --models mistral_7b llama3.2_3b --country cmr
 
 # Specify sample size
-python generate_fl_fi_analysis.py --strategy zero_shot --sample-size 500
+python generate_fl_fi_analysis.py --strategy zero_shot --sample-size 500 --country cmr
 
 # Custom output directory
 python generate_fl_fi_analysis.py --strategy zero_shot --output-dir ./custom_output
