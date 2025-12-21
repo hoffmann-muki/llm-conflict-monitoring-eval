@@ -65,7 +65,7 @@ def find_model_results(results_dir: Path) -> List[str]:
     """Find all model subdirectories with results."""
     model_dirs = []
     for item in results_dir.iterdir():
-        if item.is_dir() and list(item.glob('ollama_results_*_acled_cmr_actors.csv')):
+        if item.is_dir() and list(item.glob('ollama_results_*_acled_*_actors.csv')):
             model_dirs.append(item.name)
     return sorted(model_dirs)
 
@@ -133,7 +133,7 @@ def generate_fl_fi_table(
     for model in models:
         # Find the CSV file for this model
         model_dir = results_dir / model
-        csv_files = list(model_dir.glob('ollama_results_*_acled_cmr_actors.csv'))
+        csv_files = list(model_dir.glob('ollama_results_*_acled_*_actors.csv'))
 
         if not csv_files:
             print(f"Warning: No results file found for {model}")
@@ -220,12 +220,20 @@ def main():
         type=Path,
         help='Output directory (default: results/analysis/fl_fi)'
     )
+    parser.add_argument(
+        '--country',
+        type=str,
+        default='cmr',
+        choices=['cmr', 'nga'],
+        help='Country to analyze (default: cmr)'
+    )
 
     args = parser.parse_args()
 
     # Setup paths
     base_dir = Path(__file__).parent.parent.parent
-    output_dir = args.output_dir or Path(__file__).parent
+    output_dir = args.output_dir or (Path(__file__).parent / args.country)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Handle different strategies
     if args.strategy == 'few_shot':
@@ -234,7 +242,7 @@ def main():
             return
 
         for shot_count in args.shots:
-            results_dir = base_dir / 'cmr' / args.strategy / str(args.sample_size) / str(shot_count)
+            results_dir = base_dir / args.country / args.strategy / str(args.sample_size) / str(shot_count)
             output_file = output_dir / f'fl_fi_analysis_few_shot_{shot_count}.csv'
 
             if not results_dir.exists():
@@ -261,7 +269,7 @@ def main():
 
     else:
         # zero_shot or explainable
-        results_dir = base_dir / 'cmr' / args.strategy / str(args.sample_size)
+        results_dir = base_dir / args.country / args.strategy / str(args.sample_size)
         output_file = output_dir / f'fl_fi_analysis_{args.strategy}.csv'
 
         if not results_dir.exists():
