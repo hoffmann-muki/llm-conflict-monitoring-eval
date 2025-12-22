@@ -296,7 +296,8 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                 confidence = float(prob_vec[pred_id])
                 
                 results.append({
-                    "model": f"conflibert_{os.path.basename(model_path.rstrip('/'))}",
+                    # Use canonical model name to avoid duplication when the local model folder is 'conflibert'
+                    "model": "ConfliBERT",
                     "event_id": event_ids[idx],
                     "true_label": true_label_codes[idx],
                     "pred_label": pred_code,

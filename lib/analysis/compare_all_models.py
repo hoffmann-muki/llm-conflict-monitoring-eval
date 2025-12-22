@@ -123,6 +123,12 @@ def load_model_results(model_files: Dict[str, str]) -> pd.DataFrame:
     if 'event_id' in combined.columns:
         combined = combined.drop_duplicates(subset=['event_id', 'model'], keep='first')
     
+    # Normalize `ConfliBERT` label so analysis/visualization treat it as a single model.
+    if 'model' in combined.columns:
+        combined['model'] = combined['model'].astype(str).apply(
+            lambda m: 'ConfliBERT' if m.lower().startswith('conflibert') else m
+        )
+    
     return combined
 
 
