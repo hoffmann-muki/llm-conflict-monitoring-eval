@@ -129,13 +129,17 @@ if ! "$VENV_PY" -c "import torch, transformers" 2>/dev/null; then
 fi
 log_success "PyTorch and transformers available"
 
-# Check model path exists
-if [ ! -d "$MODEL_PATH" ]; then
-    log_error "Model path not found: $MODEL_PATH"
-    log_info "Download model with: python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir $MODEL_PATH"
-    exit 1
+# Check model path exists unless we're explicitly skipping inference
+if [ "$SKIP_INFERENCE" = "true" ]; then
+    log_warn "SKIP_INFERENCE=true; skipping model path existence check"
+else
+    if [ ! -d "$MODEL_PATH" ]; then
+        log_error "Model path not found: $MODEL_PATH"
+        log_info "Download model with: python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir $MODEL_PATH"
+        exit 1
+    fi
+    log_success "ConfliBERT model found at: $MODEL_PATH"
 fi
-log_success "ConfliBERT model found at: $MODEL_PATH"
 
 # Display configuration
 log_phase "CONFLIBERT EXPERIMENT CONFIGURATION"
@@ -231,15 +235,28 @@ COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES=
     "$VENV_PY" - <<PY
 import sys
 import os, glob, pandas as pd
+
 results_dir = os.environ.get('STRATEGY_RESULTS')
 country = os.environ.get('COUNTRY')
 conf_csv = os.environ.get('CONFLIBERT_RESULTS_CSV')
-files = []
+files = set()
+
+# Always consider an existing combined Ollama file if present
+combined_candidate = os.path.join(results_dir, f'ollama_results_acled_{country}_actors.csv')
+if os.path.exists(combined_candidate):
+    files.add(combined_candidate)
+
+# Include ConfliBERT CSV if available
 if conf_csv and os.path.exists(conf_csv):
-    files.append(conf_csv)
-# Look for per-model Ollama raw output files under model subdirectories
-files.extend(glob.glob(os.path.join(results_dir, '*/ollama_results_*_acled_{}_actors.csv'.format(country))))
-files = [f for f in files if os.path.exists(f)]
+    files.add(conf_csv)
+
+# Include any per-model Ollama raw output files under model subdirectories
+per_model = glob.glob(os.path.join(results_dir, '*/ollama_results_*_acled_{}_actors.csv'.format(country)))
+for p in per_model:
+    if os.path.exists(p):
+        files.add(p)
+
+files = sorted(list(files))
 if not files:
     print('No raw result files found to combine; using', conf_csv)
     combined_path = conf_csv
@@ -255,8 +272,12 @@ else:
     else:
         combined = pd.concat(dfs, ignore_index=True)
         combined_path = os.path.join(results_dir, f'ollama_results_acled_{country}_actors.csv')
+        # Drop duplicate rows by event_id + model to prefer the first occurrence
+        if 'event_id' in combined.columns and 'model' in combined.columns:
+            combined = combined.drop_duplicates(subset=['event_id', 'model'], keep='first')
         combined.to_csv(combined_path, index=False)
         print('Wrote combined raw results to', combined_path)
+
 print('Running calibration on:', combined_path)
 os.environ['RESULTS_CSV'] = combined_path
 os.execv(sys.executable, [sys.executable, '-m', 'lib.analysis.calibration'])

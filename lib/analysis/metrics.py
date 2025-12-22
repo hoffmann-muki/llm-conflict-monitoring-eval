@@ -301,18 +301,60 @@ def main():
     # Compute standard metrics
     metrics, cms = compute_metrics(df)
     mdf = pd.DataFrame(metrics)
-    mdf.to_csv(OUT_METRICS, index=False)
-    with open(OUT_CMS, 'w') as f:
-        json.dump({'labels': labels, 'cms': cms}, f, indent=2)
-    print('Wrote metrics to', OUT_METRICS)
-    print('Wrote confusion matrices to', OUT_CMS)
+    # Merge new metrics into existing metrics file to avoid clobbering other models
+    if os.path.exists(OUT_METRICS):
+        try:
+            prev = pd.read_csv(OUT_METRICS)
+            # drop rows for models present in this run, then append the new rows
+            prev = prev[~prev['model'].isin(mdf['model'].unique())]
+            merged = pd.concat([prev, mdf], ignore_index=True)
+            merged.to_csv(OUT_METRICS, index=False)
+            print('Merged metrics into', OUT_METRICS)
+        except Exception as e:
+            print('Warning: failed to merge metrics, overwriting instead:', e)
+            mdf.to_csv(OUT_METRICS, index=False)
+    else:
+        mdf.to_csv(OUT_METRICS, index=False)
+
+    # Merge confusion matrices JSON by model
+    if os.path.exists(OUT_CMS):
+        try:
+            with open(OUT_CMS) as f:
+                prev_json = json.load(f)
+            prev_cms = prev_json.get('cms', {})
+            # Replace or add cms entries for models present in this run
+            for k, v in cms.items():
+                prev_cms[k] = v
+            out_json = {'labels': labels, 'cms': prev_cms}
+            with open(OUT_CMS, 'w') as f:
+                json.dump(out_json, f, indent=2)
+            print('Merged confusion matrices into', OUT_CMS)
+        except Exception as e:
+            print('Warning: failed to merge confusion matrices, overwriting instead:', e)
+            with open(OUT_CMS, 'w') as f:
+                json.dump({'labels': labels, 'cms': cms}, f, indent=2)
+    else:
+        with open(OUT_CMS, 'w') as f:
+            json.dump({'labels': labels, 'cms': cms}, f, indent=2)
+
     print(mdf.to_string(index=False))
     
     # Compute fairness metrics
     fairness_df = compute_fairness_metrics(df, target_label='V', n_bootstrap=1000)
     if not fairness_df.empty:
-        fairness_df.to_csv(OUT_FAIRNESS, index=False)
-        print(f'\nWrote fairness metrics to {OUT_FAIRNESS}')
+        # Merge fairness metrics to preserve other models
+        if os.path.exists(OUT_FAIRNESS):
+            try:
+                prev_f = pd.read_csv(OUT_FAIRNESS)
+                prev_f = prev_f[~prev_f['model'].isin(fairness_df['model'].unique())]
+                merged_f = pd.concat([prev_f, fairness_df], ignore_index=True)
+                merged_f.to_csv(OUT_FAIRNESS, index=False)
+                print(f'\nMerged fairness metrics into {OUT_FAIRNESS}')
+            except Exception as e:
+                print('Warning: failed to merge fairness metrics, overwriting instead:', e)
+                fairness_df.to_csv(OUT_FAIRNESS, index=False)
+        else:
+            fairness_df.to_csv(OUT_FAIRNESS, index=False)
         print(fairness_df.to_string(index=False))
     else:
         print('\nCould not compute fairness metrics (missing actor information)')
@@ -321,7 +363,19 @@ def main():
     correlation_df = analyze_error_correlations(df)
     if not correlation_df.empty:
         out_corr_path = os.path.join(RESULTS_DIR, f'error_correlations_acled_{COUNTRY}_actors.csv')
-        correlation_df.to_csv(out_corr_path, index=False)
+        # Merge with existing correlations if present
+        if os.path.exists(out_corr_path):
+            try:
+                prev_corr = pd.read_csv(out_corr_path)
+                prev_corr = prev_corr[~prev_corr['model'].isin(correlation_df['model'].unique())]
+                merged_corr = pd.concat([prev_corr, correlation_df], ignore_index=True)
+                merged_corr.to_csv(out_corr_path, index=False)
+                print(f'\nMerged error correlation analysis into {out_corr_path}')
+            except Exception as e:
+                print('Warning: failed to merge error correlations, overwriting instead:', e)
+                correlation_df.to_csv(out_corr_path, index=False)
+        else:
+            correlation_df.to_csv(out_corr_path, index=False)
         print(f'\nWrote error correlation analysis to {out_corr_path}')
         
         print('\n=== Error Rate by Notes Length ===')

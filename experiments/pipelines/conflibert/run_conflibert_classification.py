@@ -297,7 +297,8 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                 
                 results.append({
                     # Use canonical model name to avoid duplication when the local model folder is 'conflibert'
-                    "model": "ConfliBERT",
+                    # Normalize to lowercase 'conflibert' for consistency across outputs
+                    "model": "conflibert",
                     "event_id": event_ids[idx],
                     "true_label": true_label_codes[idx],
                     "pred_label": pred_code,
