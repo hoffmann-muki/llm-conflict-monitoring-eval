@@ -4,19 +4,18 @@ COUNTERFACTUAL ANALYSIS REPORT
 Country: NGA
 Models: conflibert
 Events analyzed: 20
-Total perturbations: 247
+Total perturbations: 269
 
 KEY FINDINGS
 --------------------
 
-Most sensitive combination: conflibert to delegitimation add (flip rate: 0.211)
+Most sensitive combination: conflibert to negation (flip rate: 0.600)
 
 SENSITIVITY CLUSTERS
 --------------------
-Mixed: 11 events
-Delegitimation Add: 6 events
-Provenance Add: 2 events
-Decontextualization: 1 events
+Mixed: 14 events
+Delegitimation Add: 3 events
+Provenance Add: 3 events
 
 STATISTICAL TESTS
 -----------------

@@ -247,9 +247,31 @@ else
         --models "$CF_MODELS" --events "$CF_EVENTS"
     
     log_step "Generating counterfactual visualizations..."
+    # Resolve possible counterfactual report locations. The counterfactual
+    # analyzer writes single-model reports into a model-specific subdirectory,
+    # while multi-model or parent-level reports live in the parent results dir.
+    # Build a filename slug that matches `lib.analysis.counterfactual`'s
+    # `models_slug` generation: replace ':' -> '-', '.' -> '_', and commas -> '_'
+    MODELS_SLUG=$(echo "$CF_MODELS" | sed -E 's/:/-/g; s/\./_/g; s/,/_/g')
+    CF_FILENAME="counterfactual_analysis_${MODELS_SLUG}.json"
+    CF_PARENT_PATH="$STRATEGY_RESULTS/$CF_FILENAME"
+
+    # Build a directory-safe model slug matching `lib.core.data_helpers.model_name_to_dir_slug`
+    MODEL_DIR_SLUG=$(echo "$CF_MODELS" | sed -E 's/[^a-zA-Z0-9._]/_/g')
+    CF_MODEL_PATH="$STRATEGY_RESULTS/$MODEL_DIR_SLUG/$CF_FILENAME"
+
+    if [ -f "$CF_PARENT_PATH" ]; then
+        INPUT_PATH="$CF_PARENT_PATH"
+    elif [ -f "$CF_MODEL_PATH" ]; then
+        INPUT_PATH="$CF_MODEL_PATH"
+    else
+        log_warn "Counterfactual report not found. Tried: $CF_PARENT_PATH and $CF_MODEL_PATH"
+        log_warn "If you just ran a single-model counterfactual run, the report may be under the model subdirectory."
+        exit 1
+    fi
+
     COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
-        "$VENV_PY" -m lib.analysis.visualize_counterfactual \
-        --input "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
+        "$VENV_PY" -m lib.analysis.visualize_counterfactual --input "$INPUT_PATH"
     
     log_success "Counterfactual analysis completed"
 fi
@@ -287,7 +309,21 @@ check_file "$STRATEGY_RESULTS/error_cases_false_illegitimization.csv"
 check_file "$STRATEGY_RESULTS/error_correlations_acled_${COUNTRY}_actors.csv"
 
 if [ "$SKIP_COUNTERFACTUAL" = "false" ]; then
-    check_file "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
+    # Check parent-level and model-subdir counterfactual report filenames.
+    # Parent-level uses MODELS_SLUG where ':' -> '-' and '.' -> '_'
+    CHECK_MODELS_SLUG=$(echo "$CF_MODELS" | sed -E 's/:/-/g; s/\./_/g; s/,/_/g')
+    CHECK_FILENAME="$STRATEGY_RESULTS/counterfactual_analysis_${CHECK_MODELS_SLUG}.json"
+    MODEL_DIR_SLUG_CHECK=$(echo "$CF_MODELS" | sed -E 's/[^a-zA-Z0-9._]/_/g')
+    CHECK_MODEL_PATH="$STRATEGY_RESULTS/$MODEL_DIR_SLUG_CHECK/counterfactual_analysis_${CHECK_MODELS_SLUG}.json"
+
+    if [ -f "$CHECK_FILENAME" ]; then
+        check_file "$CHECK_FILENAME"
+    elif [ -f "$CHECK_MODEL_PATH" ]; then
+        check_file "$CHECK_MODEL_PATH"
+    else
+        # Fall back to previous (legacy) name check to avoid surprising users
+        check_file "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
+    fi
 fi
 
 echo ""

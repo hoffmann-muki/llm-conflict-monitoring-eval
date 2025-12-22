@@ -1,0 +1,21 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: CMR
+Models: olmo2:7b
+Events analyzed: 20
+Total perturbations: 285
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: olmo2:7b to negation (flip rate: 0.450)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 16 events
+Negation: 4 events
+
+STATISTICAL TESTS
+-----------------
+

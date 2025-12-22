@@ -9,9 +9,16 @@ Total perturbations: 285
 KEY FINDINGS
 --------------------
 
+Most sensitive combination: conflibert to legitimation add (flip rate: 0.300)
+
 SENSITIVITY CLUSTERS
 --------------------
-Robust: 20 events
+Mixed: 10 events
+Intensity High: 2 events
+Provenance Add: 2 events
+Legitimation Add: 3 events
+Decontextualization: 2 events
+Delegitimation Add: 1 events
 
 STATISTICAL TESTS
 -----------------

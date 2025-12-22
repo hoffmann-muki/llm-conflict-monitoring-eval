@@ -1,4 +1,10 @@
 model,label,precision,recall,f1,support
+conflibert,B,0.35802469135802467,0.8285714285714286,0.5,70
+conflibert,E,0.02631578947368421,0.25,0.047619047619047616,4
+conflibert,P,0.0,0.0,0.0,3
+conflibert,R,0.0,0.0,0.0,7
+conflibert,S,0.0,0.0,0.0,41
+conflibert,V,0.0,0.0,0.0,75
 conflibert_conflibert,B,0.35802469135802467,0.8285714285714286,0.5,70
 conflibert_conflibert,E,0.02631578947368421,0.25,0.047619047619047616,4
 conflibert_conflibert,P,0.0,0.0,0.0,3
