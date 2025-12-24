@@ -86,6 +86,9 @@ def parse_args():
     parser.add_argument('--num-examples', type=int, default=None,
                        help='Number of few-shot examples (1-5). Only used with --strategy few_shot. '
                             'Default: 1 for few_shot strategy.')
+    parser.add_argument('--model-name', default=None,
+                       help='Optional canonical model name to write into results and filename. '
+                            'If omitted, derived from --model-path basename (lowercased).')
     
     return parser.parse_args()
 
@@ -93,7 +96,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                                  sample_size: int, model_path: str,
                                  batch_size: int, max_length: int, device: str,
                                  primary_group: str | None = None, primary_share: float = 0.0,
-                                 num_examples: int | None = None):
+                                 num_examples: int | None = None, model_name: str | None = None):
     """Run ConfliBERT classification with independent stratified sampling.
     
     This function:
@@ -266,6 +269,9 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     # Create dataset and loader
     dataset = TextDataset(texts, tokenizer, max_length)
     loader = DataLoader(dataset, batch_size=batch_size)
+
+    # Determine model name to use in results rows and filename
+    derived_model_name = model_name if model_name else os.path.basename(os.path.normpath(model_path)).lower()
     
     # Run inference
     results = []
@@ -296,9 +302,8 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                 confidence = float(prob_vec[pred_id])
                 
                 results.append({
-                    # Use canonical model name to avoid duplication when the local model folder is 'conflibert'
-                    # Normalize to lowercase 'conflibert' for consistency across outputs
-                    "model": "conflibert",
+                    # Use canonical model name (derived from --model-name or model_path basename)
+                    "model": derived_model_name,
                     "event_id": event_ids[idx],
                     "true_label": true_label_codes[idx],
                     "pred_label": pred_code,
@@ -317,10 +322,10 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     _, results_dir = setup_country_environment(country_code, strategy_name, str(sample_size), num_examples)
     os.makedirs(results_dir, exist_ok=True)
     
-    # Save results
+    # Save results (include derived_model_name in filename to avoid accidental overwrites)
     out_path = os.path.join(
         results_dir,
-        f"conflibert_results_acled_{country_code}_actors.csv"
+        f"{derived_model_name}_results_acled_{country_code}_actors.csv"
     )
     res_df.to_csv(out_path, index=False)
     
@@ -376,7 +381,8 @@ def main():
         device=args.device,
         primary_group=args.primary_group,
         primary_share=args.primary_share,
-        num_examples=args.num_examples
+        num_examples=args.num_examples,
+        model_name=args.model_name
     )
 
 

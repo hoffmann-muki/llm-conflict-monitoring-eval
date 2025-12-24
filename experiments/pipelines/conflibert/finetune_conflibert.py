@@ -30,7 +30,41 @@ from typing import List
 import numpy as np
 import pandas as pd
 import torch
-from datasets import Dataset, DatasetDict
+# The repository contains a top-level `datasets/` data folder which can
+# shadow the installed Hugging Face `datasets` package when running from
+# the project root. To avoid import shadowing, temporarily remove the
+# current working directory from sys.path while importing the installed
+# `datasets` package, then restore sys.path.
+import importlib
+import sys
+import os
+
+_removed_sys_path = []
+_cwd = os.getcwd()
+# Determine repository root (three parents up from this script: experiments/pipelines/conflibert)
+try:
+    from pathlib import Path
+    _repo_root = str(Path(__file__).resolve().parents[3])
+except Exception:
+    _repo_root = None
+
+# Remove entries that would cause the local `datasets/` data folder to be found
+for _p in ('', _cwd, os.path.abspath(_cwd), _repo_root):
+    if not _p:
+        continue
+    while _p in sys.path:
+        sys.path.remove(_p)
+        _removed_sys_path.append(_p)
+
+try:
+    _hf_datasets = importlib.import_module('datasets')
+finally:
+    # restore sys.path entries we removed (preserve original order)
+    for _p in reversed(_removed_sys_path):
+        sys.path.insert(0, _p)
+
+Dataset = _hf_datasets.Dataset
+DatasetDict = _hf_datasets.DatasetDict
 from sklearn.metrics import accuracy_score, f1_score
 from transformers import (
     AutoConfig,
@@ -122,12 +156,16 @@ def run_training(
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    training_args = TrainingArguments(
+    # Build TrainingArguments kwargs in a backward/forward-compatible way:
+    # some transformers releases use 'evaluation_strategy' while others use 'eval_strategy'.
+    import inspect
+    ta_sig = inspect.signature(TrainingArguments.__init__).parameters
+
+    common_kwargs = dict(
         output_dir=out_dir,
         num_train_epochs=epochs,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_train_batch_size,
-        evaluation_strategy='epoch' if 'validation' in tokenized else 'no',
         save_strategy='epoch',
         learning_rate=learning_rate,
         weight_decay=0.01,
@@ -137,6 +175,18 @@ def run_training(
         metric_for_best_model='f1_macro',
         greater_is_better=True,
     )
+
+    # prefer the long name if supported, otherwise use the shorter alias
+    if 'evaluation_strategy' in ta_sig:
+        common_kwargs['evaluation_strategy'] = 'epoch' if 'validation' in tokenized else 'no'
+    elif 'eval_strategy' in ta_sig:
+        common_kwargs['eval_strategy'] = 'epoch' if 'validation' in tokenized else 'no'
+    else:
+        # fallback: set do_eval/do_train flags instead
+        common_kwargs['do_eval'] = 'validation' in tokenized
+        common_kwargs['do_train'] = True
+
+    training_args = TrainingArguments(**common_kwargs)
 
     trainer = Trainer(
         model=model,
