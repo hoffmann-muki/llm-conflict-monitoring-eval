@@ -2,5 +2,5 @@
     "python.analysis.extraPaths": [
         "./lib",
         "./experiments"
-    ]
+    ],
 }
