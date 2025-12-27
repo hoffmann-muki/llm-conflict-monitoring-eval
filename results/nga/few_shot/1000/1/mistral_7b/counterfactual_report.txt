@@ -1,0 +1,23 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: NGA
+Models: mistral:7b
+Events analyzed: 20
+Total perturbations: 242
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: mistral:7b to delegitimation add (flip rate: 0.256)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 17 events
+Delegitimation Add: 1 events
+Legitimation Add: 1 events
+Negation: 1 events
+
+STATISTICAL TESTS
+-----------------
+
