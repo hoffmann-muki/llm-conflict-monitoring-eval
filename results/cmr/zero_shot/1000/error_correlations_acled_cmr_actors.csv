@@ -1,10 +1,4 @@
 model,feature,feature_value,n_samples,error_rate,error_rate_diff_from_overall
-conflibert_conflibert,notes_length,very_short,2,1.0,0.27
-conflibert_conflibert,notes_length,short,388,0.7809278350515464,0.0509278350515464
-conflibert_conflibert,notes_length,medium,470,0.7106382978723405,-0.0193617021276595
-conflibert_conflibert,notes_length,long,138,0.644927536231884,-0.0850724637681159
-conflibert_conflibert,notes_length,very_long,2,1.0,0.27
-conflibert_conflibert,notes_length_continuous,correlation,1000,-0.135789628746003,1.642573363405638e-05
 gemma3:4b,notes_length,very_short,2,0.0,-0.424
 gemma3:4b,notes_length,short,388,0.4201030927835051,-0.0038969072164948
 gemma3:4b,notes_length,medium,470,0.4340425531914894,0.0100425531914893
