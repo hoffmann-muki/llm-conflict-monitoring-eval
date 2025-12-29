@@ -6,7 +6,7 @@ format used by `lib.analysis.counterfactual` (i.e. keys: `label`, `confidence`).
 
 The helper loads the tokenizer/model lazily and caches them for subsequent
 calls. It tries a few sensible default paths for the model directory and
-supports a `model_name` token like `conflibert_conflibert` produced by the
+supports a `model_name` token like `conflibert` produced by the
 ConfliBERT pipeline.
 """
 from __future__ import annotations
@@ -88,7 +88,7 @@ def run_conflibert_single(model_token: Optional[str], text: str, device: Optiona
     """Run a single text through ConfliBERT and return {'label', 'confidence'}.
 
     Args:
-        model_token: token/name from calibrated CSV (e.g., 'conflibert_conflibert')
+        model_token: token/name from calibrated CSV (e.g., 'conflibert')
         text: the event text to classify
         device: torch device string, defaults to CUDA if available else CPU
 

@@ -1,0 +1,22 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: NGA
+Models: gemma3:4b
+Events analyzed: 20
+Total perturbations: 224
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: gemma3:4b to actor substitution (flip rate: 0.571)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 17 events
+Actor Substitution: 1 events
+Delegitimation Add: 2 events
+
+STATISTICAL TESTS
+-----------------
+
