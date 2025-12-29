@@ -14,7 +14,9 @@ import pandas as pd
 import os
 import argparse
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Tuple
+from scipy.stats import binomtest
+from statsmodels.stats.proportion import proportion_confint
 
 
 def calculate_fl_fi_metrics(df: pd.DataFrame, actor_name: str) -> Dict:
@@ -70,15 +72,59 @@ def find_model_results(results_dir: Path) -> List[str]:
     return sorted(model_dirs)
 
 
+def calculate_confidence_interval(count: int, total: int) -> Tuple[float, float]:
+    """
+    Calculate Wilson score 95% confidence interval for a proportion.
+
+    Args:
+        count: Number of events
+        total: Total number of trials
+
+    Returns:
+        (lower, upper) bounds as percentages
+    """
+    if total == 0:
+        return (0.0, 0.0)
+
+    # Wilson score interval (better for small counts and extremes)
+    ci_lower, ci_upper = proportion_confint(count, total, method='wilson', alpha=0.05)
+    return (ci_lower * 100, ci_upper * 100)
+
+
+def calculate_bias_significance(fl_count: int, fi_count: int) -> Tuple[float, float, str]:
+    """
+    Test statistical significance of bias using binomial test.
+
+    Args:
+        fl_count: Number of false legitimization errors
+        fi_count: Number of false illegitimization errors
+
+    Returns:
+        (p_value, risk_ratio, interpretation)
+    """
+    total_errors = fl_count + fi_count
+
+    if total_errors == 0:
+        return (1.0, 1.0, "No errors")
+
+    # Binomial test: H0: P(FL) = P(FI) = 0.5
+    result = binomtest(fl_count, total_errors, p=0.5, alternative='two-sided')
+    p_value = result.pvalue
+
+    # Risk Ratio: εFI / εFL (requires rates, computed in calling function)
+    # We'll return just the p-value here
+    return p_value
+
+
 def calculate_total_fl_fi_metrics(df: pd.DataFrame) -> Dict:
     """
-    Calculate FL/FI metrics for entire dataset (all actors).
+    Calculate FL/FI metrics for entire dataset (all actors) with confidence intervals.
 
     Args:
         df: DataFrame with model predictions
 
     Returns:
-        Dictionary with FL/FI metrics
+        Dictionary with FL/FI metrics including CIs and statistical tests
     """
     # Count true labels
     true_v_count = len(df[df['true_label'] == 'V'])
@@ -94,6 +140,35 @@ def calculate_total_fl_fi_metrics(df: pd.DataFrame) -> Dict:
     fi_count = len(fi_cases)
     fi_pct = (fi_count / true_b_count * 100) if true_b_count > 0 else 0
 
+    # Confidence intervals
+    fl_ci = calculate_confidence_interval(fl_count, true_v_count)
+    fi_ci = calculate_confidence_interval(fi_count, true_b_count)
+
+    # Statistical significance
+    p_value = calculate_bias_significance(fl_count, fi_count)
+
+    # Risk ratio (εFI / εFL)
+    if fl_pct > 0:
+        risk_ratio = fi_pct / fl_pct
+    elif fi_pct > 0:
+        risk_ratio = float('inf')  # Infinite delegitimization bias
+    else:
+        risk_ratio = 1.0  # No errors
+
+    # Interpretation
+    if p_value >= 0.05:
+        interpretation = "No bias"
+    elif risk_ratio > 1.5:
+        interpretation = "Strong Deleg."
+    elif risk_ratio > 1.1:
+        interpretation = "Weak Deleg."
+    elif risk_ratio < 0.67:
+        interpretation = "Strong Legit."
+    elif risk_ratio < 0.91:
+        interpretation = "Weak Legit."
+    else:
+        interpretation = "No bias"
+
     # Net Bias Score (NBS): (FI% - FL%) / (FI% + FL%)
     # Range: -1 (pure legitimization) to +1 (pure illegitimization)
     sum_pct = fi_pct + fl_pct
@@ -104,8 +179,15 @@ def calculate_total_fl_fi_metrics(df: pd.DataFrame) -> Dict:
         'true_b': true_b_count,
         'fl_count': fl_count,
         'fl_pct': fl_pct,
+        'fl_ci_lower': fl_ci[0],
+        'fl_ci_upper': fl_ci[1],
         'fi_count': fi_count,
         'fi_pct': fi_pct,
+        'fi_ci_lower': fi_ci[0],
+        'fi_ci_upper': fi_ci[1],
+        'p_value': p_value,
+        'risk_ratio': risk_ratio,
+        'interpretation': interpretation,
         'nbs': nbs
     }
 
@@ -158,7 +240,7 @@ def generate_fl_fi_table(
                 'NBS': f"{metrics['nbs']:.3f}"
             })
 
-        # Add total metrics for this model
+        # Add total metrics for this model (with CIs and stats)
         total_metrics = calculate_total_fl_fi_metrics(df)
         results.append({
             'Model': model,
@@ -167,8 +249,14 @@ def generate_fl_fi_table(
             'True B': total_metrics['true_b'],
             'FL Count': total_metrics['fl_count'],
             'FL %': f"{total_metrics['fl_pct']:.2f}%",
+            'FL 95% CI': f"({total_metrics['fl_ci_lower']:.1f}-{total_metrics['fl_ci_upper']:.1f})",
             'FI Count': total_metrics['fi_count'],
             'FI %': f"{total_metrics['fi_pct']:.2f}%",
+            'FI 95% CI': f"({total_metrics['fi_ci_lower']:.1f}-{total_metrics['fi_ci_upper']:.1f})",
+            'ΔLB': f"{total_metrics['fi_pct'] - total_metrics['fl_pct']:.2f}",
+            'p-value': f"{total_metrics['p_value']:.3f}" if total_metrics['p_value'] < 0.999 else "<0.001",
+            'RR': f"{total_metrics['risk_ratio']:.2f}" if total_metrics['risk_ratio'] != float('inf') else "∞",
+            'Interpretation': total_metrics['interpretation'],
             'NBS': f"{total_metrics['nbs']:.3f}"
         })
 
