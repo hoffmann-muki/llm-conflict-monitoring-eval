@@ -1,6 +1,6 @@
 model,N,accuracy,precision_macro,recall_macro
 conflibert,2000,0.386,0.09,0.173
 llama3.2:3b,1000,0.842,0.803,0.739
-mistral:7b,1000,0.787,0.723,0.662
-olmo2:7b,1000,0.707,0.687,0.563
 gemma3:4b,1000,0.648,0.738,0.592
+olmo2:7b,1000,0.707,0.687,0.563
+mistral:7b,1000,0.787,0.723,0.662
