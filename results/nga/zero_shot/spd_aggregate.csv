@@ -1,0 +1,6 @@
+country,strategy,sample_size,file,model,target_label,n_state,n_nonstate,SPD,SPD_CI_lower,SPD_CI_upper,TPR_pvalue,FPR_pvalue
+nga,zero_shot,1000,results/nga/zero_shot/1000/fairness_metrics_acled_nga_actors.csv,llama3.2:3b,V,501,499,-0.3653934615738463,-0.4213538854155416,-0.3132735530942124,0.345,0.0
+nga,zero_shot,1000,results/nga/zero_shot/1000/fairness_metrics_acled_nga_actors.csv,gemma3:4b,V,501,499,-0.1621526486105944,-0.2241014964059856,-0.1059143236572946,0.409,0.19
+nga,zero_shot,1000,results/nga/zero_shot/1000/fairness_metrics_acled_nga_actors.csv,olmo2:7b,V,501,499,-0.2988051952207809,-0.3428952715810863,-0.24875299501198,0.0,0.0
+nga,zero_shot,1000,results/nga/zero_shot/1000/fairness_metrics_acled_nga_actors.csv,mistral:7b,V,501,499,-0.3189812759251037,-0.3691453765815063,-0.2728881915527663,0.0,0.0
+nga,zero_shot,1000,results/nga/zero_shot/1000/fairness_metrics_acled_nga_actors.csv,conflibert,V,501,499,0.0,0.0,0.0,1.0,1.0
