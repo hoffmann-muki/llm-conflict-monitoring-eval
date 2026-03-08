@@ -30,6 +30,7 @@ from lib.inference import conflibert_client
 from lib.core.data_helpers import paths_for_country, get_strategy, setup_country_environment, get_model_results_dir
 from lib.core.constants import WORKING_MODELS
 from experiments.prompting_strategies import ZeroShotStrategy
+from lib.analysis.event_ambiguity import compute_event_ambiguity_score, assign_ambiguity_tier
 import sys
 
 class PerturbationGenerator:
@@ -94,6 +95,61 @@ class PerturbationGenerator:
         
         # Generic location placeholders for decontextualization
         self.generic_locations = ['Location X', 'Location Y', 'the area', 'the region']
+
+        # ------------------------------------------------------------------ #
+        # CONTROL CONDITION: semantically neutral substitutions (CheckList-    #
+        # style invariance test; Ribeiro et al. 2020).  These swap surface     #
+        # tokens that carry no framing signal relevant to event-type           #
+        # classification, establishing a noise-floor CFR against which all     #
+        # treatment perturbation flip rates can be calibrated.                #
+        # ------------------------------------------------------------------ #
+
+        # Neutral reporting/attribution verbs — no evaluative direction.
+        # 'claimed' is intentionally excluded: in conflict-journalism English it
+        # carries an epistemic-distance / doubt connotation that would make any
+        # substitution involving it a framing perturbation rather than a control.
+        self.neutral_reporting_verbs = {
+            'said': ['stated', 'noted', 'indicated', 'mentioned'],
+            'stated': ['said', 'noted', 'indicated', 'mentioned'],
+            'reported': ['noted', 'indicated', 'documented', 'described'],
+            'noted': ['stated', 'said', 'reported', 'indicated'],
+            'confirmed': ['stated', 'reported', 'noted', 'indicated'],
+        }
+
+        # Day-of-week tokens — irrelevant to event type classification
+        self.day_substitutions = {
+            'Monday': 'Tuesday',
+            'Tuesday': 'Wednesday',
+            'Wednesday': 'Thursday',
+            'Thursday': 'Friday',
+            'Friday': 'Monday',
+            'Saturday': 'Sunday',
+            'Sunday': 'Saturday',
+        }
+
+        # Neutral temporal connectives / adverbs — no framing content
+        self.neutral_connectives = {
+            'later': 'afterwards',
+            'afterwards': 'later',
+            'while': 'during',
+            'before': 'prior to',
+            'after': 'following',
+            'then': 'subsequently',
+            'subsequently': 'then',
+            'earlier': 'previously',
+            'previously': 'earlier',
+        }
+
+        # Small cardinal number words — sub-threshold numeric changes that do
+        # not shift severity or event category (Gardner et al. 2020).
+        self.neutral_numerals = {
+            'one': 'two',
+            'two': 'three',
+            'three': 'four',
+            'four': 'five',
+            'five': 'six',
+            'six': 'seven',
+        }
     
     def compute_edit_distance_ratio(self, text1: str, text2: str) -> float:
         """Compute normalized edit distance between two texts."""
@@ -367,6 +423,93 @@ class PerturbationGenerator:
         
         return perturbations
 
+    def generate_control_perturbations(self, text: str) -> List[Dict[str, Any]]:
+        """Generate semantically neutral control perturbations.
+
+        These substitutions serve as a baseline (noise-floor) condition:
+        they change surface tokens but carry no framing signal relevant to
+        conflict-event classification.  Any treatment perturbation whose CFR
+        substantially exceeds the neutral_control CFR can be attributed to the
+        specific framing dimension under test rather than to general lexical
+        sensitivity (Ribeiro et al. 2020; Gardner et al. 2020).
+
+        Four swap families are applied; at most one substitution is made per
+        family per call so that the perturbation length is comparable to other
+        perturbation types:
+          - neutral reporting verbs  (said ↔ stated, reported ↔ noted, …)
+          - day-of-week tokens       (Monday → Tuesday, …)
+          - temporal connectives     (later → afterwards, while → during, …)
+          - small cardinal numerals  (two → three, …)
+        """
+        perturbations = []
+
+        # 1. Neutral reporting verbs
+        for original, replacements in self.neutral_reporting_verbs.items():
+            pattern = rf'\b{re.escape(original)}\b'
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                replacement = replacements[0]
+                perturbed = re.sub(pattern, replacement, text, flags=re.IGNORECASE, count=1)
+                if perturbed != text:
+                    perturbations.append({
+                        'type': 'neutral_control',
+                        'subtype': 'reporting_verb',
+                        'original': original,
+                        'replacement': replacement,
+                        'text': perturbed,
+                        'description': f'Neutral verb swap: "{original}" → "{replacement}"'
+                    })
+                    break  # one per family per event
+
+        # 2. Day-of-week substitutions
+        for day, alt_day in self.day_substitutions.items():
+            pattern = rf'\b{re.escape(day)}\b'
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                perturbed = re.sub(pattern, alt_day, text, flags=re.IGNORECASE, count=1)
+                if perturbed != text:
+                    perturbations.append({
+                        'type': 'neutral_control',
+                        'subtype': 'day_of_week',
+                        'original': day,
+                        'replacement': alt_day,
+                        'text': perturbed,
+                        'description': f'Neutral day swap: "{day}" → "{alt_day}"'
+                    })
+                    break
+
+        # 3. Temporal connectives
+        for original, replacement in self.neutral_connectives.items():
+            pattern = rf'\b{re.escape(original)}\b'
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                perturbed = re.sub(pattern, replacement, text, flags=re.IGNORECASE, count=1)
+                if perturbed != text:
+                    perturbations.append({
+                        'type': 'neutral_control',
+                        'subtype': 'temporal_connective',
+                        'original': original,
+                        'replacement': replacement,
+                        'text': perturbed,
+                        'description': f'Neutral connective swap: "{original}" → "{replacement}"'
+                    })
+                    break
+
+        # 4. Small cardinal numerals
+        for original, replacement in self.neutral_numerals.items():
+            pattern = rf'\b{re.escape(original)}\b'
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                perturbed = re.sub(pattern, replacement, text, flags=re.IGNORECASE, count=1)
+                if perturbed != text:
+                    perturbations.append({
+                        'type': 'neutral_control',
+                        'subtype': 'cardinal_numeral',
+                        'original': original,
+                        'replacement': replacement,
+                        'text': perturbed,
+                        'description': f'Neutral numeral swap: "{original}" → "{replacement}"'
+                    })
+                    break
+
+        return perturbations
+
     def generate_all_perturbations(self, text: str, max_per_type: int = 3) -> List[Dict[str, Any]]:
         """Generate all types of perturbations for a given text with validation."""
         all_perturbations = []
@@ -380,7 +523,8 @@ class PerturbationGenerator:
             self.generate_sufficiency_perturbations,
             self.generate_legitimation_perturbations,
             self.generate_provenance_perturbations,
-            self.generate_decontextualization_perturbations
+            self.generate_decontextualization_perturbations,
+            self.generate_control_perturbations,  # neutral baseline condition
         ]
         
         for generator in generators:
@@ -497,6 +641,38 @@ class CounterfactualAnalyzer:
                     'label': model_results.iloc[0]['pred_label'],
                     'confidence': model_results.iloc[0]['pred_conf_temp']
                 }
+
+        # ------------------------------------------------------------------
+        # Event Ambiguity Score (EAS)
+        # Prefer pre-computed columns from top_disagreements.csv (written by
+        # per_class_metrics.py).  If absent, compute on-the-fly from the
+        # original model predictions captured above.
+        # ------------------------------------------------------------------
+        if 'ambiguity_score' in event_row and pd.notna(event_row.get('ambiguity_score')):
+            ambiguity_score = float(event_row['ambiguity_score'])
+            ambiguity_tier  = str(event_row.get('ambiguity_tier', assign_ambiguity_tier(ambiguity_score)))
+            eas_components  = {
+                k: event_row.get(k)
+                for k in ['eas_label_entropy', 'eas_conf_uncertainty',
+                          'eas_conf_dispersion', 'eas_text_ambiguity']
+            }
+        else:
+            model_labels = [v['label']      for v in original_preds.values()]
+            model_probs  = [v['confidence'] for v in original_preds.values()]
+            eas = compute_event_ambiguity_score(
+                notes=original_text,
+                actor_norm=event_row.get('actor_norm'),
+                model_labels=model_labels,
+                model_probs=model_probs,
+            )
+            ambiguity_score = eas['ambiguity_score']
+            ambiguity_tier  = eas['ambiguity_tier']
+            eas_components  = {
+                'eas_label_entropy':    eas['eas_label_entropy'],
+                'eas_conf_uncertainty': eas['eas_conf_uncertainty'],
+                'eas_conf_dispersion':  eas['eas_conf_dispersion'],
+                'eas_text_ambiguity':   eas['eas_text_ambiguity'],
+            }
         
         # Generate perturbations
         perturbations = self.perturbation_generator.generate_all_perturbations(original_text)
@@ -506,6 +682,9 @@ class CounterfactualAnalyzer:
             'original_text': original_text,
             'true_label': true_label,
             'original_predictions': original_preds,
+            'ambiguity_score': ambiguity_score,
+            'ambiguity_tier': ambiguity_tier,
+            'eas_components': eas_components,
             'perturbations': []
         }
         
@@ -567,7 +746,44 @@ class CounterfactualAnalyzer:
                     }
         
         return summary
-    
+
+    def compute_flip_metrics_by_ambiguity_tier(
+        self, results: List[Dict[str, Any]]
+    ) -> Dict[str, Dict]:
+        """Compute CFR stratified by Event Ambiguity Tier (High / Medium / Low).
+
+        This is the core targeted error-analysis output.  Comparing CFR values
+        across tiers allows the analyst to distinguish:
+
+          Low-ambiguity, high CFR  → model-induced bias (framing cue causes
+                                     flip on an event the task unambiguously
+                                     prescribes a single label for).
+          High-ambiguity, high CFR → task-inherent uncertainty (both the human
+                                     coder and the model face a genuine
+                                     boundary case; the perturbation tips an
+                                     already unstable decision).
+
+        Returns a dict keyed by tier ('High', 'Medium', 'Low', 'all'), each
+        value having the same structure as compute_flip_metrics().
+        """
+        tiers = ['High', 'Medium', 'Low']
+        tier_results: Dict[str, List] = {t: [] for t in tiers}
+        tier_results['all'] = results
+
+        for event_result in results:
+            tier = event_result.get('ambiguity_tier', 'Low')
+            if tier in tier_results:
+                tier_results[tier].append(event_result)
+
+        stratified: Dict[str, Any] = {}
+        for tier, subset in tier_results.items():
+            stratified[tier] = {
+                'n_events': len(subset),
+                'flip_metrics': self.compute_flip_metrics(subset) if subset else {}
+            }
+
+        return stratified
+
     def compute_counterfactual_differential_effect(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Compute Counterfactual Differential Effect (CDE) with statistical tests.
         CDE: Average change in predicted probability across counterfactuals per perturbation type."""
@@ -788,21 +1004,39 @@ class CounterfactualAnalyzer:
         quality_metrics = self.compute_perturbation_quality_metrics(results)
         test_results = self.statistical_tests(results)
         clusters = self.cluster_sensitivity_patterns(results)
-        
+
+        # Stratified CFR by ambiguity tier — core targeted error-analysis output.
+        # Enables separation of model-induced bias (low-ambiguity events with high CFR)
+        # from task-inherent uncertainty (high-ambiguity boundary cases).
+        stratified_cfr = self.compute_flip_metrics_by_ambiguity_tier(results)
+
+        # Ambiguity tier distribution across the analysed events
+        tier_counts: Dict[str, int] = {'High': 0, 'Medium': 0, 'Low': 0}
+        for r in results:
+            t = r.get('ambiguity_tier', 'Low')
+            tier_counts[t] = tier_counts.get(t, 0) + 1
+
         report = {
             'metadata': {
                 'country': self.country,
                 'models': self.models,
                 'n_events': len(results),
-                'n_perturbations_total': sum(len(r['perturbations']) for r in results)
+                'n_perturbations_total': sum(len(r['perturbations']) for r in results),
+                'ambiguity_tier_distribution': tier_counts,
             },
             'counterfactual_flip_rate_CFR': flip_metrics,
+            'counterfactual_flip_rate_by_ambiguity_tier': stratified_cfr,
             'counterfactual_differential_effect_CDE': cde_metrics,
             'perturbation_quality': quality_metrics,
             'statistical_tests': test_results,
             'sensitivity_clusters': clusters,
             'detailed_results': results
         }
+
+        # Print a quick ambiguity summary for immediate visibility
+        print(f"\nAmbiguity tier distribution across {len(results)} events:")
+        for tier, count in tier_counts.items():
+            print(f"  {tier:6s}: {count:3d}  ({100*count/max(len(results),1):.0f}%)")
 
         # Backwards-compatible alias expected by visualization utilities.
         # The visualizer expects a structure `flip_metrics[pert_type][model]` with
@@ -817,7 +1051,7 @@ class CounterfactualAnalyzer:
                     'flip_rate': metrics.get('counterfactual_flip_rate_CFR', metrics.get('flip_rate', 0.0)),
                     'n_perturbations': metrics.get('n_perturbations', 0),
                     'mean_confidence_delta': metrics.get('mean_confidence_delta', 0.0),
-                    'mean_abs_confidence_delta': metrics.get('mean_abs_confidence_delta', metrics.get('mean_abs_confidence_delta', 0.0))
+                    'mean_abs_confidence_delta': metrics.get('mean_abs_confidence_delta', 0.0),
                 }
 
         report['flip_metrics'] = aliased

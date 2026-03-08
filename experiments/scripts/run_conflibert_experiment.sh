@@ -341,7 +341,35 @@ else
     else
         log_warn "Counterfactual output file not found"
     fi
-    
+
+    # Aggregate word-level impact scores across all perturbation types
+    # (including newly added neutral_control baseline).  Non-critical.
+    log_step "Aggregating word-level impact scores across perturbation types..."
+    if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+        "$VENV_PY" -m lib.analysis.aggregate_word_impacts_from_counterfactuals; then
+        log_success "Word impact aggregation complete"
+        log_step "Visualizing word impacts by perturbation type..."
+        if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+            "$VENV_PY" -m lib.analysis.visualize_word_impacts_by_perturbation; then
+            log_success "Word impact visualizations generated"
+        else
+            log_warn "Word impact visualization failed (non-critical)"
+        fi
+    else
+        log_warn "Word impact aggregation failed (non-critical)"
+    fi
+
+    # Error trace: Layer Integrated Gradients (ConfliBERT).
+    # RFC rationale analysis is skipped for encoder-only models.
+    # Reads the counterfactual JSON already on disk; non-critical.
+    log_step "Running error trace analysis (LIG attribution)..."
+    if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+        "$VENV_PY" -m lib.analysis.error_trace; then
+        log_success "Error trace analysis complete"
+    else
+        log_warn "Error trace analysis failed (non-critical)"
+    fi
+
     log_success "Counterfactual analysis completed"
 fi
 
@@ -383,6 +411,11 @@ if [ "$SKIP_COUNTERFACTUAL" = "false" ]; then
     if [ -n "$CF_OUTPUT" ]; then
         check_file "$CF_OUTPUT"
     fi
+    check_file "$STRATEGY_RESULTS/word_impacts.csv"
+    check_file "$STRATEGY_RESULTS/fig_word_impact_scatter_by_perturbation.png"
+    check_file "$STRATEGY_RESULTS/fig_word_impact_bars_by_perturbation.png"
+    check_file "$STRATEGY_RESULTS/error_trace_report.json"
+    check_file "$STRATEGY_RESULTS/error_trace_summary.csv"
 fi
 
 echo ""

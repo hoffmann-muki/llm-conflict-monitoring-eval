@@ -84,6 +84,109 @@ def _load_model(model_dir: str, device: str = 'cpu'):
     return tokenizer, model, device
 
 
+def run_conflibert_with_attribution(
+    model_token: Optional[str],
+    text: str,
+    n_steps: int = 50,
+    device: Optional[str] = None,
+) -> Optional[dict]:
+    """Run ConfliBERT inference and compute Layer Integrated Gradients attribution.
+
+    Uses Captum's ``LayerIntegratedGradients`` against the model's embedding
+    layer, with an all-[PAD] baseline (token id 0).  Attribution scores are
+    summed over the embedding dimension to yield a scalar per subword token.
+
+    References
+    ----------
+    Sundararajan, Taly & Yan (2017).  Axiomatic Attribution for Deep Networks.
+        ICML 2017.
+
+    Args:
+        model_token: ConfliBERT model identifier (e.g. 'conflibert').
+        text:        Event text to classify and attribute.
+        n_steps:     Number of Riemann-sum approximation steps for IG.
+                     50 is adequate for token-level attribution; use 100 for
+                     publication-quality figures.
+        device:      Torch device string; defaults to CUDA if available.
+
+    Returns:
+        dict with keys:
+            label           str           Predicted ACLED event type code.
+            confidence      float         Softmax probability of predicted class.
+            pred_class_idx  int           Index of predicted class in id_to_code.
+            tokens          List[str]     Subword tokens (including special tokens).
+            attributions    List[float]   Per-token attribution scores (same length
+                                          as ``tokens``), summed over embedding dim.
+            convergence_delta float       IG convergence diagnostic (should be
+                                          close to 0; large values indicate
+                                          insufficient n_steps).
+        Returns None if model loading or inference fails.
+    """
+    try:
+        device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        model_dir = _resolve_model_dir(model_token)
+        tokenizer, model, dev = _load_model(model_dir, device)
+
+        enc = tokenizer(
+            text,
+            truncation=True,
+            padding=True,
+            return_tensors='pt',
+        )
+        input_ids      = enc['input_ids'].to(dev)
+        attention_mask = enc['attention_mask'].to(dev)
+
+        # Determine predicted class (forward pass without gradient tracking)
+        with torch.no_grad():
+            outputs    = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits_np  = outputs.logits.detach().cpu().numpy().squeeze(0)
+        exp_logits  = np.exp(logits_np - np.max(logits_np))
+        probs        = exp_logits / exp_logits.sum()
+        pred_class_idx = int(np.argmax(probs))
+
+        # Forward function over raw inputs (LayerIntegratedGradients interpolates
+        # the embedding layer's output, so input_ids remain as-is here)
+        def _forward(ids, mask):
+            out = model(input_ids=ids, attention_mask=mask)
+            return out.logits
+
+        lig = LayerIntegratedGradients(_forward, model.get_input_embeddings())
+
+        # Baseline: all [PAD] tokens (index 0 for both BERT and RoBERTa variants)
+        baseline_ids = torch.zeros_like(input_ids)
+
+        attributions, convergence_delta = lig.attribute(
+            inputs=input_ids,
+            baselines=baseline_ids,
+            additional_forward_args=(attention_mask,),
+            target=pred_class_idx,
+            n_steps=n_steps,
+            return_convergence_delta=True,
+        )
+
+        # Sum over embedding dimension → scalar per token; detach before numpy
+        token_scores = (
+            attributions.sum(dim=-1).squeeze(0).detach().cpu().numpy().tolist()
+        )
+        tokens = tokenizer.convert_ids_to_tokens(input_ids.squeeze(0).tolist())
+
+        id_to_code = _build_id_mappings()
+        label      = id_to_code.get(pred_class_idx, 'INVALID')
+        confidence = float(probs[pred_class_idx])
+
+        return {
+            'label':             label,
+            'confidence':        confidence,
+            'pred_class_idx':    pred_class_idx,
+            'tokens':            tokens,
+            'attributions':      [round(float(s), 6) for s in token_scores],
+            'convergence_delta': float(convergence_delta.mean().item()),
+        }
+
+    except Exception:
+        return None
+
+
 def run_conflibert_single(model_token: Optional[str], text: str, device: Optional[str] = None) -> dict:
     """Run a single text through ConfliBERT and return {'label', 'confidence'}.
 

@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 """
-Aggregate word impacts across multiple models from zero-shot counterfactual analysis.
+Aggregate word impacts across multiple models from counterfactual analysis.
 
 This script:
-1. Loads counterfactual JSON files from zero_shot results
-2. Extracts word impacts from each model
+1. Loads counterfactual JSON files from the results directory
+2. Extracts word/phrase impact rows from each model's detailed_results
 3. Aggregates statistics across all models
 4. Computes p-values using t-tests
 5. Saves aggregated CSV for figure generation
 
-Usage:
-    python lib/analysis/aggregate_word_impacts.py
+Usage (via pipeline scripts with env vars):
+    COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=1000 python -m lib.analysis.aggregate_word_impacts_from_counterfactuals
 
 Output:
-    results/cmr/explainable/1000/word_impacts.csv
+    results/{country}/{strategy}/{sample_size}/word_impacts.csv
 """
 
+import os
+import re
+import glob
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -24,9 +27,92 @@ import json
 from typing import List, Dict, Tuple
 import sys
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from analysis.plot_word_impact import WordImpactAnalyzer
+
+class WordImpactAnalyzer:
+    """Extract per-word/-phrase impact rows from counterfactual detailed_results.
+
+    For each perturbation in a counterfactual JSON's 'detailed_results' section,
+    this class extracts the tokens that were modified (the 'original' and
+    'replacement' surface strings) and associates them with the confidence_delta
+    and label_flipped values produced by the given model.  The result is a
+    flat DataFrame suitable for cross-model aggregation.
+    """
+
+    # Category label used for perturbations that don't carry a specific word token
+    # (e.g. legitimation/provenance additions insert whole phrases)
+    PHRASE_CATEGORY = 'phrase'
+
+    def extract_word_impacts(self, detailed_results: list, model_name: str) -> pd.DataFrame:
+        """Extract word-level impact rows from one model's counterfactual results.
+
+        Args:
+            detailed_results: List of event-level dicts from counterfactual JSON.
+            model_name:       Model key used in 'model_results' sub-dicts.
+
+        Returns:
+            DataFrame with columns:
+                word, category, confidence_delta, label_flipped, event_id, model
+        """
+        rows = []
+        for event in detailed_results:
+            event_id = event.get('event_id', '')
+            for pert_result in event.get('perturbations', []):
+                pert = pert_result.get('perturbation', {})
+                pert_type = pert.get('type', 'unknown')
+                model_res = pert_result.get('model_results', {}).get(model_name, {})
+
+                if not model_res.get('success', False):
+                    continue
+                if 'confidence_delta' not in model_res:
+                    continue
+
+                conf_delta = float(model_res['confidence_delta'])
+                flipped = bool(model_res.get('label_flipped', False))
+
+                # Extract the modified token(s) from the perturbation dict.
+                # Different generator types store the token under different keys.
+                tokens = self._extract_tokens(pert)
+                for word, category in tokens:
+                    rows.append({
+                        'word': word,
+                        'category': category if category else pert_type,
+                        'confidence_delta': conf_delta,
+                        'label_flipped': flipped,
+                        'event_id': event_id,
+                        'model': model_name,
+                    })
+
+        return pd.DataFrame(rows) if rows else pd.DataFrame(
+            columns=['word', 'category', 'confidence_delta', 'label_flipped', 'event_id', 'model']
+        )
+
+    @staticmethod
+    def _extract_tokens(pert: dict) -> List[Tuple[str, str]]:
+        """Return a list of (token_string, category) pairs from a perturbation dict."""
+        pert_type = pert.get('type', 'unknown')
+        tokens = []
+
+        # Substitution-style perturbations: have explicit 'original' and 'replacement'
+        if 'original' in pert and 'replacement' in pert:
+            tokens.append((str(pert['replacement']), pert_type))
+            return tokens
+
+        # Phrase-insertion perturbations (legitimation_add, delegitimation_add,
+        # provenance_add, neutral_control) carry the phrase under a key like
+        # 'phrase', 'source', or 'modifier'.
+        for key in ('phrase', 'source', 'modifier'):
+            if key in pert:
+                # Use first 5 words as the representative token to keep CSV readable
+                phrase = ' '.join(str(pert[key]).split()[:5])
+                tokens.append((phrase, pert_type))
+                return tokens
+
+        # Fallback: use description text up to first comma
+        desc = pert.get('description', '')
+        if desc:
+            token = desc.split(',')[0].strip()
+            tokens.append((token, pert_type))
+        return tokens
 
 
 def aggregate_across_models(word_dfs: List[pd.DataFrame]) -> pd.DataFrame:
@@ -92,26 +178,53 @@ def aggregate_across_models(word_dfs: List[pd.DataFrame]) -> pd.DataFrame:
 
 
 def main():
-    """Generate aggregated word impacts from zero-shot counterfactual data."""
+    """Generate aggregated word impacts from counterfactual data.
 
-    # Paths
-    zero_shot_dir = Path("results/cmr/zero_shot/1000")
-    output_file = Path("results/cmr/zero_shot/1000/word_impacts.csv")
+    Reads COUNTRY, STRATEGY, SAMPLE_SIZE, NUM_EXAMPLES from environment to
+    construct the results directory path, then auto-discovers all model
+    subdirectories that contain a counterfactual JSON file.
+    """
+    country     = os.environ.get('COUNTRY',     'cmr')
+    strategy    = os.environ.get('STRATEGY',    'zero_shot')
+    sample_size = os.environ.get('SAMPLE_SIZE', '1000')
+    num_examples = os.environ.get('NUM_EXAMPLES')
 
-    # Models to include (matching perturbation table)
-    models = ['mistral_7b', 'llama3.2_3b', 'olmo2_7b', 'gemma3_4b']
+    if strategy == 'few_shot' and num_examples:
+        results_base = Path(f"results/{country}/{strategy}/{sample_size}/{num_examples}")
+    else:
+        results_base = Path(f"results/{country}/{strategy}/{sample_size}")
+
+    output_file = results_base / 'word_impacts.csv'
+
+    # Auto-discover model directories that contain a counterfactual JSON
+    json_pattern = str(results_base / '*' / 'counterfactual_analysis_*.json')
+    json_files   = sorted(glob.glob(json_pattern))
+
+    if not json_files:
+        print(f"No counterfactual JSON files found under {results_base}/*/")
+        print("Run counterfactual analysis first.")
+        sys.exit(0)
+
+    # Map model_dir_slug -> json_path (one JSON per model directory)
+    model_json_map: Dict[str, Path] = {}
+    for jf in json_files:
+        model_dir = Path(jf).parent.name
+        if model_dir not in model_json_map:    # keep first match per directory (lexicographic order)
+            model_json_map[model_dir] = Path(jf)
+
+    models = list(model_json_map.keys())
 
     print("=" * 80)
     print("AGGREGATING WORD IMPACTS ACROSS MODELS")
     print("=" * 80)
-    print(f"\nSource: {zero_shot_dir}")
+    print(f"\nSource: {results_base}")
     print(f"Models: {', '.join(models)}\n")
 
     analyzer = WordImpactAnalyzer()
     all_word_dfs = []
 
     for model_dir in models:
-        json_file = zero_shot_dir / model_dir / f"counterfactual_analysis_{model_dir.replace('_', '-').replace('.', '_')}.json"
+        json_file = model_json_map[model_dir]
 
         if not json_file.exists():
             print(f"⚠ Skipping {model_dir}: JSON not found")

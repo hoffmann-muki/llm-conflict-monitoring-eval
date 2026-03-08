@@ -288,6 +288,35 @@ run_counterfactual_analysis() {
         else
             log_warn "Counterfactual output file not found"
         fi
+
+        # Aggregate word-level impact scores across all perturbation types
+        # (including newly added neutral_control baseline).  Non-critical.
+        log_step "Aggregating word-level impact scores across perturbation types..."
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+            "${VENV_PY:-python}" -m lib.analysis.aggregate_word_impacts_from_counterfactuals; then
+            log_success "Word impact aggregation complete"
+            log_step "Visualizing word impacts by perturbation type..."
+            if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+                "${VENV_PY:-python}" -m lib.analysis.visualize_word_impacts_by_perturbation; then
+                log_success "Word impact visualizations generated"
+            else
+                log_warn "Word impact visualization failed (non-critical)"
+            fi
+        else
+            log_warn "Word impact aggregation failed (non-critical)"
+        fi
+
+        # Error trace: Rationale-Flip Concordance (Ollama) and/or Layer
+        # Integrated Gradients (ConfliBERT) — non-critical post-processing.
+        # Reads the counterfactual JSON already on disk; re-invokes LLMs only
+        # for flipped events (bounded by MAX_RATIONALE_EVENTS in error_trace.py).
+        log_step "Running error trace analysis (RFC / LIG attribution)..."
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+            "${VENV_PY:-python}" -m lib.analysis.error_trace; then
+            log_success "Error trace analysis complete"
+        else
+            log_warn "Error trace analysis failed (non-critical)"
+        fi
     else
         log_warn "Counterfactual analysis failed (non-critical)"
     fi
@@ -357,7 +386,7 @@ generate_summary() {
     [ -f "${RESULTS_DIR}/error_correlations_acled_${COUNTRY}_actors.csv" ] && \
         echo " error_correlations_acled_${COUNTRY}_actors.csv (notes length correlation)"
     [ -f "${RESULTS_DIR}/top_disagreements.csv" ] && \
-        echo " top_disagreements.csv (high-confidence disagreements)"
+        echo " top_disagreements.csv (high-confidence disagreements + EAS ambiguity tier)"
     [ -f "${RESULTS_DIR}/error_cases_false_legitimization.csv" ] && \
         echo " error_cases_false_legitimization.csv (N≤200 error samples)"
     [ -f "${RESULTS_DIR}/error_cases_false_illegitimization.csv" ] && \
@@ -368,9 +397,19 @@ generate_summary() {
     CF_JSON=$(find "${RESULTS_DIR}" -name "counterfactual_analysis_*.json" -type f 2>/dev/null | head -1)
     CF_CSV=$(find "${RESULTS_DIR}" -name "counterfactual_analysis_*_summary.csv" -type f 2>/dev/null | head -1)
     [ -n "$CF_JSON" ] && [ -f "$CF_JSON" ] && \
-        echo " $(basename "$CF_JSON") (CFR, CDE, validity metrics)"
+        echo " $(basename "$CF_JSON") (CFR, CDE, stratified CFR by ambiguity tier)"
     [ -n "$CF_CSV" ] && [ -f "$CF_CSV" ] && \
         echo " $(basename "$CF_CSV") (summary table)"
+    [ -f "${RESULTS_DIR}/word_impacts.csv" ] && \
+        echo " word_impacts.csv (word-level CFR + confidence delta across perturbation types)"
+    [ -f "${RESULTS_DIR}/fig_word_impact_scatter_by_perturbation.png" ] && \
+        echo " fig_word_impact_scatter_by_perturbation.png"
+    [ -f "${RESULTS_DIR}/fig_word_impact_bars_by_perturbation.png" ] && \
+        echo " fig_word_impact_bars_by_perturbation.png"
+    [ -f "${RESULTS_DIR}/error_trace_report.json" ] && \
+        echo " error_trace_report.json (RFC concordance + LIG attribution, by EAS tier)"
+    [ -f "${RESULTS_DIR}/error_trace_summary.csv" ] && \
+        echo " error_trace_summary.csv"
     
     echo ""
     echo "Visualizations:"

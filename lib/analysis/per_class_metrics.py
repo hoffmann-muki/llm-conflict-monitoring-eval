@@ -17,6 +17,7 @@ import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 from lib.core.data_helpers import setup_country_environment
 from lib.analysis.auto_annotate import auto_annotate_dataframe
+from lib.analysis.event_ambiguity import annotate_disagreements_with_ambiguity
 
 # Module-level constants (no side effects)
 # TOP_N can be overridden via environment variable for counterfactual analysis
@@ -83,6 +84,17 @@ def main():
 
     disagreements = wide[wide["disagreement_count"] > 1].copy()
     disagreements = disagreements.sort_values(by=["max_confidence"], ascending=False)
+
+    # Annotate every disagreement event with an Event Ambiguity Score (EAS).
+    # This stratifies events by task-inherent uncertainty (aleatoric) vs.
+    # model-induced instability (epistemic), enabling targeted error analysis
+    # that distinguishes genuine boundary cases (e.g. unidentified armed groups
+    # at the V/B boundary) from clear-cut events where model bias is operative.
+    # See lib/analysis/event_ambiguity.py for the full methodology.
+    try:
+        disagreements = annotate_disagreements_with_ambiguity(disagreements)
+    except Exception as e:
+        print(f"Warning: ambiguity annotation failed ({e}) — proceeding without EAS columns.")
 
     topn = disagreements.head(TOP_N)
     topn.reset_index(inplace=True)

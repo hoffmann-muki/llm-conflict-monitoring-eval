@@ -10,6 +10,14 @@ from .auto_annotate import (
     auto_annotate_dataframe,
 )
 
+from .event_ambiguity import (
+    compute_event_ambiguity_score,
+    assign_ambiguity_tier,
+    annotate_disagreements_with_ambiguity,
+)
+
+from .error_trace import ErrorTraceAnalyzer
+
 __all__ = [
     'classify_provenance',
     'classify_verb_intensity',
@@ -18,4 +26,8 @@ __all__ = [
     'detect_ambiguous_actor',
     'auto_annotate_row',
     'auto_annotate_dataframe',
+    'compute_event_ambiguity_score',
+    'assign_ambiguity_tier',
+    'annotate_disagreements_with_ambiguity',
+    'ErrorTraceAnalyzer',
 ]

@@ -6,12 +6,14 @@ Uses the actual 7 perturbation types from counterfactual analysis instead of
 collapsing into 3 arbitrary categories (legitimizing/delegitimizing/neutral).
 """
 
+import os
+import glob
+import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-import json
 
 # Styling
 try:
@@ -278,29 +280,52 @@ def plot_ranked_bars_by_perturbation(word_impacts_csv: Path,
 
 
 def main():
-    """Generate both visualizations."""
+    """Generate both word-impact visualizations.
 
-    base_dir = Path("results/cmr/zero_shot/1000")
+    Reads COUNTRY, STRATEGY, SAMPLE_SIZE, NUM_EXAMPLES from environment to
+    locate results directory, word_impacts.csv, and any counterfactual JSON.
+    """
+    country      = os.environ.get('COUNTRY',     'cmr')
+    strategy     = os.environ.get('STRATEGY',    'zero_shot')
+    sample_size  = os.environ.get('SAMPLE_SIZE', '1000')
+    num_examples = os.environ.get('NUM_EXAMPLES')
 
-    word_impacts_csv = base_dir / "word_impacts.csv"
-    counterfactual_json = base_dir / "mistral_7b" / "counterfactual_analysis_mistral-7b.json"
+    if strategy == 'few_shot' and num_examples:
+        base_dir = Path(f"results/{country}/{strategy}/{sample_size}/{num_examples}")
+    else:
+        base_dir = Path(f"results/{country}/{strategy}/{sample_size}")
 
-    output_scatter = base_dir / "fig_word_impact_scatter_by_perturbation.png"
-    output_bars = base_dir / "fig_word_impact_bars_by_perturbation.png"
+    word_impacts_csv = base_dir / 'word_impacts.csv'
+    if not word_impacts_csv.exists():
+        print(f"word_impacts.csv not found at {word_impacts_csv}")
+        print("Run aggregate_word_impacts_from_counterfactuals first.")
+        return
+
+    # Find any counterfactual JSON for the scatter-plot reference colours
+    json_candidates = sorted(glob.glob(str(base_dir / '*' / 'counterfactual_analysis_*.json')))
+    if not json_candidates:
+        print(f"No counterfactual JSON found under {base_dir}; skipping visualizations.")
+        return
+    counterfactual_json = Path(json_candidates[0])
+
+    output_scatter = base_dir / 'fig_word_impact_scatter_by_perturbation.png'
+    output_bars    = base_dir / 'fig_word_impact_bars_by_perturbation.png'
 
     print("Generating word impact visualizations by perturbation type...\n")
+    print(f"  Source:  {word_impacts_csv}")
+    print(f"  JSON ref: {counterfactual_json}\n")
 
     # Scatter plot
     plot_scatter_by_perturbation(word_impacts_csv, counterfactual_json,
-                                  output_scatter, min_n=20)
+                                  output_scatter, min_n=5)
 
     # Bar chart
     plot_ranked_bars_by_perturbation(word_impacts_csv, counterfactual_json,
-                                       output_bars, min_n=20)
+                                       output_bars, min_n=5)
 
     print("\n✓ Complete! Generated:")
-    print(f"  - {output_scatter.name}")
-    print(f"  - {output_bars.name}")
+    print(f"  - {output_scatter}")
+    print(f"  - {output_bars}")
 
 
 if __name__ == "__main__":

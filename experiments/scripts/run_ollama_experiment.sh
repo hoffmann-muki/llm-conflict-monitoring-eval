@@ -272,7 +272,36 @@ else
 
     COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
         "$VENV_PY" -m lib.analysis.visualize_counterfactual --input "$INPUT_PATH"
-    
+
+    # Aggregate word-level impact scores across all perturbation types
+    # (including newly added neutral_control baseline).  Non-critical.
+    log_step "Aggregating word-level impact scores across perturbation types..."
+    if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+        "$VENV_PY" -m lib.analysis.aggregate_word_impacts_from_counterfactuals; then
+        log_success "Word impact aggregation complete"
+        log_step "Visualizing word impacts by perturbation type..."
+        if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+            "$VENV_PY" -m lib.analysis.visualize_word_impacts_by_perturbation; then
+            log_success "Word impact visualizations generated"
+        else
+            log_warn "Word impact visualization failed (non-critical)"
+        fi
+    else
+        log_warn "Word impact aggregation failed (non-critical)"
+    fi
+
+    # Error trace: Rationale-Flip Concordance (Ollama) and/or Layer
+    # Integrated Gradients (ConfliBERT) — non-critical post-processing.
+    # Reads the counterfactual JSON already on disk; re-invokes LLMs only
+    # for flipped events (bounded by MAX_RATIONALE_EVENTS in error_trace.py).
+    log_step "Running error trace analysis (RFC / LIG attribution)..."
+    if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+        "$VENV_PY" -m lib.analysis.error_trace; then
+        log_success "Error trace analysis complete"
+    else
+        log_warn "Error trace analysis failed (non-critical)"
+    fi
+
     log_success "Counterfactual analysis completed"
 fi
 
@@ -324,6 +353,11 @@ if [ "$SKIP_COUNTERFACTUAL" = "false" ]; then
         # Fall back to previous (legacy) name check to avoid surprising users
         check_file "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
     fi
+    check_file "$STRATEGY_RESULTS/word_impacts.csv"
+    check_file "$STRATEGY_RESULTS/fig_word_impact_scatter_by_perturbation.png"
+    check_file "$STRATEGY_RESULTS/fig_word_impact_bars_by_perturbation.png"
+    check_file "$STRATEGY_RESULTS/error_trace_report.json"
+    check_file "$STRATEGY_RESULTS/error_trace_summary.csv"
 fi
 
 echo ""
