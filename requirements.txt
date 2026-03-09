@@ -26,3 +26,5 @@ wheel==0.45.1
 transformers>=4.20
 datasets
 accelerate>=0.26.0
+peft>=0.4.0
+captum>=0.6.0
