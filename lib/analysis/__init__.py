@@ -16,7 +16,10 @@ from .event_ambiguity import (
     annotate_disagreements_with_ambiguity,
 )
 
-from .error_trace import ErrorTraceAnalyzer
+try:
+    from .error_trace import ErrorTraceAnalyzer
+except Exception:
+    ErrorTraceAnalyzer = None
 
 __all__ = [
     'classify_provenance',
@@ -29,5 +32,7 @@ __all__ = [
     'compute_event_ambiguity_score',
     'assign_ambiguity_tier',
     'annotate_disagreements_with_ambiguity',
-    'ErrorTraceAnalyzer',
 ]
+
+if ErrorTraceAnalyzer is not None:
+    __all__.append('ErrorTraceAnalyzer')
