@@ -144,6 +144,7 @@ def run_training(
     per_device_train_batch_size: int = 8,
     learning_rate: float = 5e-5,
     fp16: bool = True,
+    warmup_head_epochs: int = 1,
 ):
     label_list = EVENT_CLASSES_FULL
     ds, label2id, id2label = prepare_datasets(train_csvs, val_csvs, label_list)
@@ -167,11 +168,58 @@ def run_training(
 
     config = AutoConfig.from_pretrained(model_path, num_labels=len(label_list), id2label=id2label, label2id=label2id, local_files_only=local_files_only)
     tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=local_files_only)
-    model = AutoModelForSequenceClassification.from_pretrained(model_path, config=config, local_files_only=local_files_only)
+    # Allow loading when the checkpoint's classification head has a different size
+    # (e.g., pretrained model was trained for 2 labels but we need 6). In that
+    # case, Transformers will skip mismatched parameters and we will train a
+    # fresh classification head for our `num_labels`.
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_path,
+        config=config,
+        local_files_only=local_files_only,
+        ignore_mismatched_sizes=True,
+    )
 
     tokenized = ds.map(lambda x: tokenize_fn(x, tokenizer), batched=True)
 
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+    # ---------------------------------------------------------------------------
+    # Stage 1 (optional): Warm up the new classification head with backbone frozen.
+    # This prevents the randomly-initialised head from corrupting pretrained
+    # backbone weights early in training (especially important when the pretrained
+    # head has a different number of classes).
+    # ---------------------------------------------------------------------------
+    if warmup_head_epochs > 0:
+        print(f"[Stage 1] Warming up classification head for {warmup_head_epochs} epoch(s) — backbone frozen")
+        for name, param in model.named_parameters():
+            if 'classifier' not in name:
+                param.requires_grad = False
+
+        warmup_training_args = TrainingArguments(
+            output_dir=out_dir + '_warmup_tmp',
+            num_train_epochs=warmup_head_epochs,
+            per_device_train_batch_size=per_device_train_batch_size,
+            per_device_eval_batch_size=per_device_train_batch_size,
+            learning_rate=1e-3,
+            save_strategy='no',
+            logging_steps=10,
+            fp16=fp16 and torch.cuda.is_available(),
+            report_to='none',
+            eval_strategy='no',
+        )
+        warmup_trainer = Trainer(
+            model=model,
+            args=warmup_training_args,
+            train_dataset=tokenized['train'],
+            tokenizer=tokenizer,
+            data_collator=data_collator,
+        )
+        warmup_trainer.train()
+
+        # Unfreeze all parameters for full fine-tuning
+        for param in model.parameters():
+            param.requires_grad = True
+        print("[Stage 2] Full model fine-tuning — all layers unfrozen")
 
     # Build TrainingArguments kwargs in a backward/forward-compatible way:
     # some transformers releases use 'evaluation_strategy' while others use 'eval_strategy'.
@@ -191,6 +239,7 @@ def run_training(
         load_best_model_at_end=True if 'validation' in tokenized else False,
         metric_for_best_model='f1_macro',
         greater_is_better=True,
+        report_to='none',
     )
 
     # prefer the long name if supported, otherwise use the shorter alias
@@ -294,6 +343,9 @@ def main():
     parser.add_argument('--per-device-train-batch-size', type=int, default=8)
     parser.add_argument('--learning-rate', type=float, default=5e-5)
     parser.add_argument('--fp16', action='store_true')
+    parser.add_argument('--warmup-head-epochs', type=int, default=1,
+                        help='Epochs to train only the new classification head (backbone frozen). '
+                             'Set to 0 to skip. Default: 1')
     args = parser.parse_args()
 
     train_csvs = [p.strip() for p in args.train_csv.split(',') if p.strip()]
@@ -312,6 +364,7 @@ def main():
         per_device_train_batch_size=args.per_device_train_batch_size,
         learning_rate=args.learning_rate,
         fp16=args.fp16,
+        warmup_head_epochs=args.warmup_head_epochs,
     )
 
     # Move model to GPU if available

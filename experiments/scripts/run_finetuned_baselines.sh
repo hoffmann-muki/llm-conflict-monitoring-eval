@@ -28,6 +28,7 @@
 #   CONFLIBERT_EPOCHS           - default: 4
 #   CONFLIBERT_BATCH_SIZE       - default: 8
 #   CONFLIBERT_LR               - default: 5e-5
+#   CONFLIBERT_WARMUP_HEAD_EPOCHS - epochs to train head only before full fine-tune (default: 1, set 0 to skip)
 #
 # Small LLM variables:
 #   SMALL_LLM_BASE_MODEL        - required when RUN_SMALL_LLM=true
@@ -61,6 +62,7 @@ CONFLIBERT_BASE_MODEL="${CONFLIBERT_BASE_MODEL:-models/conflibert}"
 CONFLIBERT_EPOCHS="${CONFLIBERT_EPOCHS:-4}"
 CONFLIBERT_BATCH_SIZE="${CONFLIBERT_BATCH_SIZE:-8}"
 CONFLIBERT_LR="${CONFLIBERT_LR:-5e-5}"
+CONFLIBERT_WARMUP_HEAD_EPOCHS="${CONFLIBERT_WARMUP_HEAD_EPOCHS:-1}"
 
 SMALL_LLM_BASE_MODEL="${SMALL_LLM_BASE_MODEL:-}"
 SMALL_LLM_MODEL_NAME="${SMALL_LLM_MODEL_NAME:-acled-small-llm-ft}"
@@ -166,7 +168,8 @@ if [ "$RUN_CONFLIBERT" = "true" ]; then
       --out-root models \
       --epochs "$CONFLIBERT_EPOCHS" \
       --per-device-train-batch-size "$CONFLIBERT_BATCH_SIZE" \
-      --learning-rate "$CONFLIBERT_LR"
+      --learning-rate "$CONFLIBERT_LR" \
+      --warmup-head-epochs "$CONFLIBERT_WARMUP_HEAD_EPOCHS"
 
     log_phase "PHASE 3: EVALUATE CONFLIBERT ON HELD-OUT COUNTRIES"
     CONFLI_RESULTS_DIR="$BASE_RESULTS_DIR/conflibert"
