@@ -56,6 +56,9 @@ export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 # Use HuggingFace Hub offline mode to avoid lock contention on shared filesystems (HPC)
 export HF_HUB_OFFLINE=1
 
+# Suppress Triton autotune cache writes on Lustre to avoid filelock hangs on exit
+export TRITON_CACHE_DIR=/dev/null
+
 # Auto-detect Python executable: prefer .venv if present, else use conda/system python
 if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
     VENV_PY="$REPO_ROOT/.venv/bin/python"
