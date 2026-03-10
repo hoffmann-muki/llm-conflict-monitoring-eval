@@ -15,7 +15,7 @@ Usage example:
   python experiments/pipelines/conflibert/finetune_conflibert.py \
     --train-csv experiments/data/few_shot/fewshot_v1/cmr/train.csv,experiments/data/few_shot/fewshot_v1/nga/train.csv \
     --val-csv experiments/data/few_shot/fewshot_v1/cmr/val.csv,experiments/data/few_shot/fewshot_v1/nga/val.csv \
-    --model-id bert-base-uncased --tag fewshot_v1 --epochs 6 --per-device-train-batch-size 8
+    --model-id snowood1/ConfliBERT-scr-uncased --tag fewshot_v1 --epochs 6 --per-device-train-batch-size 8
 
 """
 from __future__ import annotations
@@ -269,7 +269,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--train-csv', required=True, help='Comma-separated train CSV paths')
     parser.add_argument('--val-csv', required=False, default='', help='Comma-separated val CSV paths')
-    parser.add_argument('--model-id', default='bert-base-uncased', help='base model id')
+    parser.add_argument('--model-id', default='snowood1/ConfliBERT-scr-uncased', help='base model id')
     parser.add_argument('--tag', default='fewshot_v1', help='tag used for outputs and model name')
     parser.add_argument('--out-root', default='models', help='where to save the fine-tuned model')
     parser.add_argument('--results-root', default='results', help='root for storing prediction CSVs')

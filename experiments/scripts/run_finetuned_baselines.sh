@@ -24,7 +24,7 @@
 #   TEST_MAX_PER_COUNTRY        - 0 means no cap
 #
 # ConfliBERT variables:
-#   CONFLIBERT_BASE_MODEL       - default: bert-base-uncased
+#   CONFLIBERT_BASE_MODEL       - default: models/conflibert (local pre-downloaded model)
 #   CONFLIBERT_EPOCHS           - default: 4
 #   CONFLIBERT_BATCH_SIZE       - default: 8
 #   CONFLIBERT_LR               - default: 5e-5
@@ -57,7 +57,7 @@ TRAIN_MAX_PER_CLASS="${TRAIN_MAX_PER_CLASS:-0}"
 DEV_MAX_PER_CLASS="${DEV_MAX_PER_CLASS:-0}"
 TEST_MAX_PER_COUNTRY="${TEST_MAX_PER_COUNTRY:-0}"
 
-CONFLIBERT_BASE_MODEL="${CONFLIBERT_BASE_MODEL:-bert-base-uncased}"
+CONFLIBERT_BASE_MODEL="${CONFLIBERT_BASE_MODEL:-models/conflibert}"
 CONFLIBERT_EPOCHS="${CONFLIBERT_EPOCHS:-4}"
 CONFLIBERT_BATCH_SIZE="${CONFLIBERT_BATCH_SIZE:-8}"
 CONFLIBERT_LR="${CONFLIBERT_LR:-5e-5}"
@@ -74,6 +74,9 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Ensure Python can import the project package
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+# Use HuggingFace Hub offline mode to avoid lock contention on shared filesystems (HPC)
+export HF_HUB_OFFLINE=1
 
 # Auto-detect Python executable: prefer .venv if present, else use conda/system python
 if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
