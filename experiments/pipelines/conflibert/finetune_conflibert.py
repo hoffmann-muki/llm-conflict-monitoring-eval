@@ -148,9 +148,26 @@ def run_training(
     label_list = EVENT_CLASSES_FULL
     ds, label2id, id2label = prepare_datasets(train_csvs, val_csvs, label_list)
 
-    config = AutoConfig.from_pretrained(model_id, num_labels=len(label_list), id2label=id2label, label2id=label2id)
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSequenceClassification.from_pretrained(model_id, config=config)
+    # Respect offline mode: prefer local files when HF_HUB_OFFLINE=1
+    import os
+    local_files_only = True if os.environ.get('HF_HUB_OFFLINE', '') == '1' else None
+
+    # If a local directory is provided, prefer it and verify files exist
+    model_path = model_id
+    if os.path.isdir(model_id):
+        # use the directory as-is
+        model_path = model_id
+    else:
+        # if a relative path was supplied but doesn't exist, leave it to HF APIs
+        model_path = model_id
+
+    # Provide clearer error when offline and local files are missing
+    if local_files_only and os.path.isdir(model_path) is False:
+        raise FileNotFoundError(f"HF_HUB_OFFLINE=1 is set but local model directory not found: {model_path}")
+
+    config = AutoConfig.from_pretrained(model_path, num_labels=len(label_list), id2label=id2label, label2id=label2id, local_files_only=local_files_only)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=local_files_only)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path, config=config, local_files_only=local_files_only)
 
     tokenized = ds.map(lambda x: tokenize_fn(x, tokenizer), batched=True)
 
