@@ -54,6 +54,9 @@ CF_EVENTS="${CF_EVENTS:-20}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Ensure Python can import the project package
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
 # Auto-detect Python executable: prefer .venv if present, else use conda/system python
 if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
     VENV_PY="$REPO_ROOT/.venv/bin/python"
