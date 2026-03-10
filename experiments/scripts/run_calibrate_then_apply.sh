@@ -20,10 +20,18 @@ STRATEGY=${STRATEGY:-zero_shot}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VENV_PY="$REPO_ROOT/.venv/bin/python"
-if [ ! -x "$VENV_PY" ]; then
-  echo "Warning: project venv python not found at $VENV_PY. Falling back to system python3."
-  VENV_PY="$(which python3)"
+
+# Auto-detect Python executable: prefer .venv if present, else use conda/system python
+if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+    VENV_PY="$REPO_ROOT/.venv/bin/python"
+else
+    VENV_PY="python"
+fi
+
+if ! command -v "$VENV_PY" &> /dev/null; then
+  echo "Error: Python executable not found: $VENV_PY"
+  echo "Ensure .venv is activated or conda environment is activated"
+  exit 1
 fi
 
 # Config

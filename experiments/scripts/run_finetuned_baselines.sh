@@ -71,7 +71,13 @@ SMALL_LLM_LR="${SMALL_LLM_LR:-2e-4}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VENV_PY="$REPO_ROOT/.venv/bin/python"
+
+# Auto-detect Python executable: prefer .venv if present, else use conda/system python
+if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+    VENV_PY="$REPO_ROOT/.venv/bin/python"
+else
+    VENV_PY="python"
+fi
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -97,8 +103,9 @@ if [ -z "$SPLIT_VERSION" ]; then
     exit 1
 fi
 
-if [ ! -x "$VENV_PY" ]; then
-    log_error "Virtual environment python not found at $VENV_PY"
+if ! command -v "$VENV_PY" &> /dev/null; then
+    log_error "Python executable not found: $VENV_PY"
+    log_info "Ensure .venv is activated or conda environment is activated"
     exit 1
 fi
 
