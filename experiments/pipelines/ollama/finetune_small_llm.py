@@ -214,7 +214,6 @@ def main() -> None:
         train_dataset=tokenized["train"],
         eval_dataset=tokenized.get("validation"),
         data_collator=collator,
-        tokenizer=tokenizer,
     )
 
     trainer.train()
