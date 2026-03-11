@@ -107,7 +107,7 @@ def _load_causal_lm(model_id: str, dtype, local_files_only: bool):
     transformers version/model class.
     """
     common_kwargs = {
-        "dtype": dtype,
+        "torch_dtype": dtype,
         "local_files_only": local_files_only,
     }
     try:
