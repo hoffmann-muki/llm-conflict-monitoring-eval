@@ -283,8 +283,14 @@ def main() -> None:
 
         cmd = ["ollama", "create", args.ollama_model_name, "-f", str(modelfile)]
         print("Running:", " ".join(cmd))
-        subprocess.run(cmd, check=True)
-        print(f"Created Ollama model: {args.ollama_model_name}")
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"Created Ollama model: {args.ollama_model_name}")
+        except FileNotFoundError:
+            print(f"⚠ Warning: ollama CLI not found in PATH.")
+            print(f"  Modelfile saved to: {modelfile}")
+            print(f"  To create the model manually, run:")
+            print(f"    ollama create {args.ollama_model_name} -f {modelfile}")
 
 
 if __name__ == "__main__":
