@@ -157,13 +157,18 @@ def main() -> None:
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
     has_validation = "validation" in tokenized
-    use_fp16 = torch.cuda.is_available()
+    use_fp16 = False
     use_bf16 = False
     if torch.cuda.is_available():
         try:
-            use_bf16 = torch.cuda.get_device_capability(0)[0] >= 8
+            if torch.cuda.get_device_capability(0)[0] >= 8:
+                # Prefer bf16 on newer GPUs (A100, H100, etc.)
+                use_bf16 = True
+            else:
+                # Use fp16 on older GPUs
+                use_fp16 = True
         except Exception:
-            use_bf16 = False
+            use_fp16 = True
 
     ta_sig = inspect.signature(TrainingArguments.__init__).parameters
     ta_kwargs = dict(
@@ -173,7 +178,6 @@ def main() -> None:
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
-        warmup_ratio=0.03,
         logging_steps=20,
         save_strategy="epoch",
         load_best_model_at_end=has_validation,
@@ -184,6 +188,13 @@ def main() -> None:
     )
 
     # Handle version-specific parameters
+    if "warmup_ratio" in ta_sig:
+        ta_kwargs["warmup_ratio"] = 0.03
+    elif "warmup_steps" in ta_sig:
+        # Calculate warmup steps from ratio: ~3% of training steps
+        total_steps = (len(tokenized["train"]) // args.batch_size) * args.epochs
+        ta_kwargs["warmup_steps"] = max(1, int(total_steps * 0.03))
+
     if "overwrite_output_dir" in ta_sig:
         ta_kwargs["overwrite_output_dir"] = True
 
