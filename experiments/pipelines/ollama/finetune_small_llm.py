@@ -123,13 +123,31 @@ def main() -> None:
             f"HF_HUB_OFFLINE=1 is set but local model directory not found: {args.base_model}"
         )
 
+    # Determine dtype before loading model to avoid mismatches
+    use_fp16 = False
+    use_bf16 = False
+    model_dtype = torch.float32
+    if torch.cuda.is_available():
+        try:
+            if torch.cuda.get_device_capability(0)[0] >= 8:
+                # Prefer bf16 on newer GPUs (A100, H100, etc.)
+                use_bf16 = True
+                model_dtype = torch.bfloat16
+            else:
+                # Use fp16 on older GPUs
+                use_fp16 = True
+                model_dtype = torch.float16
+        except Exception:
+            use_fp16 = True
+            model_dtype = torch.float16
+
     tokenizer = AutoTokenizer.from_pretrained(args.base_model, use_fast=True, local_files_only=local_files_only)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         args.base_model,
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        torch_dtype=model_dtype,
         local_files_only=local_files_only,
     )
 
@@ -157,18 +175,6 @@ def main() -> None:
     collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
     has_validation = "validation" in tokenized
-    use_fp16 = False
-    use_bf16 = False
-    if torch.cuda.is_available():
-        try:
-            if torch.cuda.get_device_capability(0)[0] >= 8:
-                # Prefer bf16 on newer GPUs (A100, H100, etc.)
-                use_bf16 = True
-            else:
-                # Use fp16 on older GPUs
-                use_fp16 = True
-        except Exception:
-            use_fp16 = True
 
     ta_sig = inspect.signature(TrainingArguments.__init__).parameters
     ta_kwargs = dict(
@@ -245,7 +251,7 @@ def main() -> None:
 
         base = AutoModelForCausalLM.from_pretrained(
             args.base_model,
-            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            torch_dtype=model_dtype,
             local_files_only=local_files_only,
         )
         merged_model = PeftModel.from_pretrained(base, out_dir).merge_and_unload()
