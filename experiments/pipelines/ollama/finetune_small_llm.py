@@ -123,21 +123,20 @@ def main() -> None:
             f"HF_HUB_OFFLINE=1 is set but local model directory not found: {args.base_model}"
         )
 
-    # Determine dtype before loading model to avoid mismatches
+    # Determine precision mode.
+    # Default to fp16 on CUDA because some HPC stacks hit CUBLAS failures with bf16.
+    # Set SMALL_LLM_PRECISION=bf16 to opt in explicitly.
+    precision_mode = os.environ.get("SMALL_LLM_PRECISION", "fp16").strip().lower()
     use_fp16 = False
     use_bf16 = False
     model_dtype = torch.float32
     if torch.cuda.is_available():
-        try:
-            if torch.cuda.get_device_capability(0)[0] >= 8:
-                # Prefer bf16 on newer GPUs (A100, H100, etc.)
-                use_bf16 = True
-                model_dtype = torch.bfloat16
-            else:
-                # Use fp16 on older GPUs
-                use_fp16 = True
-                model_dtype = torch.float16
-        except Exception:
+        if precision_mode == "bf16":
+            use_bf16 = True
+            model_dtype = torch.bfloat16
+        elif precision_mode == "fp32":
+            model_dtype = torch.float32
+        else:
             use_fp16 = True
             model_dtype = torch.float16
 
@@ -193,13 +192,11 @@ def main() -> None:
         seed=args.seed,
     )
 
-    # Handle version-specific parameters
-    if "warmup_ratio" in ta_sig:
-        ta_kwargs["warmup_ratio"] = 0.03
-    elif "warmup_steps" in ta_sig:
-        # Calculate warmup steps from ratio: ~3% of training steps
-        total_steps = (len(tokenized["train"]) // args.batch_size) * args.epochs
-        ta_kwargs["warmup_steps"] = max(1, int(total_steps * 0.03))
+    # Set warmup using explicit steps to avoid deprecated warmup_ratio path.
+    total_steps = max(1, (len(tokenized["train"]) // args.batch_size) * args.epochs)
+    warmup_steps = max(1, int(total_steps * 0.03))
+    if "warmup_steps" in ta_sig:
+        ta_kwargs["warmup_steps"] = warmup_steps
 
     if "overwrite_output_dir" in ta_sig:
         ta_kwargs["overwrite_output_dir"] = True
