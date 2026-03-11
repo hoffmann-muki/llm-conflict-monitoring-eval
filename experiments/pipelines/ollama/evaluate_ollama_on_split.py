@@ -24,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model", required=True, help="Ollama model name")
     parser.add_argument("--input-csv", required=True, help="Split CSV path (train/dev/test_*.csv)")
     parser.add_argument("--output-csv", required=True, help="Output predictions CSV")
+    parser.add_argument("--max-samples", type=int, default=None,
+                        help="Limit evaluation to first N rows (default: None, use all)")
     return parser.parse_args()
 
 
@@ -37,6 +39,11 @@ def main() -> None:
 
     df = pd.read_csv(input_csv)
     cols = resolve_columns(df, ["event_id", "event_id_cnty", "notes", "event_type", "gold_label", "actor_norm"])
+
+    # Optionally limit to first N samples
+    if args.max_samples is not None:
+        df = df.head(args.max_samples)
+        print(f"Limiting evaluation to first {args.max_samples} samples (total in CSV: {len(df)})")
 
     event_id_col = cols.get("event_id") or cols.get("event_id_cnty")
     notes_col = cols.get("notes")
