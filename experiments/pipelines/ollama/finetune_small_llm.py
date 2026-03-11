@@ -117,13 +117,20 @@ def main() -> None:
 
     raw_ds = datasets.load_dataset("json", data_files=data_files)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.base_model, use_fast=True)
+    local_files_only = os.environ.get('HF_HUB_OFFLINE', '') == '1'
+    if local_files_only and not os.path.isdir(args.base_model):
+        raise FileNotFoundError(
+            f"HF_HUB_OFFLINE=1 is set but local model directory not found: {args.base_model}"
+        )
+
+    tokenizer = AutoTokenizer.from_pretrained(args.base_model, use_fast=True, local_files_only=local_files_only)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         args.base_model,
         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        local_files_only=local_files_only,
     )
 
     target_modules = _find_lora_target_modules(model)
@@ -226,6 +233,7 @@ def main() -> None:
         base = AutoModelForCausalLM.from_pretrained(
             args.base_model,
             torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            local_files_only=local_files_only,
         )
         merged_model = PeftModel.from_pretrained(base, out_dir).merge_and_unload()
         merged_model.save_pretrained(merged_dir)

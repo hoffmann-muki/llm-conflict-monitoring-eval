@@ -30,6 +30,13 @@ export HF_HUB_OFFLINE=1
 # Suppress Triton autotune cache writes on Lustre by using node-local temp dir (avoids filelock hangs)
 export TRITON_CACHE_DIR=${TMPDIR:-/tmp}
 
+# Use node-local temp dir for datasets library cache to avoid Lustre file-locking issues
+export HF_DATASETS_CACHE=${TMPDIR:-/tmp}/hf_datasets_cache
+mkdir -p "$HF_DATASETS_CACHE"
+
+# Disable file locking in datasets library (not supported on Lustre)
+export DISABLE_FILE_LOCKING=1
+
 # Auto-detect Python executable: prefer .venv if present, else use conda/system python
 if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
     VENV_PY="$REPO_ROOT/.venv/bin/python"

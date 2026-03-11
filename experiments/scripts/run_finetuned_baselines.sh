@@ -6,7 +6,7 @@
 #   1) Build leak-safe train/dev/test splits
 #   2) Fine-tune ConfliBERT on ACLED train split
 #   3) Evaluate ConfliBERT on Cameroon/Nigeria held-out test splits
-#   4) (Optional) Fine-tune small LLM via LoRA SFT and evaluate through Ollama
+#   4) (Optional) Fine-tune small LLM via LoRA SFT (HF model), merge, register with Ollama, and evaluate
 #
 # Usage:
 #   SPLIT_VERSION=acled_v1 ./experiments/scripts/run_finetuned_baselines.sh
@@ -32,11 +32,17 @@
 #
 # Small LLM variables:
 #   SMALL_LLM_BASE_MODEL        - required when RUN_SMALL_LLM=true
-#   SMALL_LLM_MODEL_NAME        - ollama model name for evaluation
+#                                 Can be a local path (e.g., models/Llama-3.2-3B) or HF model ID
+#                                 See lib/core/constants.LOCAL_BASE_MODELS for local model paths
+#   SMALL_LLM_MODEL_NAME        - Ollama model name to register and serve the fine-tuned model (auto-resolved from SMALL_LLM_BASE_MODEL)
 #   SMALL_LLM_EPOCHS            - default: 3
 #   SMALL_LLM_BATCH_SIZE        - default: 4
 #   SMALL_LLM_GRAD_ACCUM        - default: 4
 #   SMALL_LLM_LR                - default: 2e-4
+#
+# Examples:
+#   Fine-tune Llama-3.2-3B locally: SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B RUN_SMALL_LLM=true ./run_finetuned_baselines.sh
+#   Fine-tune HF model directly:    SMALL_LLM_BASE_MODEL=meta-llama/Llama-3.2-1B RUN_SMALL_LLM=true ./run_finetuned_baselines.sh
 #
 ###############################################################################
 
@@ -83,6 +89,13 @@ export HF_HUB_OFFLINE=1
 # Suppress Triton autotune cache writes on Lustre by using node-local temp dir (avoids filelock hangs)
 export TRITON_CACHE_DIR=${TMPDIR:-/tmp}
 
+# Use node-local temp dir for datasets library cache to avoid Lustre file-locking issues
+export HF_DATASETS_CACHE=${TMPDIR:-/tmp}/hf_datasets_cache
+mkdir -p "$HF_DATASETS_CACHE"
+
+# Disable file locking in datasets library (not supported on Lustre)
+export DISABLE_FILE_LOCKING=1
+
 # Auto-detect Python executable: prefer .venv if present, else use conda/system python
 if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
     VENV_PY="$REPO_ROOT/.venv/bin/python"
@@ -122,7 +135,23 @@ fi
 
 if [ "$RUN_SMALL_LLM" = "true" ] && [ -z "$SMALL_LLM_BASE_MODEL" ]; then
     log_error "SMALL_LLM_BASE_MODEL must be set when RUN_SMALL_LLM=true"
+    log_info "Specify a local path or HF model ID:"
+    log_info "  SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B $0"
+    log_info "  SMALL_LLM_BASE_MODEL=models/Mistral-7B-v0.3 $0"
+    log_info "  SMALL_LLM_BASE_MODEL=models/gemma-3-4b-pt $0"
+    log_info "  SMALL_LLM_BASE_MODEL=models/OLMo-2-1124-7B $0"
+    log_info "  SMALL_LLM_BASE_MODEL=meta-llama/Llama-2-7b-hf $0  # or any HF model ID"
     exit 1
+fi
+
+if [ "$RUN_SMALL_LLM" = "true" ] && [ -n "$SMALL_LLM_BASE_MODEL" ]; then
+    # HF_HUB_OFFLINE=1 is always set, so only local model directories are supported.
+    if [ ! -d "$SMALL_LLM_BASE_MODEL" ]; then
+        log_error "SMALL_LLM_BASE_MODEL path not found: $SMALL_LLM_BASE_MODEL"
+        log_error "HF_HUB_OFFLINE=1 is set — only local model directories are supported."
+        exit 1
+    fi
+    log_info "Using local base model: $SMALL_LLM_BASE_MODEL"
 fi
 
 cd "$REPO_ROOT"
@@ -222,18 +251,26 @@ if [ "$RUN_SMALL_LLM" = "true" ]; then
     SMALL_LLM_ADAPTER_DIR="models/small_llm_adapter_${SPLIT_VERSION}_seed${SEED}"
     SMALL_LLM_MERGED_DIR="models/small_llm_merged_${SPLIT_VERSION}_seed${SEED}"
 
-    "$VENV_PY" experiments/pipelines/ollama/finetune_small_llm.py \
-      --train-jsonl "$TRAIN_JSONL" \
-      --dev-jsonl "$DEV_JSONL" \
-      --base-model "$SMALL_LLM_BASE_MODEL" \
-      --output-dir "$SMALL_LLM_ADAPTER_DIR" \
-      --merged-output-dir "$SMALL_LLM_MERGED_DIR" \
-      --epochs "$SMALL_LLM_EPOCHS" \
-      --batch-size "$SMALL_LLM_BATCH_SIZE" \
-      --grad-accum "$SMALL_LLM_GRAD_ACCUM" \
-      --learning-rate "$SMALL_LLM_LR" \
-      --create-ollama-model \
+    FINETUNE_ARGS=(
+      --train-jsonl "$TRAIN_JSONL"
+      --dev-jsonl "$DEV_JSONL"
+      --base-model "$SMALL_LLM_BASE_MODEL"
+      --output-dir "$SMALL_LLM_ADAPTER_DIR"
+      --merged-output-dir "$SMALL_LLM_MERGED_DIR"
+      --epochs "$SMALL_LLM_EPOCHS"
+      --batch-size "$SMALL_LLM_BATCH_SIZE"
+      --grad-accum "$SMALL_LLM_GRAD_ACCUM"
+      --learning-rate "$SMALL_LLM_LR"
+      --create-ollama-model
       --ollama-model-name "$SMALL_LLM_MODEL_NAME"
+    )
+
+    "$VENV_PY" experiments/pipelines/ollama/finetune_small_llm.py "${FINETUNE_ARGS[@]}"
+
+    log_success "LoRA fine-tuning complete"
+    log_info "Adapter saved:  $SMALL_LLM_ADAPTER_DIR"
+    log_info "Merged model:   $SMALL_LLM_MERGED_DIR"
+    log_info "Ollama model:   $SMALL_LLM_MODEL_NAME"
 
     log_phase "PHASE 6: EVALUATE SMALL LLM ON HELD-OUT COUNTRIES"
     SMALL_RESULTS_DIR="$BASE_RESULTS_DIR/small_llm"
@@ -278,4 +315,5 @@ if [ "$RUN_CONFLIBERT" = "true" ]; then
 fi
 if [ "$RUN_SMALL_LLM" = "true" ]; then
   log_info "Small LLM outputs:   $BASE_RESULTS_DIR/small_llm/"
+  log_info "Merged HF model:     models/small_llm_merged_${SPLIT_VERSION}_seed${SEED}/"
 fi
