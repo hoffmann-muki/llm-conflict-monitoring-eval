@@ -102,14 +102,6 @@ def _find_lora_target_modules(model) -> list[str]:
 def main() -> None:
     args = parse_args()
 
-    # PEFT LoRA is incompatible with DataParallel (multi-GPU). The Trainer
-    # auto-detects all visible GPUs and wraps in DataParallel, which mishandles
-    # adapter weight replication and causes CUBLAS errors. A single A100-80GB
-    # is sufficient for any of the target models, so restrict to one GPU unless
-    # explicitly overridden.
-    if "CUDA_VISIBLE_DEVICES" not in os.environ:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
     datasets = _import_hf_datasets()
 
     train_path = Path(args.train_jsonl)

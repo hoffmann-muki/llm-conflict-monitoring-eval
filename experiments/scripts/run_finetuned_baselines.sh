@@ -265,7 +265,9 @@ if [ "$RUN_SMALL_LLM" = "true" ]; then
       --ollama-model-name "$SMALL_LLM_MODEL_NAME"
     )
 
-    "$VENV_PY" experiments/pipelines/ollama/finetune_small_llm.py "${FINETUNE_ARGS[@]}"
+    # PEFT LoRA is incompatible with DataParallel. Force single GPU before the
+    # Python process starts so PyTorch only ever sees one device.
+    CUDA_VISIBLE_DEVICES=0 "$VENV_PY" experiments/pipelines/ollama/finetune_small_llm.py "${FINETUNE_ARGS[@]}"
 
     log_success "LoRA fine-tuning complete"
     log_info "Adapter saved:  $SMALL_LLM_ADAPTER_DIR"
