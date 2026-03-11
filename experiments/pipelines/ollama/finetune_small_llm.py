@@ -99,6 +99,27 @@ def _find_lora_target_modules(model) -> list[str]:
     return sorted(set(fallback)) or ["q_proj", "v_proj"]
 
 
+def _load_causal_lm(model_id: str, dtype, local_files_only: bool):
+    """Load a causal LM with a stable attention backend for training.
+
+    Some HPC software stacks hit CUDA/CUBLAS errors through SDPA kernels.
+    Prefer eager attention and fall back if unsupported by the installed
+    transformers version/model class.
+    """
+    common_kwargs = {
+        "dtype": dtype,
+        "local_files_only": local_files_only,
+    }
+    try:
+        return AutoModelForCausalLM.from_pretrained(
+            model_id,
+            attn_implementation="eager",
+            **common_kwargs,
+        )
+    except TypeError:
+        return AutoModelForCausalLM.from_pretrained(model_id, **common_kwargs)
+
+
 def main() -> None:
     args = parse_args()
 
@@ -144,11 +165,9 @@ def main() -> None:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(
-        args.base_model,
-        dtype=model_dtype,
-        local_files_only=local_files_only,
-    )
+    model = _load_causal_lm(args.base_model, model_dtype, local_files_only)
+    if hasattr(model, "config") and hasattr(model.config, "use_cache"):
+        model.config.use_cache = False
 
     target_modules = _find_lora_target_modules(model)
     peft_cfg = LoraConfig(
@@ -246,11 +265,7 @@ def main() -> None:
         merged_dir = Path(args.merged_output_dir)
         merged_dir.mkdir(parents=True, exist_ok=True)
 
-        base = AutoModelForCausalLM.from_pretrained(
-            args.base_model,
-            dtype=model_dtype,
-            local_files_only=local_files_only,
-        )
+        base = _load_causal_lm(args.base_model, model_dtype, local_files_only)
         merged_model = PeftModel.from_pretrained(base, out_dir).merge_and_unload()
         merged_model.save_pretrained(merged_dir)
         tokenizer.save_pretrained(merged_dir)
