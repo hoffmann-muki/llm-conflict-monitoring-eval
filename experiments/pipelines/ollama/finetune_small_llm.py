@@ -168,7 +168,6 @@ def main() -> None:
     ta_sig = inspect.signature(TrainingArguments.__init__).parameters
     ta_kwargs = dict(
         output_dir=args.output_dir,
-        overwrite_output_dir=True,
         num_train_epochs=args.epochs,
         learning_rate=args.learning_rate,
         per_device_train_batch_size=args.batch_size,
@@ -183,6 +182,10 @@ def main() -> None:
         report_to="none",
         seed=args.seed,
     )
+
+    # Handle version-specific parameters
+    if "overwrite_output_dir" in ta_sig:
+        ta_kwargs["overwrite_output_dir"] = True
 
     if "evaluation_strategy" in ta_sig:
         ta_kwargs["evaluation_strategy"] = "epoch" if has_validation else "no"
