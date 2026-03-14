@@ -24,7 +24,7 @@
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   OLLAMA_MODELS        - Comma-separated models for inference [default: all WORKING_MODELS]
-#   CF_MODELS            - Models for counterfactual analysis [default: llama3.2,mistral:7b]
+#   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
@@ -41,7 +41,7 @@ NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 OLLAMA_MODELS="${OLLAMA_MODELS:-}"
-CF_MODELS="${CF_MODELS:-llama3.2:3b,mistral:7b,gemma3:4b,olmo2:7b}"
+CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-20}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
 SKIP_COUNTERFACTUAL="${SKIP_COUNTERFACTUAL:-false}"
@@ -157,7 +157,7 @@ log_info "Sample Size:        $SAMPLE_SIZE"
 log_info "Ollama Models:      ${OLLAMA_MODELS:-all WORKING_MODELS}"
 log_info "Skip Inference:     $SKIP_INFERENCE"
 log_info "Skip Counterfactual: $SKIP_COUNTERFACTUAL"
-log_info "CF Models:          $CF_MODELS"
+log_info "CF Models:          ${CF_MODELS:-all WORKING_MODELS}"
 log_info "CF Events:          $CF_EVENTS"
 
 # Build results directory path (includes num_examples for few_shot)
@@ -265,31 +265,35 @@ else
         fi
     fi
 
-    COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
-        "$VENV_PY" -m lib.analysis.counterfactual \
-        --models "$CF_MODELS" --events "$CF_EVENTS"
+    # If CF_MODELS not set, prefer using the explicit OLLAMA_MODELS when a
+    # single-model inference was just run. This keeps outputs in model-specific
+    # subdirectories and avoids mixing naming conventions.
+    if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
+        model_count=$(echo "${OLLAMA_MODELS}" | awk -F',' '{print NF}')
+        if [ "$model_count" -eq 1 ]; then
+            CF_MODELS="${OLLAMA_MODELS}"
+            log_step "Setting CF_MODELS to OLLAMA_MODELS for per-model counterfactual: ${CF_MODELS}"
+        fi
+    fi
+
+    if [ -n "${CF_MODELS}" ]; then
+        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+            "$VENV_PY" -m lib.analysis.counterfactual \
+            --models "$CF_MODELS" --events "$CF_EVENTS"
+    else
+        COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
+            "$VENV_PY" -m lib.analysis.counterfactual \
+            --events "$CF_EVENTS"
+    fi
     
     log_step "Generating counterfactual visualizations..."
-    # Resolve possible counterfactual report locations. The counterfactual
-    # analyzer writes single-model reports into a model-specific subdirectory,
-    # while multi-model or parent-level reports live in the parent results dir.
-    # Build a filename slug that matches `lib.analysis.counterfactual`'s
-    # `models_slug` generation: replace ':' -> '-', '.' -> '_', and commas -> '_'
-    MODELS_SLUG=$(echo "$CF_MODELS" | sed -E 's/:/-/g; s/\./_/g; s/,/_/g')
-    CF_FILENAME="counterfactual_analysis_${MODELS_SLUG}.json"
-    CF_PARENT_PATH="$STRATEGY_RESULTS/$CF_FILENAME"
+    # Resolve the most recent counterfactual report from either parent-level
+    # or model-specific subdirectories to support arbitrary custom model names.
+    INPUT_PATH=$(find "$STRATEGY_RESULTS" -name "counterfactual_analysis_*.json" -type f -print0 2>/dev/null | \
+        xargs -0 ls -t 2>/dev/null | head -1)
 
-    # Build a directory-safe model slug matching `lib.core.data_helpers.model_name_to_dir_slug`
-    MODEL_DIR_SLUG=$(echo "$CF_MODELS" | sed -E 's/[^a-zA-Z0-9._]/_/g')
-    CF_MODEL_PATH="$STRATEGY_RESULTS/$MODEL_DIR_SLUG/$CF_FILENAME"
-
-    if [ -f "$CF_PARENT_PATH" ]; then
-        INPUT_PATH="$CF_PARENT_PATH"
-    elif [ -f "$CF_MODEL_PATH" ]; then
-        INPUT_PATH="$CF_MODEL_PATH"
-    else
-        log_warn "Counterfactual report not found. Tried: $CF_PARENT_PATH and $CF_MODEL_PATH"
-        log_warn "If you just ran a single-model counterfactual run, the report may be under the model subdirectory."
+    if [ -z "$INPUT_PATH" ] || [ ! -f "$INPUT_PATH" ]; then
+        log_warn "Counterfactual report not found under $STRATEGY_RESULTS"
         exit 1
     fi
 
@@ -361,20 +365,11 @@ check_file "$STRATEGY_RESULTS/error_cases_false_illegitimization.csv"
 check_file "$STRATEGY_RESULTS/error_correlations_acled_${COUNTRY}_actors.csv"
 
 if [ "$SKIP_COUNTERFACTUAL" = "false" ]; then
-    # Check parent-level and model-subdir counterfactual report filenames.
-    # Parent-level uses MODELS_SLUG where ':' -> '-' and '.' -> '_'
-    CHECK_MODELS_SLUG=$(echo "$CF_MODELS" | sed -E 's/:/-/g; s/\./_/g; s/,/_/g')
-    CHECK_FILENAME="$STRATEGY_RESULTS/counterfactual_analysis_${CHECK_MODELS_SLUG}.json"
-    MODEL_DIR_SLUG_CHECK=$(echo "$CF_MODELS" | sed -E 's/[^a-zA-Z0-9._]/_/g')
-    CHECK_MODEL_PATH="$STRATEGY_RESULTS/$MODEL_DIR_SLUG_CHECK/counterfactual_analysis_${CHECK_MODELS_SLUG}.json"
-
-    if [ -f "$CHECK_FILENAME" ]; then
-        check_file "$CHECK_FILENAME"
-    elif [ -f "$CHECK_MODEL_PATH" ]; then
-        check_file "$CHECK_MODEL_PATH"
+    CHECK_CF_JSON=$(find "$STRATEGY_RESULTS" -name "counterfactual_analysis_*.json" -type f 2>/dev/null | head -1)
+    if [ -n "$CHECK_CF_JSON" ] && [ -f "$CHECK_CF_JSON" ]; then
+        check_file "$CHECK_CF_JSON"
     else
-        # Fall back to previous (legacy) name check to avoid surprising users
-        check_file "$STRATEGY_RESULTS/counterfactual_analysis_${CF_MODELS//,/_}.json"
+        log_warn "counterfactual_analysis_*.json (not found)"
     fi
     check_file "$STRATEGY_RESULTS/word_impacts.csv"
     check_file "$STRATEGY_RESULTS/fig_word_impact_scatter_by_perturbation.png"
