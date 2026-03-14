@@ -18,7 +18,7 @@ from typing import Optional, Tuple
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-from lib.core.constants import LABEL_MAP
+from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL
 
 # Cached model/tokenizer
 _MODEL_CACHE = {
@@ -29,11 +29,26 @@ _MODEL_CACHE = {
 }
 
 
-def _build_id_mappings():
-    # Recreate the same stable id mapping used in the training pipeline
-    codes = sorted(set(LABEL_MAP.values()))
-    code_to_id = {c: i for i, c in enumerate(codes)}
-    id_to_code = {v: k for k, v in code_to_id.items()}
+def _build_id_mappings(model):
+    """Build id -> short code mapping from model config labels.
+
+    Uses model.config.id2label when present, and falls back to the canonical
+    EVENT_CLASSES_FULL order used in fine-tuning.
+    """
+    id_to_code = {}
+    raw_id2label = getattr(model.config, 'id2label', None) or {}
+    for raw_id, full_label in raw_id2label.items():
+        try:
+            class_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        code = LABEL_MAP.get(str(full_label))
+        if code is not None:
+            id_to_code[class_id] = code
+
+    if not id_to_code:
+        id_to_code = {i: LABEL_MAP[label] for i, label in enumerate(EVENT_CLASSES_FULL)}
+
     return id_to_code
 
 
@@ -170,7 +185,7 @@ def run_conflibert_with_attribution(
         )
         tokens = tokenizer.convert_ids_to_tokens(input_ids.squeeze(0).tolist())
 
-        id_to_code = _build_id_mappings()
+        id_to_code = _build_id_mappings(model)
         label      = id_to_code.get(pred_class_idx, 'INVALID')
         confidence = float(probs[pred_class_idx])
 
@@ -215,7 +230,7 @@ def run_conflibert_single(model_token: Optional[str], text: str, device: Optiona
         probs = exp / exp.sum()
         pred_id = int(np.argmax(probs))
 
-        id_to_code = _build_id_mappings()
+        id_to_code = _build_id_mappings(model)
         label = id_to_code.get(pred_id, 'INVALID')
         confidence = float(probs[pred_id])
 

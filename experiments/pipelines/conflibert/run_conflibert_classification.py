@@ -30,9 +30,28 @@ from lib.data_preparation import (
     build_balanced_actor_sample
 )
 
-# We'll produce a stable ID mapping for the model classes
-CODE_TO_ID = {c: i for i, c in enumerate(sorted(set(LABEL_MAP.values())))}
-ID_TO_CODE = {v: k for k, v in CODE_TO_ID.items()}
+def _build_id_to_code_from_model(model):
+    """Build prediction id -> short label code mapping from model config.
+
+    This avoids assuming any fixed class index order and keeps inference
+    consistent with whatever mapping the fine-tuned checkpoint was trained with.
+    """
+    id2code = {}
+    raw_id2label = getattr(model.config, "id2label", None) or {}
+    for raw_id, full_label in raw_id2label.items():
+        try:
+            class_id = int(raw_id)
+        except (TypeError, ValueError):
+            continue
+        code = LABEL_MAP.get(str(full_label))
+        if code is not None:
+            id2code[class_id] = code
+
+    # Fallback for checkpoints without id2label metadata
+    if not id2code:
+        id2code = {i: LABEL_MAP[label] for i, label in enumerate(EVENT_CLASSES_FULL)}
+
+    return id2code
 
 
 class TextDataset(Dataset):
@@ -261,10 +280,12 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
     model.eval()
     
     # Verify model outputs match expected labels
-    expected_num_labels = len(CODE_TO_ID)
+    expected_num_labels = len(EVENT_CLASSES_FULL)
     if model.config.num_labels != expected_num_labels:
         print(f"Warning: model.num_labels={model.config.num_labels} "
               f"but label mapping has {expected_num_labels} classes.")
+
+    id_to_code = _build_id_to_code_from_model(model)
     
     # Create dataset and loader
     dataset = TextDataset(texts, tokenizer, max_length)
@@ -298,7 +319,7 @@ def run_conflibert_classification(country_code: str, strategy_name: str,
                 if idx >= len(event_ids):
                     break
                 
-                pred_code = ID_TO_CODE.get(pred_id, "UNKNOWN")
+                pred_code = id_to_code.get(int(pred_id), "UNKNOWN")
                 confidence = float(prob_vec[pred_id])
                 
                 results.append({

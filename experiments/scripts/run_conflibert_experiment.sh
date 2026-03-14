@@ -188,7 +188,9 @@ if [ "$STRATEGY" = "few_shot" ]; then
 else
     STRATEGY_RESULTS="results/$COUNTRY/$STRATEGY/$SAMPLE_SIZE"
 fi
+MODEL_NAME="$(basename "$MODEL_PATH" | tr '[:upper:]' '[:lower:]')"
 log_info "Results Directory:  $STRATEGY_RESULTS"
+log_info "Model Name:         $MODEL_NAME"
 echo ""
 
 cd "$REPO_ROOT"
@@ -241,7 +243,7 @@ log_phase "PHASE 2: CALIBRATION & CORE METRICS"
 export RESULTS_DIR="$STRATEGY_RESULTS"
 
 # Point analysis modules to ConfliBERT results (instead of default ollama_results_*.csv)
-CONFLIBERT_RESULTS_CSV="$STRATEGY_RESULTS/conflibert_results_acled_${COUNTRY}_actors.csv"
+CONFLIBERT_RESULTS_CSV="$STRATEGY_RESULTS/${MODEL_NAME}_results_acled_${COUNTRY}_actors.csv"
 export RESULTS_CSV="$CONFLIBERT_RESULTS_CSV"
 log_info "Using results file: $RESULTS_CSV"
 
@@ -349,7 +351,7 @@ else
     # Cross-model comparison (ConfliBERT vs Ollama models) happens at the reporting/visualization level.
     COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
         "$VENV_PY" -m lib.analysis.counterfactual \
-        --models "conflibert" --events "$CF_EVENTS"
+        --models "$MODEL_NAME" --events "$CF_EVENTS"
     
     log_step "Generating counterfactual visualizations..."
     
@@ -419,7 +421,7 @@ check_file() {
     fi
 }
 
-check_file "$STRATEGY_RESULTS/conflibert_results_acled_${COUNTRY}_actors.csv"
+check_file "$STRATEGY_RESULTS/${MODEL_NAME}_results_acled_${COUNTRY}_actors.csv"
 check_file "$STRATEGY_RESULTS/ollama_results_calibrated.csv"
 check_file "$STRATEGY_RESULTS/calibration_brier_scores.csv"
 check_file "$STRATEGY_RESULTS/metrics_acled_${COUNTRY}_actors.csv"
