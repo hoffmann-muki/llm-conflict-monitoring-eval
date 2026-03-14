@@ -389,7 +389,7 @@ else
     # Reads the counterfactual JSON already on disk; non-critical.
     log_step "Running error trace analysis (LIG attribution)..."
     if COUNTRY="$COUNTRY" STRATEGY="$STRATEGY" SAMPLE_SIZE="$SAMPLE_SIZE" NUM_EXAMPLES="$NUM_EXAMPLES" \
-        "$VENV_PY" -m lib.analysis.error_trace; then
+        "$VENV_PY" lib/analysis/error_trace.py; then
         log_success "Error trace analysis complete"
     else
         log_warn "Error trace analysis failed (non-critical)"

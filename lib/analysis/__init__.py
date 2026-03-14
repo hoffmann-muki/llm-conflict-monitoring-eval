@@ -16,11 +16,6 @@ from .event_ambiguity import (
     annotate_disagreements_with_ambiguity,
 )
 
-try:
-    from .error_trace import ErrorTraceAnalyzer
-except Exception:
-    ErrorTraceAnalyzer = None
-
 __all__ = [
     'classify_provenance',
     'classify_verb_intensity',
@@ -34,5 +29,13 @@ __all__ = [
     'annotate_disagreements_with_ambiguity',
 ]
 
-if ErrorTraceAnalyzer is not None:
-    __all__.append('ErrorTraceAnalyzer')
+
+def __getattr__(name):
+    """Lazy-load heavy analysis modules on demand."""
+    if name == 'ErrorTraceAnalyzer':
+        from .error_trace import ErrorTraceAnalyzer
+        return ErrorTraceAnalyzer
+    raise AttributeError(name)
+
+
+__all__.append('ErrorTraceAnalyzer')

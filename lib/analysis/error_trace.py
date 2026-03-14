@@ -466,6 +466,7 @@ class ErrorTraceAnalyzer:
                 })
 
             event_records.append({
+                'model':            model_token,
                 'event_id':         event_id,
                 'ambiguity_tier':   amb_tier,
                 'top_tokens_original': [
@@ -475,6 +476,70 @@ class ErrorTraceAnalyzer:
             })
 
         return event_records
+
+    def _analyse_single_counterfactual(
+        self,
+        counterfactual_json_path: Path,
+        lig_n_steps: int = 50,
+    ) -> Dict[str, Any]:
+        """Analyse one counterfactual JSON and return structured results."""
+        with open(counterfactual_json_path) as f:
+            cf_data = json.load(f)
+
+        metadata      = cf_data.get('metadata', {})
+        all_models    = metadata.get('models', [])
+        detailed      = cf_data.get('detailed_results', [])
+        n_events      = len(detailed)
+
+        print(f"\nSource:  {counterfactual_json_path}")
+        if not detailed:
+            print("No detailed_results in counterfactual JSON — nothing to trace.")
+            return {
+                'source': str(counterfactual_json_path),
+                'cf_data': cf_data,
+                'rfc_results': {},
+                'lig_results': [],
+                'n_events': 0,
+                'all_models': all_models,
+            }
+
+        ollama_models     = [m for m in all_models if not m.lower().startswith('conflibert')]
+        conflibert_models = [m for m in all_models if m.lower().startswith('conflibert')]
+
+        print(f"Events:             {n_events}")
+        print(f"Ollama models:      {ollama_models or '—'}")
+        print(f"ConfliBERT models:  {conflibert_models or '—'}")
+
+        # ----- RFC (Ollama) ------------------------------------------------
+        rfc_results: Dict[str, Any] = {}
+        if ollama_models:
+            print("\n[1/2] Rationale-Flip Concordance (RFC) — Ollama models")
+            rfc_results = self.analyse_rfc(detailed, ollama_models)
+        else:
+            print("\n[1/2] RFC skipped — no Ollama models in this source.")
+
+        # ----- LIG (ConfliBERT) -------------------------------------------
+        lig_results: List[Dict] = []
+        if conflibert_models:
+            print("\n[2/2] Layer Integrated Gradients (LIG) — ConfliBERT")
+            # Analyse each ConfliBERT model present in this source JSON.
+            for model_token in conflibert_models:
+                lig_results.extend(
+                    self.analyse_lig(detailed, model_token, n_steps=lig_n_steps)
+                )
+        elif not ollama_models:
+            print("\n[2/2] LIG skipped — no models found in this source.")
+        else:
+            print("\n[2/2] LIG skipped — no ConfliBERT models in this source.")
+
+        return {
+            'source': str(counterfactual_json_path),
+            'cf_data': cf_data,
+            'rfc_results': rfc_results,
+            'lig_results': lig_results,
+            'n_events': n_events,
+            'all_models': all_models,
+        }
 
     # ------------------------------------------------------------------
     # Report generation
@@ -492,52 +557,54 @@ class ErrorTraceAnalyzer:
             lig_n_steps:              IG approximation steps for LIG (higher =
                                       more accurate; 50 is standard).
         """
+        self.run_many([counterfactual_json_path], lig_n_steps=lig_n_steps)
+
+    def run_many(
+        self,
+        counterfactual_json_paths: List[Path],
+        lig_n_steps: int = 50,
+    ) -> None:
+        """Execute error trace across one or more counterfactual JSON files."""
         print("=" * 80)
         print("ERROR TRACE ANALYSIS")
         print("=" * 80)
-        print(f"\nSource:  {counterfactual_json_path}")
 
-        with open(counterfactual_json_path) as f:
-            cf_data = json.load(f)
+        analyses: List[Dict[str, Any]] = []
+        for cf_path in counterfactual_json_paths:
+            analyses.append(self._analyse_single_counterfactual(cf_path, lig_n_steps))
 
-        metadata      = cf_data.get('metadata', {})
-        all_models    = metadata.get('models', [])
-        detailed      = cf_data.get('detailed_results', [])
-        n_events      = len(detailed)
+        # Merge RFC by model across all sources
+        merged_rfc: Dict[str, Dict[str, Any]] = {}
+        merged_lig: List[Dict] = []
+        total_events = 0
+        sources_meta = []
 
-        if not detailed:
-            print("No detailed_results in counterfactual JSON — nothing to trace.")
-            return
+        for a in analyses:
+            total_events += int(a.get('n_events', 0))
+            sources_meta.append({
+                'source': a.get('source', ''),
+                'n_events': a.get('n_events', 0),
+                'models': a.get('all_models', []),
+            })
 
-        ollama_models     = [m for m in all_models if not m.lower().startswith('conflibert')]
-        conflibert_models = [m for m in all_models if m.lower().startswith('conflibert')]
+            for model, data in a.get('rfc_results', {}).items():
+                merged_rfc.setdefault(model, {'records': [], 'aggregate': {}})
+                merged_rfc[model]['records'].extend(data.get('records', []))
 
-        print(f"\nEvents:             {n_events}")
-        print(f"Ollama models:      {ollama_models or '—'}")
-        print(f"ConfliBERT models:  {conflibert_models or '—'}")
+            merged_lig.extend(a.get('lig_results', []))
 
-        # ----- RFC (Ollama) ------------------------------------------------
-        rfc_results: Dict[str, Any] = {}
-        if ollama_models:
-            print("\n[1/2] Rationale-Flip Concordance (RFC) — Ollama models")
-            rfc_results = self.analyse_rfc(detailed, ollama_models)
-        else:
-            print("\n[1/2] RFC skipped — no Ollama models in this run.")
+        for model, data in merged_rfc.items():
+            data['aggregate'] = _aggregate_rfc_stats(data['records'])
 
-        # ----- LIG (ConfliBERT) -------------------------------------------
-        lig_results: List[Dict] = []
-        if conflibert_models:
-            print("\n[2/2] Layer Integrated Gradients (LIG) — ConfliBERT")
-            # We take the first ConfliBERT model; multi-CB runs are rare
-            lig_results = self.analyse_lig(detailed, conflibert_models[0], n_steps=lig_n_steps)
-        elif not ollama_models:
-            print("\n[2/2] LIG skipped — no models found in counterfactual JSON.")
-        else:
-            print("\n[2/2] LIG skipped — no ConfliBERT models in this run.")
-
-        # ----- Write outputs -----------------------------------------------
-        self._write_report(cf_data, rfc_results, lig_results)
-        self._write_summary_csv(rfc_results, lig_results)
+        self._write_report_multi(
+            analyses=analyses,
+            merged_rfc=merged_rfc,
+            merged_lig=merged_lig,
+            total_events=total_events,
+            sources_meta=sources_meta,
+            lig_n_steps=lig_n_steps,
+        )
+        self._write_summary_csv(merged_rfc, merged_lig)
 
     def _write_report(
         self,
@@ -602,6 +669,79 @@ class ErrorTraceAnalyzer:
             json.dump(report, f, indent=2, default=_json_safe)
         print(f"\n✓ Report saved: {out_path}")
 
+    def _write_report_multi(
+        self,
+        analyses: List[Dict[str, Any]],
+        merged_rfc: Dict[str, Dict[str, Any]],
+        merged_lig: List[Dict],
+        total_events: int,
+        sources_meta: List[Dict[str, Any]],
+        lig_n_steps: int,
+    ) -> None:
+        """Write a combined report covering all discovered counterfactual sources."""
+        n_flip_events = 0
+        for a in analyses:
+            cf_data = a.get('cf_data', {})
+            n_flip_events += sum(
+                1 for e in cf_data.get('detailed_results', [])
+                if any(
+                    mr.get('label_flipped', False)
+                    for pr in e.get('perturbations', [])
+                    for mr in pr.get('model_results', {}).values()
+                )
+            )
+
+        report = {
+            'metadata': {
+                'country': self.country,
+                'strategy': self.strategy,
+                'sample_size': self.sample_size,
+                'num_sources': len(analyses),
+                'sources': sources_meta,
+                'n_events_analysed': total_events,
+                'n_flip_events': n_flip_events,
+                'methods': {
+                    'ollama': 'rationale_flip_concordance (Turpin et al. NeurIPS 2023)',
+                    'conflibert': 'layer_integrated_gradients (Sundararajan et al. ICML 2017)',
+                },
+                'references': [
+                    'Turpin M, et al. (2023). Language Models Don\'t Always Say What They Think. NeurIPS.',
+                    'Sundararajan M, Taly A, Yan Q (2017). Axiomatic Attribution for Deep Networks. ICML.',
+                    'Ye X, Durrett G (2022). Unreliability of Explanations in Few-Shot Prompting. NeurIPS.',
+                    'Ferrando J, et al. (2024). A Primer on the Inner Workings of Transformer-based LMs. ACL.',
+                    'Feder A, et al. (2021). CausaLM: Causal Model Explanation via Counterfactual LMs. CL 47(2).',
+                ],
+            },
+            'ollama_rationale_analysis': {
+                'by_model': {
+                    model: {
+                        'n_flips_analysed': len(data.get('records', [])),
+                        'aggregate': data.get('aggregate', {}),
+                        'records': data.get('records', []),
+                    }
+                    for model, data in merged_rfc.items()
+                },
+                'interpretation': (
+                    'Discordant flips (label changed, rationale unchanged or irrelevant) '
+                    'on Low-ambiguity events (EAS tier = Low) are the primary indicator '
+                    'of model-induced bias per Turpin et al. 2023.'
+                ),
+            },
+            'conflibert_attribution': {
+                'method': (
+                    'LayerIntegratedGradients against the embedding layer, '
+                    f'{lig_n_steps} approximation steps, [PAD]-token baseline.'
+                ),
+                'per_event': merged_lig,
+            },
+        }
+
+        out_path = self.results_base / 'error_trace_report.json'
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, 'w') as f:
+            json.dump(report, f, indent=2, default=_json_safe)
+        print(f"\n✓ Report saved: {out_path}")
+
     def _write_summary_csv(
         self,
         rfc_results: Dict,
@@ -636,7 +776,7 @@ class ErrorTraceAnalyzer:
             top_score = top[0]['attribution'] if top else ''
             rows.append({
                 'source':            'lig',
-                'model':             'conflibert',
+                'model':             rec.get('model', 'conflibert'),
                 'event_id':          rec.get('event_id', ''),
                 'ambiguity_tier':    rec.get('ambiguity_tier', ''),
                 'perturbation_type': '',
@@ -779,7 +919,7 @@ def main() -> None:
 
     analyser = ErrorTraceAnalyzer(country, strategy, sample_size, num_examples)
 
-    # Auto-discover the most recently written counterfactual JSON in the results dir
+    # Auto-discover all counterfactual JSONs in the results dir
     pattern      = str(analyser.results_base / '*' / 'counterfactual_analysis_*.json')
     json_files   = sorted(glob.glob(pattern))
 
@@ -787,15 +927,23 @@ def main() -> None:
     pattern_top  = str(analyser.results_base / 'counterfactual_analysis_*.json')
     json_files  += sorted(glob.glob(pattern_top))
 
-    if not json_files:
+    # De-duplicate paths while preserving order
+    seen = set()
+    unique_jsons: List[Path] = []
+    for p in json_files:
+        rp = str(Path(p).resolve())
+        if rp in seen:
+            continue
+        seen.add(rp)
+        unique_jsons.append(Path(p))
+
+    if not unique_jsons:
         print(f"No counterfactual JSON found under {analyser.results_base}")
         print("Run counterfactual analysis first.")
         sys.exit(0)
 
-    # Use the first discovered file (lexicographic; typically there is only one
-    # per results directory after a single pipeline run)
-    cf_json_path = Path(json_files[0])
-    analyser.run(cf_json_path, lig_n_steps=lig_n_steps)
+    print(f"Discovered {len(unique_jsons)} counterfactual JSON file(s) for tracing.")
+    analyser.run_many(unique_jsons, lig_n_steps=lig_n_steps)
 
 
 if __name__ == '__main__':
