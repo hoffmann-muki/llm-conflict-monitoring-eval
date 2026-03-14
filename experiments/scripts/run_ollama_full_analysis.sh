@@ -50,6 +50,33 @@ set -e  # Exit immediately if a command exits with a non-zero status
 set -u  # Treat unset variables as an error
 set -o pipefail  # Pipeline fails if any command fails
 
+# Determine repository root (two levels up from this script)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Ensure Python can import the project package
+export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+# Use HuggingFace Hub offline mode to avoid lock contention on shared filesystems (HPC)
+export HF_HUB_OFFLINE=1
+
+# Suppress Triton autotune cache writes on Lustre by using node-local temp dir (avoids filelock hangs)
+export TRITON_CACHE_DIR=${TMPDIR:-/tmp}
+
+# Use node-local temp dir for datasets library cache to avoid Lustre file-locking issues
+export HF_DATASETS_CACHE=${TMPDIR:-/tmp}/hf_datasets_cache
+mkdir -p "$HF_DATASETS_CACHE"
+
+# Disable file locking in datasets library (not supported on Lustre)
+export DISABLE_FILE_LOCKING=1
+
+# Auto-detect Python executable: prefer .venv if present, else use conda/system python
+if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+    VENV_PY="$REPO_ROOT/.venv/bin/python"
+else
+    VENV_PY="python"
+fi
+
 # Configuration with sensible defaults
 STRATEGY="${STRATEGY:-zero_shot}"
 NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
@@ -466,6 +493,8 @@ main() {
     echo ""
     
     check_prerequisites
+    cd "$REPO_ROOT"
+    
     run_inference
     run_aggregation
     run_calibration_and_metrics
