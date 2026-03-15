@@ -9,7 +9,6 @@ Outputs
 -------
 - Adapter directory (`--output-dir`)
 - Optional merged model directory (`--merged-output-dir`)
-- Optional Ollama model creation via generated Modelfile (`--create-ollama-model`)
 """
 from __future__ import annotations
 
@@ -17,7 +16,6 @@ import argparse
 import importlib
 import json
 import os
-import subprocess
 import sys
 import inspect
 from pathlib import Path
@@ -74,9 +72,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
-
-    parser.add_argument("--create-ollama-model", action="store_true")
-    parser.add_argument("--ollama-model-name", default="")
     return parser.parse_args()
 
 
@@ -294,8 +289,8 @@ def main() -> None:
         "target_modules": target_modules,
         "train_jsonl": str(train_path),
         "dev_jsonl": str(dev_path) if dev_path else None,
-        "sft_input_format": "prompt_response" if has_prompt_response else "text_only",
-        "output_only_loss_masking": bool(has_prompt_response),
+        "sft_input_format": "prompt_response",
+        "output_only_loss_masking": True,
         "epochs": args.epochs,
         "learning_rate": args.learning_rate,
         "batch_size": args.batch_size,
@@ -316,27 +311,6 @@ def main() -> None:
         merged_model.save_pretrained(merged_dir)
         tokenizer.save_pretrained(merged_dir)
         print(f"Saved merged model: {merged_dir}")
-
-    if args.create_ollama_model:
-        if not args.ollama_model_name:
-            raise SystemExit("--ollama-model-name is required when --create-ollama-model is set")
-        if merged_dir is None:
-            raise SystemExit("--merged-output-dir must be provided to create an Ollama model")
-
-        modelfile = merged_dir / "Modelfile"
-        with open(modelfile, "w") as f:
-            f.write(f"FROM {merged_dir.resolve()}\n")
-
-        cmd = ["ollama", "create", args.ollama_model_name, "-f", str(modelfile)]
-        print("Running:", " ".join(cmd))
-        try:
-            subprocess.run(cmd, check=True)
-            print(f"Created Ollama model: {args.ollama_model_name}")
-        except FileNotFoundError:
-            print(f"⚠ Warning: ollama CLI not found in PATH.")
-            print(f"  Modelfile saved to: {modelfile}")
-            print(f"  To create the model manually, run:")
-            print(f"    ollama create {args.ollama_model_name} -f {modelfile}")
 
 
 if __name__ == "__main__":

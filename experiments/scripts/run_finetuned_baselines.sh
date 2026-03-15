@@ -6,7 +6,7 @@
 #   1) Build leak-safe train/dev/test splits
 #   2) Fine-tune ConfliBERT on ACLED train split
 #   3) Evaluate ConfliBERT on Cameroon/Nigeria held-out test splits
-#   4) (Optional) Fine-tune small LLM via LoRA SFT (HF model), merge, register with Ollama, and evaluate
+#   4) (Optional) Fine-tune small LLM via LoRA SFT (HF model), merge, and evaluate directly with transformers
 #
 # Usage:
 #   SPLIT_VERSION=acled_v1 ./experiments/scripts/run_finetuned_baselines.sh
@@ -34,7 +34,6 @@
 #   SMALL_LLM_BASE_MODEL        - required when RUN_SMALL_LLM=true
 #                                 Can be a local path (e.g., models/Llama-3.2-3B) or HF model ID
 #                                 See lib/core/constants.LOCAL_BASE_MODELS for local model paths
-#   SMALL_LLM_MODEL_NAME        - Ollama model name to register and serve the fine-tuned model (auto-resolved from SMALL_LLM_BASE_MODEL)
 #   SMALL_LLM_EPOCHS            - default: 3
 #   SMALL_LLM_BATCH_SIZE        - default: 4
 #   SMALL_LLM_GRAD_ACCUM        - default: 4
@@ -73,7 +72,6 @@ CONFLIBERT_LR="${CONFLIBERT_LR:-5e-5}"
 CONFLIBERT_WARMUP_HEAD_EPOCHS="${CONFLIBERT_WARMUP_HEAD_EPOCHS:-1}"
 
 SMALL_LLM_BASE_MODEL="${SMALL_LLM_BASE_MODEL:-}"
-SMALL_LLM_MODEL_NAME="${SMALL_LLM_MODEL_NAME:-acled-small-llm-ft}"
 SMALL_LLM_EPOCHS="${SMALL_LLM_EPOCHS:-3}"
 SMALL_LLM_BATCH_SIZE="${SMALL_LLM_BATCH_SIZE:-4}"
 SMALL_LLM_GRAD_ACCUM="${SMALL_LLM_GRAD_ACCUM:-4}"
@@ -295,8 +293,6 @@ if [ "$RUN_SMALL_LLM" = "true" ]; then
       --batch-size "$SMALL_LLM_BATCH_SIZE"
       --grad-accum "$SMALL_LLM_GRAD_ACCUM"
       --learning-rate "$SMALL_LLM_LR"
-      --create-ollama-model
-      --ollama-model-name "$SMALL_LLM_MODEL_NAME"
     )
 
     # PEFT LoRA is incompatible with DataParallel. Force single GPU before the
@@ -306,24 +302,26 @@ if [ "$RUN_SMALL_LLM" = "true" ]; then
     log_success "LoRA fine-tuning complete"
     log_info "Adapter saved:  $SMALL_LLM_ADAPTER_DIR"
     log_info "Merged model:   $SMALL_LLM_MERGED_DIR"
-    log_info "Ollama model:   $SMALL_LLM_MODEL_NAME"
+    log_info "Optional Ollama registration utility: experiments/pipelines/ollama/register_ollama_model.py"
 
-    log_phase "PHASE 6: EVALUATE SMALL LLM ON HELD-OUT COUNTRIES"
+    log_phase "PHASE 6: EVALUATE SMALL LLM ON HELD-OUT COUNTRIES (HF DIRECT)"
     SMALL_RESULTS_DIR="$BASE_RESULTS_DIR/small_llm"
     mkdir -p "$SMALL_RESULTS_DIR"
 
     if [ -f "$TEST_CMR" ]; then
       "$VENV_PY" experiments/pipelines/ollama/evaluate_ollama_on_split.py \
-        --model "$SMALL_LLM_MODEL_NAME" \
+        --model-path "$SMALL_LLM_MERGED_DIR" \
+        --model-name "small_llm_merged_${SPLIT_VERSION}_seed${SEED}" \
         --input-csv "$TEST_CMR" \
-        --output-csv "$SMALL_RESULTS_DIR/ollama_predictions_cmr.csv"
+        --output-csv "$SMALL_RESULTS_DIR/hf_predictions_cmr.csv"
     fi
 
     if [ -f "$TEST_NGA" ]; then
       "$VENV_PY" experiments/pipelines/ollama/evaluate_ollama_on_split.py \
-        --model "$SMALL_LLM_MODEL_NAME" \
+        --model-path "$SMALL_LLM_MERGED_DIR" \
+        --model-name "small_llm_merged_${SPLIT_VERSION}_seed${SEED}" \
         --input-csv "$TEST_NGA" \
-        --output-csv "$SMALL_RESULTS_DIR/ollama_predictions_nga.csv"
+        --output-csv "$SMALL_RESULTS_DIR/hf_predictions_nga.csv"
     fi
 
     log_success "Small-LLM baseline complete"
