@@ -65,6 +65,7 @@ import glob
 import json
 import re
 import csv
+import argparse
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -999,34 +1000,73 @@ def main() -> None:
         COUNTRY, STRATEGY, SAMPLE_SIZE
 
     Optional env vars:
-        NUM_EXAMPLES   (for few_shot strategy)
-        LIG_N_STEPS    (int, default 50; increase to 100 for publication figures)
+        NUM_EXAMPLES          (for few_shot strategy)
+        LIG_N_STEPS           (int, default 50; increase to 100 for publication figures)
+        COUNTERFACTUAL_JSON   (path to specific counterfactual JSON; if set, only process that file)
+        CF_MODELS             (comma-separated models; used to filter/validate discovery)
     """
+    parser = argparse.ArgumentParser(description='Error trace analysis (RFC + LIG)')
+    parser.add_argument('--counterfactual-json', default=None, help='Path to specific counterfactual JSON to process')
+    args = parser.parse_args()
+    
     country      = os.environ.get('COUNTRY', 'cmr')
     strategy     = os.environ.get('STRATEGY', 'zero_shot')
     sample_size  = os.environ.get('SAMPLE_SIZE', '1000')
     num_examples = os.environ.get('NUM_EXAMPLES')
     lig_n_steps  = int(os.environ.get('LIG_N_STEPS', '50'))
+    cf_models_env = os.environ.get('CF_MODELS', '').strip()
 
     analyser = ErrorTraceAnalyzer(country, strategy, sample_size, num_examples)
 
-    # Auto-discover all counterfactual JSONs in the results dir
-    pattern      = str(analyser.results_base / '*' / 'counterfactual_analysis_*.json')
-    json_files   = sorted(glob.glob(pattern))
+    # Priority: explicit --counterfactual-json argument or COUNTERFACTUAL_JSON env var
+    explicit_json = args.counterfactual_json or os.environ.get('COUNTERFACTUAL_JSON', '').strip()
+    
+    if explicit_json:
+        # Process only the explicitly specified JSON
+        json_path = Path(explicit_json)
+        if not json_path.exists():
+            print(f"Error: counterfactual JSON not found: {json_path}")
+            sys.exit(1)
+        unique_jsons = [json_path]
+        print(f"Processing explicit counterfactual JSON: {json_path}")
+    else:
+        # Auto-discover counterfactual JSONs in the results dir
+        pattern      = str(analyser.results_base / '*' / 'counterfactual_analysis_*.json')
+        json_files   = sorted(glob.glob(pattern))
 
-    # Also check the top-level results dir (multi-model runs write there)
-    pattern_top  = str(analyser.results_base / 'counterfactual_analysis_*.json')
-    json_files  += sorted(glob.glob(pattern_top))
+        # Also check the top-level results dir (multi-model runs write there)
+        pattern_top  = str(analyser.results_base / 'counterfactual_analysis_*.json')
+        json_files  += sorted(glob.glob(pattern_top))
 
-    # De-duplicate paths while preserving order
-    seen = set()
-    unique_jsons: List[Path] = []
-    for p in json_files:
-        rp = str(Path(p).resolve())
-        if rp in seen:
-            continue
-        seen.add(rp)
-        unique_jsons.append(Path(p))
+        # De-duplicate paths while preserving order
+        seen = set()
+        unique_jsons: List[Path] = []
+        for p in json_files:
+            rp = str(Path(p).resolve())
+            if rp in seen:
+                continue
+            seen.add(rp)
+            unique_jsons.append(Path(p))
+        
+        # If CF_MODELS is set, filter discovered JSONs to only those matching
+        # the current model set (to avoid reprocessing previous runs).
+        if cf_models_env and unique_jsons:
+            cf_models_set = set(m.strip() for m in cf_models_env.split(',') if m.strip())
+            filtered = []
+            for json_path in unique_jsons:
+                try:
+                    with open(json_path) as f:
+                        cf_data = json.load(f)
+                    json_models_set = set(cf_data.get('metadata', {}).get('models', []))
+                    # Include JSON if its model set matches current CF_MODELS
+                    if json_models_set == cf_models_set:
+                        filtered.append(json_path)
+                except Exception as e:
+                    print(f"Warning: could not read {json_path}: {e}")
+            
+            if filtered:
+                unique_jsons = filtered
+            # If filtering resulted in no matches, proceed with all discovered (fallback)
 
     if not unique_jsons:
         disagreements_csv = analyser.results_base / 'top_disagreements.csv'
@@ -1044,7 +1084,6 @@ def main() -> None:
                 m.strip() for m in conflibert_models_env.split(',') if m.strip()
             ]
         else:
-            cf_models_env = os.environ.get('CF_MODELS', '').strip()
             conflibert_models = [
                 m.strip() for m in cf_models_env.split(',')
                 if m.strip().lower().startswith('conflibert')

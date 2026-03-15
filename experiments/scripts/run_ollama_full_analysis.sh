@@ -359,13 +359,18 @@ run_counterfactual_analysis() {
         # Reads the counterfactual JSON already on disk; re-invokes LLMs only
         # for flipped events (bounded by MAX_RATIONALE_EVENTS in error_trace.py).
         log_step "Running error trace analysis (RFC / LIG attribution)..."
-        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
-            HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
-            HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
-            "${VENV_PY:-python}" lib/analysis/error_trace.py; then
-            log_success "Error trace analysis complete"
+        if [ -n "$CF_FILE" ] && [ -f "$CF_FILE" ]; then
+            # Process only the counterfactual JSON from this run (avoid reprocessing old JSONs)
+            if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+                HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+                HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
+                "${VENV_PY:-python}" lib/analysis/error_trace.py --counterfactual-json "$CF_FILE"; then
+                log_success "Error trace analysis complete"
+            else
+                log_warn "Error trace analysis failed (non-critical)"
+            fi
         else
-            log_warn "Error trace analysis failed (non-critical)"
+            log_warn "Counterfactual output file not found for error trace"
         fi
     else
         log_warn "Counterfactual analysis failed (non-critical)"
