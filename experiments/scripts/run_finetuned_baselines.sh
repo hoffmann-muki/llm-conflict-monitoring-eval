@@ -143,8 +143,8 @@ if ! command -v "$VENV_PY" &> /dev/null; then
     exit 1
 fi
 
-if [ "$RUN_SMALL_LLM" = "true" ] && [ -z "$SMALL_LLM_BASE_MODEL" ]; then
-    log_error "SMALL_LLM_BASE_MODEL must be set when RUN_SMALL_LLM=true"
+if [ "$RUN_SMALL_LLM" = "true" ] && [ "$SMALL_LLM_SKIP_FINETUNE" != "true" ] && [ -z "$SMALL_LLM_BASE_MODEL" ]; then
+    log_error "SMALL_LLM_BASE_MODEL must be set when RUN_SMALL_LLM=true and SMALL_LLM_SKIP_FINETUNE=false"
     log_info "Specify a local path or HF model ID:"
     log_info "  SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B $0"
     log_info "  SMALL_LLM_BASE_MODEL=models/Mistral-7B-v0.3 $0"
@@ -154,7 +154,7 @@ if [ "$RUN_SMALL_LLM" = "true" ] && [ -z "$SMALL_LLM_BASE_MODEL" ]; then
     exit 1
 fi
 
-if [ "$RUN_SMALL_LLM" = "true" ] && [ -n "$SMALL_LLM_BASE_MODEL" ]; then
+if [ "$RUN_SMALL_LLM" = "true" ] && [ "$SMALL_LLM_SKIP_FINETUNE" != "true" ] && [ -n "$SMALL_LLM_BASE_MODEL" ]; then
     # HF_HUB_OFFLINE=1 is always set, so only local model directories are supported.
     if [ ! -d "$SMALL_LLM_BASE_MODEL" ]; then
         log_error "SMALL_LLM_BASE_MODEL path not found: $SMALL_LLM_BASE_MODEL"
