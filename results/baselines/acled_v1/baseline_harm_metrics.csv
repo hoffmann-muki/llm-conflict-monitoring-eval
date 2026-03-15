@@ -1,0 +1,5 @@
+model,country,false_legitimization_rate_FLR,false_illegitimization_rate_FIR,false_legitimization_count_FL,false_illegitimization_count_FI,harm_ratio_FL_to_FI,n_illegit_events,n_legit_events
+conflibert_finetuned_acled_v1_seed42,cmr,0.010294711344368187,0.04629485785303713,51,298,0.17114093959731544,4954,6437
+small_llm_merged_acled_v1_seed42,cmr,0.008771929824561403,0.043478260869565216,1,7,0.14285714285714285,114,161
+conflibert_finetuned_acled_v1_seed42,nga,0.01020408163265306,0.023014804845222073,88,171,0.5146198830409356,8624,7430
+small_llm_merged_acled_v1_seed42,nga,0.009433962264150943,0.018867924528301886,1,2,0.5,106,106

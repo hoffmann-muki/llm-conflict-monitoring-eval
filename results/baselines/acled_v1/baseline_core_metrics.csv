@@ -1,0 +1,5 @@
+model,country,n,accuracy,macro_f1,f1_V,f1_B,f1_E,f1_P,f1_R,f1_S,cfr_mean_optional,rfc_low_discord_optional
+conflibert_finetuned_acled_v1_seed42,cmr,12566,0.9635,0.9633,0.963,0.9422,0.9604,0.9938,0.9313,0.9894,,
+conflibert_finetuned_acled_v1_seed42,nga,22885,0.9743,0.9719,0.9776,0.9676,0.9788,0.9921,0.9285,0.9871,,
+small_llm_merged_acled_v1_seed42,cmr,300,0.9567,0.9474,0.9614,0.9427,1.0,1.0,0.8,0.9806,,
+small_llm_merged_acled_v1_seed42,nga,300,0.98,0.9822,0.9859,0.9724,1.0,0.9892,0.9455,1.0,,

@@ -1,0 +1,67 @@
+{
+  "split_version": "acled_v1",
+  "source_csv": "datasets/Africa_lagged_data_up_to-2024-10-24.csv",
+  "seed": 42,
+  "dev_ratio": 0.1,
+  "eval_countries": [
+    "cmr",
+    "nga"
+  ],
+  "eval_country_names": [
+    "Cameroon",
+    "Nigeria"
+  ],
+  "include_eval_countries_in_train": false,
+  "balance_train": true,
+  "balance_dev": false,
+  "balance_test": false,
+  "train_max_per_class": 0,
+  "dev_max_per_class": 0,
+  "test_max_per_country": 0,
+  "n_rows": {
+    "train": 64710,
+    "dev": 16394,
+    "test_cmr": 12566,
+    "test_nga": 22885
+  },
+  "class_distribution": {
+    "train": {
+      "Battles": 10785,
+      "Explosions/Remote violence": 10785,
+      "Protests": 10785,
+      "Riots": 10785,
+      "Strategic developments": 10785,
+      "Violence against civilians": 10785
+    },
+    "dev": {
+      "Battles": 3699,
+      "Explosions/Remote violence": 1198,
+      "Protests": 4627,
+      "Riots": 1649,
+      "Strategic developments": 1830,
+      "Violence against civilians": 3391
+    },
+    "test_cmr": {
+      "Battles": 3468,
+      "Explosions/Remote violence": 321,
+      "Protests": 404,
+      "Riots": 450,
+      "Strategic developments": 2969,
+      "Violence against civilians": 4954
+    },
+    "test_nga": {
+      "Battles": 6122,
+      "Explosions/Remote violence": 1055,
+      "Protests": 4070,
+      "Riots": 1706,
+      "Strategic developments": 1308,
+      "Violence against civilians": 8624
+    }
+  },
+  "paths": {
+    "train": "data/processed/splits/acled_v1/train.csv",
+    "dev": "data/processed/splits/acled_v1/dev.csv",
+    "test_cmr": "data/processed/splits/acled_v1/test_cmr.csv",
+    "test_nga": "data/processed/splits/acled_v1/test_nga.csv"
+  }
+}
