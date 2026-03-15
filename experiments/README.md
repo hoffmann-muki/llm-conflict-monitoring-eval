@@ -31,49 +31,49 @@ The pipeline follows a **per-model-then-aggregate** design so the various models
 
 ## Shell Scripts
 
-### run_ollama_full_analysis.sh
+### run_full_analysis.sh (canonical)
 
 Complete 5-phase pipeline: Inference → Aggregation → Calibration → Metrics → Counterfactual
 
 ```bash
 # Full run with all models
 COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Few-shot with 3 examples per category
 COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Specific models only
 INFERENCE_MODELS=mistral:7b,llama3.2:3b COUNTRY=nga SAMPLE_SIZE=1000 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Hybrid inference: run fine-tuned model from local HF checkpoint (no Ollama registration)
 INFERENCE_MODELS=acled-small-llm-ft:v1 COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=zero_shot \
 HF_INFERENCE_MODELS=acled-small-llm-ft:v1 \
 HF_MODEL_PATH=/absolute/path/to/models/small_llm_merged_acled_v1_seed42 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Hybrid multi-model inference: one HF model + regular Ollama models
 INFERENCE_MODELS=acled-small-llm-ft:v1,mistral:7b,llama3.2:3b COUNTRY=cmr SAMPLE_SIZE=500 \
 HF_INFERENCE_MODELS=acled-small-llm-ft:v1 \
 HF_MODEL_PATH_MAP='acled-small-llm-ft:v1=/absolute/path/to/models/small_llm_merged_acled_v1_seed42' \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Note: when CF_MODELS is unset, counterfactual and error-trace now inherit
 # INFERENCE_MODELS, so HF-backed fine-tuned models remain included end-to-end.
 
 # Skip inference, analyze existing results
 SKIP_INFERENCE=true COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Custom counterfactual settings
 CF_MODELS=mistral:7b CF_EVENTS=100 COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 
 # Skip counterfactual analysis entirely
 SKIP_COUNTERFACTUAL=true COUNTRY=cmr SAMPLE_SIZE=500 \
-  ./experiments/scripts/run_ollama_full_analysis.sh
+  ./experiments/scripts/run_full_analysis.sh
 ```
 
 ### run_calibrate_then_apply.sh
@@ -85,13 +85,13 @@ COUNTRY=cmr STRATEGY=zero_shot SMALL_SAMPLE=20 LARGE_SAMPLE=50 \
   ./experiments/scripts/run_calibrate_then_apply.sh
 ```
 
-### run_conflibert_experiment.sh
+### Legacy wrappers
 
-ConfliBERT experiment with the same interface as the Ollama scripts.
+`run_ollama_full_analysis.sh` is a compatibility wrapper that forwards to `run_full_analysis.sh`.
 
 ```bash
 COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot \
-  ./experiments/scripts/run_conflibert_experiment.sh
+  ./experiments/scripts/run_full_analysis.sh
 ```
 
 ## Pipelines (Python Direct)

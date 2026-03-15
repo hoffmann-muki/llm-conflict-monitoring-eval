@@ -16,6 +16,7 @@ import os
 import glob
 import re
 import pandas as pd
+from typing import List, Optional
 from lib.core.data_helpers import (
     setup_country_environment, get_strategy, get_sample_size, get_num_examples,
     model_name_to_dir_slug, get_model_results_dir
@@ -92,7 +93,8 @@ def get_per_model_result_path(country: str, model_name: str, results_dir: str = 
 
 def list_per_model_files(country: str, results_dir: str = None,
                          strategy: str = None, sample_size: str = None,
-                         num_examples: int = None) -> list:
+                         num_examples: int = None,
+                         models_filter: Optional[List[str]] = None) -> list:
     """List all per-model result files for a country, strategy, and sample size.
     
     Scans model subdirectories within results_dir for per-model result files.
@@ -118,12 +120,17 @@ def list_per_model_files(country: str, results_dir: str = None,
             slug = match.group(1)
             results.append((slug, f))
     
+    if models_filter:
+        allowed_slugs = {model_name_to_slug(m.strip()) for m in models_filter if m.strip()}
+        results = [(slug, path) for slug, path in results if slug in allowed_slugs]
+
     return results
 
 
 def aggregate_model_results(country: str = None, results_dir: str = None, 
                            strategy: str = None, sample_size: str = None,
                            num_examples: int = None,
+                           models_filter: Optional[List[str]] = None,
                            verbose: bool = True) -> pd.DataFrame:
     """Aggregate all per-model result files into a single DataFrame.
     
@@ -147,11 +154,15 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
     elif results_dir is None:
         _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     
-    per_model_files = list_per_model_files(country, results_dir, strategy, sample_size, num_examples)
+    per_model_files = list_per_model_files(
+        country, results_dir, strategy, sample_size, num_examples, models_filter=models_filter
+    )
     
     if not per_model_files:
         if verbose:
             print(f"No per-model result files found for strategy '{strategy}', sample_size '{sample_size}' in {results_dir}")
+            if models_filter:
+                print(f"Active model filter: {models_filter}")
             print(f"Pattern: {get_per_model_results_pattern(country, results_dir, strategy, sample_size, num_examples)}")
         return pd.DataFrame()
     
@@ -196,6 +207,7 @@ def aggregate_model_results(country: str = None, results_dir: str = None,
 def write_combined_results(country: str = None, results_dir: str = None,
                           strategy: str = None, sample_size: str = None,
                           num_examples: int = None,
+                          models_filter: Optional[List[str]] = None,
                           verbose: bool = True) -> str:
     """Aggregate per-model files and write combined results file.
     
@@ -211,7 +223,10 @@ def write_combined_results(country: str = None, results_dir: str = None,
     elif results_dir is None:
         _, results_dir = setup_country_environment(country, strategy, str(sample_size), num_examples)
     
-    combined = aggregate_model_results(country, results_dir, strategy, sample_size, num_examples, verbose)
+    combined = aggregate_model_results(
+        country, results_dir, strategy, sample_size, num_examples,
+        models_filter=models_filter, verbose=verbose
+    )
     
     if combined.empty:
         if verbose:
@@ -248,6 +263,8 @@ def main():
                        help='List per-model files without aggregating')
     parser.add_argument('--quiet', action='store_true',
                        help='Suppress progress messages')
+    parser.add_argument('--models', default=os.environ.get('INFERENCE_MODELS', None),
+                       help='Comma-separated model list to aggregate (default: all discovered files)')
     
     args = parser.parse_args()
     
@@ -256,9 +273,13 @@ def main():
     sample_size = args.sample_size
     num_examples = args.num_examples
     country = args.country
+    models_filter = [m.strip() for m in args.models.split(',') if m.strip()] if args.models else None
     
     if args.list_only:
-        files = list_per_model_files(country, args.results_dir, strategy, sample_size, num_examples)
+        files = list_per_model_files(
+            country, args.results_dir, strategy, sample_size, num_examples,
+            models_filter=models_filter
+        )
         if files:
             print(f"Per-model result files for {country} (strategy={strategy}, sample_size={sample_size})"
                   + (f", num_examples={num_examples}" if strategy == 'few_shot' and num_examples else "") + ":")
@@ -267,7 +288,10 @@ def main():
         else:
             print(f"No per-model result files found for {country} (strategy={strategy}, sample_size={sample_size})")
     else:
-        write_combined_results(country, args.results_dir, strategy, sample_size, num_examples, verbose)
+        write_combined_results(
+            country, args.results_dir, strategy, sample_size, num_examples,
+            models_filter=models_filter, verbose=verbose
+        )
 
 
 if __name__ == '__main__':

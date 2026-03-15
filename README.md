@@ -29,7 +29,7 @@ python experiments/pipelines/conflibert/download_conflibert_model.py --out-dir m
 
 ## Running the Full Analysis
 ```bash
-COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot ./experiments/scripts/run_ollama_full_analysis.sh
+COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot ./experiments/scripts/run_full_analysis.sh
 ```
 This shell script runs inference → aggregation → calibration → metrics → counterfactual for Ollama models. After that, run `python -m lib.analysis.compare_all_models` (same env vars) to build the comparison folder alongside the root results.
 

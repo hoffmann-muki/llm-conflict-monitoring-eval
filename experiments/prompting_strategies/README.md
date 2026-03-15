@@ -84,7 +84,7 @@ To ensure models output valid labels:
 1. Create strategy file in this directory
 2. Add import to `__init__.py`
 3. Register in `lib/core/strategy_helpers.py`
-4. Run: `STRATEGY=my_strategy ./experiments/scripts/run_ollama_full_analysis.sh`
+4. Run: `STRATEGY=my_strategy ./experiments/scripts/run_full_analysis.sh`
 
 ## Architecture
 

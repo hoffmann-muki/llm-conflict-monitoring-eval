@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import os
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -52,20 +52,63 @@ def _build_id_mappings(model):
     return id_to_code
 
 
+def _parse_model_path_map(raw: str) -> Dict[str, str]:
+    """Parse CONFLIBERT_MODEL_PATH_MAP values.
+
+    Supported formats per entry:
+      model_token=/abs/path
+      model_token:/abs/path
+    Entries are comma-separated.
+    """
+    mapping: Dict[str, str] = {}
+    for chunk in (raw or "").split(','):
+        entry = chunk.strip()
+        if not entry:
+            continue
+        if '=' in entry:
+            k, v = entry.split('=', 1)
+        elif ':' in entry:
+            k, v = entry.split(':', 1)
+        else:
+            continue
+        k = k.strip()
+        v = v.strip()
+        if k and v:
+            mapping[k] = v
+    return mapping
+
+
 def _resolve_model_dir(model_token: Optional[str] = None) -> str:
     """Try to resolve a local model directory for ConfliBERT.
 
-    Heuristics:
-    - If `models/conflibert` exists, prefer it.
-    - If `model_token` is like `conflibert_name`, try `models/<name>`.
-    - Otherwise, fall back to `models/conflibert`.
+    Resolution order:
+    - If `model_token` is an existing absolute/relative directory, use it.
+    - If CONFLIBERT_MODEL_PATH_MAP contains the token, use mapped path.
+    - If model_token exists under models/<model_token>, use it.
+    - If model_token is like conflibert_name, try models/<name>.
+    - Else, fallback to models/conflibert.
     """
-    # Preferred default
     preferred = os.path.join('models', 'conflibert')
-    if os.path.isdir(preferred):
-        return preferred
+
+    # Explicit path provided directly as token
+    if model_token and os.path.isdir(model_token):
+        return model_token
+
+    # Explicit mapping via env var
+    path_map = _parse_model_path_map(os.environ.get('CONFLIBERT_MODEL_PATH_MAP', ''))
+    if model_token and model_token in path_map and os.path.isdir(path_map[model_token]):
+        return path_map[model_token]
+
+    # Optional generic fallback path via env var
+    env_fallback = os.environ.get('CONFLIBERT_MODEL_PATH', '').strip()
+    if model_token and env_fallback and os.path.isdir(env_fallback):
+        return env_fallback
 
     if model_token and model_token.startswith('conflibert'):
+        candidate = os.path.join('models', model_token)
+        if os.path.isdir(candidate):
+            return candidate
+
         parts = model_token.split('_', 1)
         if len(parts) == 2 and parts[1]:
             candidate = os.path.join('models', parts[1])
@@ -78,7 +121,12 @@ def _resolve_model_dir(model_token: Optional[str] = None) -> str:
         if os.path.isdir(candidate):
             return candidate
 
-    # If none found, return the preferred path (may not exist)
+    # For non-baseline ConfliBERT tokens, never silently fall back to base.
+    # Return token-specific path even if missing so model load fails loudly.
+    if model_token and model_token.startswith('conflibert') and model_token != 'conflibert':
+        return os.path.join('models', model_token)
+
+    # If none found, return default base path (may not exist)
     return preferred
 
 
