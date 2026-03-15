@@ -12,6 +12,9 @@ import sys
 import time
 import json
 import argparse
+import re
+
+import torch
 
 # Strategy helper imported from the core helpers
 from lib.core.strategy_helpers import get_strategy
@@ -22,50 +25,111 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from lib.data_preparation import extract_country_rows, get_actor_norm_series, extract_state_actor, build_stratified_sample, build_balanced_actor_sample
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_MODELS, COUNTRY_NAMES as _COUNTRY_NAMES
 from lib.inference.ollama_client import run_ollama_structured
+from lib.inference.hf_causal_client import (
+    _extract_json_object,
+    _build_generation_prompt,
+    _load_hf_runtime,
+    is_hf_inference_model,
+    resolve_hf_model_path,
+    resolve_hf_device,
+    resolve_hf_max_new_tokens,
+)
 from lib.core.data_helpers import paths_for_country, resolve_columns, write_sample, setup_country_environment
 from lib.core.result_aggregator import model_name_to_slug, get_per_model_result_path
 
 # get_strategy and COUNTRY_NAMES are provided by lib.core.constants
 
 
-def run_model_on_rows_with_strategy(model_name: str, rows, strategy, 
+VALID_LABELS = {"V", "B", "E", "P", "R", "S"}
+
+def _normalize_label(value: object) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return "ERROR"
+    upper = raw.upper()
+    if upper in VALID_LABELS:
+        return upper
+    return LABEL_MAP.get(raw, LABEL_MAP.get(raw.title(), "ERROR"))
+
+
+def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
                                     note_col: str = 'notes',
                                     event_id_col: str = 'event_id_cnty',
                                     true_label_col: str = 'gold_label',
-                                    actor_norm_col: str = 'actor_norm'):
+                                    actor_norm_col: str = 'actor_norm',
+                                    use_hf: bool = False):
     """Run model on rows using specified prompting strategy.
     
     This is a strategy-aware version of run_model_on_rows that uses
     the strategy's make_prompt() method.
     
     Args:
-        model_name: Name of the Ollama model
+        model_name: Name of the Ollama model or HF-backed model
         rows: DataFrame rows to classify
         strategy: PromptingStrategy instance
         note_col: Column name for event notes
         event_id_col: Column name for event ID
         true_label_col: Column name for true label
         actor_norm_col: Column name for normalized actor
+        use_hf: Whether to use HF inference backend
         
     Returns:
         List of result dictionaries
     """
     results = []
+    hf_runtime = None
+    hf_device = None
+    hf_max_new_tokens = None
+    
+    if use_hf:
+        hf_device = resolve_hf_device()
+        hf_max_new_tokens = resolve_hf_max_new_tokens(default=96)
+        model_path = resolve_hf_model_path(model_name)
+        print(f"Loading HF checkpoint for {model_name}: {model_path}")
+        hf_runtime = _load_hf_runtime(model_path, hf_device)
+
     for r in rows.itertuples(index=False):
         t0 = time.time()
+        note = None
         try:
             note = getattr(r, note_col)
             # Generate strategy-specific prompt
             prompt = strategy.make_prompt(note)
             system_msg = strategy.get_system_message()
-            # Run with strategy prompt and system message
-            resp = run_ollama_structured(
-                model_name, 
-                prompt=prompt,
-                system_msg=system_msg,
-                schema=strategy.get_schema()
-            )
-            label = str(resp.get("label", "FAIL")).strip()
+            if use_hf:
+                tokenizer, model = hf_runtime  # type: ignore[misc]
+                generation_prompt = _build_generation_prompt(prompt, system_msg)
+                inputs = tokenizer(generation_prompt, return_tensors="pt").to(hf_device)
+
+                with torch.no_grad():
+                    generated = model.generate(
+                        **inputs,
+                        max_new_tokens=hf_max_new_tokens,
+                        do_sample=False,
+                        pad_token_id=tokenizer.pad_token_id,
+                        eos_token_id=tokenizer.eos_token_id,
+                    )
+
+                gen_tokens = generated[0][inputs["input_ids"].shape[1]:]
+                raw_output = tokenizer.decode(gen_tokens, skip_special_tokens=True).strip()
+                resp = _extract_json_object(raw_output)
+                if resp is None:
+                    label_match = re.search(r'"label"\s*:\s*"([VBEPRS])"', raw_output)
+                    conf_match = re.search(r'"confidence"\s*:\s*([0-9]*\.?[0-9]+)', raw_output)
+                    resp = {
+                        "label": label_match.group(1) if label_match else "ERROR",
+                        "confidence": float(conf_match.group(1)) if conf_match else 0.0,
+                    }
+            else:
+                # Run with strategy prompt and system message via Ollama API
+                resp = run_ollama_structured(
+                    model_name,
+                    prompt=prompt,
+                    system_msg=system_msg,
+                    schema=strategy.get_schema()
+                )
+
+            label = _normalize_label(resp.get("label", "ERROR"))
             conf = float(resp.get("confidence", 0))
             logits = None
             for k in ("logits", "log_probs", "scores", "label_scores"):
@@ -252,10 +316,22 @@ def run_classification_experiment(country_code: str,
     
     # Setup results directory (includes strategy, sample_size, and num_examples for few_shot)
     _, results_dir = setup_country_environment(country_code, strategy_name, str(sample_size), num_examples)
-    
+
     for m in models:
         print(f"Starting model: {m}")
-        model_results = run_model_on_rows_with_strategy(m, subset, strategy)
+        use_hf = is_hf_inference_model(m)
+        if use_hf:
+            device = resolve_hf_device()
+            print(f"  Inference backend: transformers (HF local checkpoint) on {device}")
+        else:
+            print("  Inference backend: Ollama API")
+
+        model_results = run_model_on_rows_with_strategy(
+            m,
+            subset,
+            strategy,
+            use_hf=use_hf,
+        )
         results.extend(model_results)
         print(f"Model {m} completed.")
         
@@ -346,7 +422,7 @@ def main():
         primary_group=args.primary_group,
         primary_share=args.primary_share,
         num_examples=args.num_examples,
-        models=models_arg
+        models=models_arg,
     )
 
 

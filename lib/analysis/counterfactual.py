@@ -26,6 +26,7 @@ from scipy.stats import chi2
 from difflib import SequenceMatcher
 
 from lib.inference.ollama_client import run_ollama_structured
+from lib.inference.hf_causal_client import is_hf_inference_model, run_hf_structured
 from lib.inference import conflibert_client
 from lib.core.data_helpers import paths_for_country, get_strategy, setup_country_environment, get_model_results_dir
 from lib.core.constants import WORKING_MODELS
@@ -597,19 +598,23 @@ class CounterfactualAnalyzer:
                     return {'label': 'ERROR', 'confidence': 0.0, 'success': False, 'error': 'Conflibert inference failed'}
                 return {'label': res.get('label', 'ERROR'), 'confidence': res.get('confidence', 0.0), 'success': True}
 
-            # Default: use Ollama structured client
+            # Generative models: route to HF local checkpoint when configured,
+            # otherwise keep Ollama API behavior.
             strategy = ZeroShotStrategy()
             prompt = strategy.make_prompt(text)
             system_msg = strategy.get_system_message()
-            result = run_ollama_structured(model, prompt, system_msg)
+            if is_hf_inference_model(model):
+                result = run_hf_structured(model, prompt, system_msg, schema=strategy.get_schema())
+            else:
+                result = run_ollama_structured(model, prompt, system_msg)
 
-            # If Ollama returned no structured JSON, treat as failure
+            # If backend returned no structured JSON, treat as failure
             if not result or 'label' not in result:
-                return {'label': 'ERROR', 'confidence': 0.0, 'success': False, 'error': 'No structured response from Ollama'}
+                return {'label': 'ERROR', 'confidence': 0.0, 'success': False, 'error': 'No structured response from inference backend'}
 
             return {
                 'label': result.get('label', 'ERROR'),
-                'confidence': result.get('confidence', 0.0),
+                'confidence': float(result.get('confidence', 0.0) or 0.0),
                 'success': True
             }
         except Exception as e:

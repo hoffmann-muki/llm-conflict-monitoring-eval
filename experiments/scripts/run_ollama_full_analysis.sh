@@ -30,7 +30,12 @@
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   OLLAMA_MODELS        - Models for inference (single or comma-separated) [default: all WORKING_MODELS]
-#   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
+#   HF_INFERENCE_MODELS  - Subset of model names (comma-separated) to run via local HF checkpoint instead of Ollama API
+#   HF_MODEL_PATH_MAP    - Mapping for HF models: "model_a=/path/a,model_b=/path/b"
+#   HF_MODEL_PATH        - Fallback HF checkpoint path when HF_INFERENCE_MODELS has one model
+#   HF_DEVICE            - HF device override (e.g., cuda, cuda:0, cpu) [default: auto]
+#   HF_MAX_NEW_TOKENS    - Max tokens for HF generation [default: 96]
+#   CF_MODELS            - Models for counterfactual analysis [default: OLLAMA_MODELS when set; else all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
@@ -83,6 +88,11 @@ NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 OLLAMA_MODELS="${OLLAMA_MODELS:-}"
+HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS:-}"
+HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP:-}"
+HF_MODEL_PATH="${HF_MODEL_PATH:-}"
+HF_DEVICE="${HF_DEVICE:-}"
+HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS:-96}"
 CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-20}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
@@ -164,6 +174,14 @@ run_inference() {
     
     log_phase "[Phase 1/5] Model Inference - Generating Predictions ($STRATEGY strategy, $SAMPLE_SIZE samples)"
     log_step "Running classification pipeline for country: ${COUNTRY}, sample size: ${SAMPLE_SIZE}, strategy: ${STRATEGY}"
+
+    if [ -n "$HF_INFERENCE_MODELS" ]; then
+        log_step "Hybrid inference enabled. HF-backed model(s): ${HF_INFERENCE_MODELS}"
+        if [ -z "$HF_MODEL_PATH_MAP" ] && [ -z "$HF_MODEL_PATH" ]; then
+            log_error "HF_INFERENCE_MODELS is set but neither HF_MODEL_PATH_MAP nor HF_MODEL_PATH is provided"
+            exit 1
+        fi
+    fi
     
     # Note: If sample file exists, it will be reused for cross-model consistency
     if [ -f "datasets/${COUNTRY}/state_actor_sample_${COUNTRY}_${SAMPLE_SIZE}.csv" ]; then
@@ -174,11 +192,15 @@ run_inference() {
     if [ -n "$OLLAMA_MODELS" ]; then
         log_step "Running inference with model(s): ${OLLAMA_MODELS}"
         STRATEGY="${STRATEGY}" NUM_EXAMPLES="${NUM_EXAMPLES}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+            HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+            HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
             OLLAMA_MODELS="${OLLAMA_MODELS}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     else
         log_step "Running inference with all WORKING_MODELS"
         STRATEGY="${STRATEGY}" NUM_EXAMPLES="${NUM_EXAMPLES}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
+            HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+            HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     fi
     
@@ -258,19 +280,12 @@ run_counterfactual_analysis() {
     fi
     
     log_phase "[Phase 4/5] Counterfactual Perturbation Analysis"
-    
-    # If CF_MODELS not set, prefer using the explicit OLLAMA_MODELS when a
-    # single-model inference was just run. This ensures per-model counterfactual
-    # outputs are written into the model-specific subdirectory instead of the
-    # parent results directory. If OLLAMA_MODELS is empty, we fall back to
-    # running counterfactual with all WORKING_MODELS (multi-model report).
+
+    # If CF_MODELS is unset, default to the same models used for inference.
+    # This keeps the fine-tuned HF-backed model included end-to-end.
     if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
-        # Count comma-separated entries
-        model_count=$(echo "${OLLAMA_MODELS}" | awk -F',' '{print NF}')
-        if [ "$model_count" -eq 1 ]; then
-            CF_MODELS="${OLLAMA_MODELS}"
-            log_step "Setting CF_MODELS to OLLAMA_MODELS for per-model counterfactual: ${CF_MODELS}"
-        fi
+        CF_MODELS="${OLLAMA_MODELS}"
+        log_step "Setting CF_MODELS to OLLAMA_MODELS: ${CF_MODELS}"
     fi
 
     # If CF_MODELS not set, use all WORKING_MODELS from constants
@@ -278,7 +293,10 @@ run_counterfactual_analysis() {
         log_step "Running counterfactual analysis with models: ${CF_MODELS}"
         log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
-        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+            HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+            HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
+            "${VENV_PY:-python}" -m lib.analysis.counterfactual \
             --models "${CF_MODELS}" \
             --events "${CF_EVENTS}"; then
             CF_ANALYSIS_SUCCESS=true
@@ -289,7 +307,10 @@ run_counterfactual_analysis() {
         log_step "Running counterfactual analysis with all WORKING_MODELS"
         log_step "Testing ${CF_EVENTS} top disagreement events with hypothesis-driven perturbations..."
         
-        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" "${VENV_PY:-python}" -m lib.analysis.counterfactual \
+        if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+            HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+            HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
+            "${VENV_PY:-python}" -m lib.analysis.counterfactual \
             --events "${CF_EVENTS}"; then
             CF_ANALYSIS_SUCCESS=true
         else
@@ -339,6 +360,8 @@ run_counterfactual_analysis() {
         # for flipped events (bounded by MAX_RATIONALE_EVENTS in error_trace.py).
         log_step "Running error trace analysis (RFC / LIG attribution)..."
         if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+            HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+            HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
             "${VENV_PY:-python}" lib/analysis/error_trace.py; then
             log_success "Error trace analysis complete"
         else
@@ -482,6 +505,13 @@ main() {
     echo "  Sample Size: ${SAMPLE_SIZE}"
     echo "  Results Directory: ${RESULTS_DIR}"
     echo "  Inference Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
+    if [ -n "${HF_INFERENCE_MODELS}" ]; then
+        echo "  HF Inference Models: ${HF_INFERENCE_MODELS}"
+        echo "  HF Model Path Map: ${HF_MODEL_PATH_MAP:-<unset>}"
+        echo "  HF Model Path Fallback: ${HF_MODEL_PATH:-<unset>}"
+        echo "  HF Device: ${HF_DEVICE:-auto}"
+        echo "  HF Max New Tokens: ${HF_MAX_NEW_TOKENS}"
+    fi
     echo "  Counterfactual Models: ${CF_MODELS:-all WORKING_MODELS}"
     echo "  Counterfactual Events: ${CF_EVENTS}"
     echo ""

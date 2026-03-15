@@ -73,6 +73,7 @@ import torch
 from captum.attr import LayerIntegratedGradients
 
 from lib.inference.ollama_client import run_ollama_structured
+from lib.inference.hf_causal_client import is_hf_inference_model, run_hf_structured
 from lib.inference.conflibert_client import run_conflibert_with_attribution
 from experiments.prompting_strategies import ExplainableStrategy
 
@@ -193,7 +194,11 @@ def _fetch_rationale(model: str, text: str) -> Optional[List[str]]:
         prompt = strategy.make_prompt(text)
         system_msg = strategy.get_system_message()
         schema = strategy.get_schema()
-        result = run_ollama_structured(model, prompt, system_msg, schema=schema)
+        if is_hf_inference_model(model):
+            max_tokens = int(os.environ.get('HF_MAX_NEW_TOKENS_RATIONALE', os.environ.get('HF_MAX_NEW_TOKENS', '160')))
+            result = run_hf_structured(model, prompt, system_msg, schema=schema, max_new_tokens=max_tokens)
+        else:
+            result = run_ollama_structured(model, prompt, system_msg, schema=schema)
         if result and isinstance(result.get('reasoning'), list):
             return [str(r) for r in result['reasoning']]
     except Exception:
@@ -503,20 +508,20 @@ class ErrorTraceAnalyzer:
                 'all_models': all_models,
             }
 
-        ollama_models     = [m for m in all_models if not m.lower().startswith('conflibert')]
+        generative_models = [m for m in all_models if not m.lower().startswith('conflibert')]
         conflibert_models = [m for m in all_models if m.lower().startswith('conflibert')]
 
         print(f"Events:             {n_events}")
-        print(f"Ollama models:      {ollama_models or '—'}")
+        print(f"Generative models:  {generative_models or '—'}")
         print(f"ConfliBERT models:  {conflibert_models or '—'}")
 
-        # ----- RFC (Ollama) ------------------------------------------------
+        # ----- RFC (Generative LLMs: Ollama and/or HF local) --------------
         rfc_results: Dict[str, Any] = {}
-        if ollama_models:
-            print("\n[1/2] Rationale-Flip Concordance (RFC) — Ollama models")
-            rfc_results = self.analyse_rfc(detailed, ollama_models)
+        if generative_models:
+            print("\n[1/2] Rationale-Flip Concordance (RFC) — Generative models")
+            rfc_results = self.analyse_rfc(detailed, generative_models)
         else:
-            print("\n[1/2] RFC skipped — no Ollama models in this source.")
+            print("\n[1/2] RFC skipped — no generative models in this source.")
 
         # ----- LIG (ConfliBERT) -------------------------------------------
         lig_results: List[Dict] = []
@@ -527,7 +532,7 @@ class ErrorTraceAnalyzer:
                 lig_results.extend(
                     self.analyse_lig(detailed, model_token, n_steps=lig_n_steps)
                 )
-        elif not ollama_models:
+        elif not generative_models:
             print("\n[2/2] LIG skipped — no models found in this source.")
         else:
             print("\n[2/2] LIG skipped — no ConfliBERT models in this source.")
