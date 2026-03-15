@@ -130,6 +130,11 @@ def main() -> None:
     )
     model = model.to(device)  # type: ignore[call-arg]
     model.eval()
+    if getattr(model, "generation_config", None) is not None:
+        # Keep greedy decoding deterministic and avoid warnings from model-level sampling defaults.
+        model.generation_config.do_sample = False
+        model.generation_config.temperature = 1.0
+        model.generation_config.top_p = 1.0
 
     df = pd.read_csv(input_csv)
     cols = resolve_columns(df, ["event_id", "event_id_cnty", "notes", "event_type", "gold_label", "actor_norm"])

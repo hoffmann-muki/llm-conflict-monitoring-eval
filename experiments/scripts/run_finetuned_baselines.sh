@@ -40,6 +40,10 @@
 #   SMALL_LLM_LR                - default: 2e-4
 #   SMALL_LLM_STRATEGY          - SFT prompt strategy (zero_shot, few_shot, explainable) [default: zero_shot]
 #   SMALL_LLM_NUM_EXAMPLES      - examples/category for few_shot SFT [default: 3]
+#   SMALL_LLM_SKIP_FINETUNE     - true/false, default: false (reuse existing merged model and skip PHASE 4/5)
+#   SMALL_LLM_MERGED_MODEL_DIR  - optional path to merged model when skipping fine-tune
+#   SMALL_LLM_EVAL_MAX_SAMPLES  - max eval rows per held-out split, default: 0 (all rows)
+#   SMALL_LLM_EVAL_MAX_NEW_TOKENS - generation budget per row, default: 96
 #
 # Examples:
 #   Fine-tune Llama-3.2-3B locally: SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B RUN_SMALL_LLM=true ./run_finetuned_baselines.sh
@@ -78,6 +82,10 @@ SMALL_LLM_GRAD_ACCUM="${SMALL_LLM_GRAD_ACCUM:-4}"
 SMALL_LLM_LR="${SMALL_LLM_LR:-2e-4}"
 SMALL_LLM_STRATEGY="${SMALL_LLM_STRATEGY:-zero_shot}"
 SMALL_LLM_NUM_EXAMPLES="${SMALL_LLM_NUM_EXAMPLES:-3}"
+SMALL_LLM_SKIP_FINETUNE="${SMALL_LLM_SKIP_FINETUNE:-false}"
+SMALL_LLM_MERGED_MODEL_DIR="${SMALL_LLM_MERGED_MODEL_DIR:-}"
+SMALL_LLM_EVAL_MAX_SAMPLES="${SMALL_LLM_EVAL_MAX_SAMPLES:-0}"
+SMALL_LLM_EVAL_MAX_NEW_TOKENS="${SMALL_LLM_EVAL_MAX_NEW_TOKENS:-96}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -173,6 +181,25 @@ fi
         exit 1
       fi
     fi
+
+    if ! [[ "$SMALL_LLM_EVAL_MAX_SAMPLES" =~ ^[0-9]+$ ]]; then
+      log_error "SMALL_LLM_EVAL_MAX_SAMPLES must be a non-negative integer"
+      exit 1
+    fi
+
+    if ! [[ "$SMALL_LLM_EVAL_MAX_NEW_TOKENS" =~ ^[0-9]+$ ]] || [ "$SMALL_LLM_EVAL_MAX_NEW_TOKENS" -lt 1 ]; then
+      log_error "SMALL_LLM_EVAL_MAX_NEW_TOKENS must be a positive integer"
+      exit 1
+    fi
+
+    case "$SMALL_LLM_SKIP_FINETUNE" in
+      true|false)
+        ;;
+      *)
+        log_error "SMALL_LLM_SKIP_FINETUNE must be true or false"
+        exit 1
+        ;;
+    esac
   fi
 
 cd "$REPO_ROOT"
@@ -252,68 +279,90 @@ else
 fi
 
 if [ "$RUN_SMALL_LLM" = "true" ]; then
-    log_phase "PHASE 4: PREPARE SFT DATA FOR SMALL LLM"
-    log_info "SFT strategy: $SMALL_LLM_STRATEGY"
-    if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
-        log_info "Few-shot examples/category: $SMALL_LLM_NUM_EXAMPLES"
-    fi
-
-    SFT_DIR="$BASE_RESULTS_DIR/sft_data"
-    mkdir -p "$SFT_DIR"
-    TRAIN_JSONL="$SFT_DIR/train.jsonl"
-    DEV_JSONL="$SFT_DIR/dev.jsonl"
-
-    SFT_STRATEGY_ARGS=(--strategy "$SMALL_LLM_STRATEGY")
-    if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
-        SFT_STRATEGY_ARGS+=(--num-examples "$SMALL_LLM_NUM_EXAMPLES")
-    fi
-
-    "$VENV_PY" experiments/pipelines/ollama/prepare_sft_data.py \
-      --input-csv "$TRAIN_CSV" \
-      --output-jsonl "$TRAIN_JSONL" \
-      "${SFT_STRATEGY_ARGS[@]}"
-
-    "$VENV_PY" experiments/pipelines/ollama/prepare_sft_data.py \
-      --input-csv "$DEV_CSV" \
-      --output-jsonl "$DEV_JSONL" \
-      "${SFT_STRATEGY_ARGS[@]}"
-
-    log_phase "PHASE 5: FINE-TUNE SMALL LLM (LORA SFT)"
-
     SMALL_LLM_ADAPTER_DIR="models/small_llm_adapter_${SPLIT_VERSION}_seed${SEED}"
     SMALL_LLM_MERGED_DIR="models/small_llm_merged_${SPLIT_VERSION}_seed${SEED}"
 
-    FINETUNE_ARGS=(
-      --train-jsonl "$TRAIN_JSONL"
-      --dev-jsonl "$DEV_JSONL"
-      --base-model "$SMALL_LLM_BASE_MODEL"
-      --output-dir "$SMALL_LLM_ADAPTER_DIR"
-      --merged-output-dir "$SMALL_LLM_MERGED_DIR"
-      --epochs "$SMALL_LLM_EPOCHS"
-      --batch-size "$SMALL_LLM_BATCH_SIZE"
-      --grad-accum "$SMALL_LLM_GRAD_ACCUM"
-      --learning-rate "$SMALL_LLM_LR"
-    )
+    if [ "$SMALL_LLM_SKIP_FINETUNE" = "true" ]; then
+      if [ -n "$SMALL_LLM_MERGED_MODEL_DIR" ]; then
+        SMALL_LLM_MERGED_DIR="$SMALL_LLM_MERGED_MODEL_DIR"
+      fi
+      if [ ! -d "$SMALL_LLM_MERGED_DIR" ]; then
+        log_error "SMALL_LLM_SKIP_FINETUNE=true but merged model directory not found: $SMALL_LLM_MERGED_DIR"
+        log_info "Set SMALL_LLM_MERGED_MODEL_DIR or run with SMALL_LLM_SKIP_FINETUNE=false"
+        exit 1
+      fi
+      log_warn "Skipping PHASE 4/5 (SMALL_LLM_SKIP_FINETUNE=true)"
+      log_info "Using merged model: $SMALL_LLM_MERGED_DIR"
+    else
+      log_phase "PHASE 4: PREPARE SFT DATA FOR SMALL LLM"
+      log_info "SFT strategy: $SMALL_LLM_STRATEGY"
+      if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
+          log_info "Few-shot examples/category: $SMALL_LLM_NUM_EXAMPLES"
+      fi
 
-    # PEFT LoRA is incompatible with DataParallel. Force single GPU before the
-    # Python process starts so PyTorch only ever sees one device.
-    CUDA_VISIBLE_DEVICES=0 "$VENV_PY" experiments/pipelines/ollama/finetune_small_llm.py "${FINETUNE_ARGS[@]}"
+      SFT_DIR="$BASE_RESULTS_DIR/sft_data"
+      mkdir -p "$SFT_DIR"
+      TRAIN_JSONL="$SFT_DIR/train.jsonl"
+      DEV_JSONL="$SFT_DIR/dev.jsonl"
 
-    log_success "LoRA fine-tuning complete"
-    log_info "Adapter saved:  $SMALL_LLM_ADAPTER_DIR"
-    log_info "Merged model:   $SMALL_LLM_MERGED_DIR"
+      SFT_STRATEGY_ARGS=(--strategy "$SMALL_LLM_STRATEGY")
+      if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
+          SFT_STRATEGY_ARGS+=(--num-examples "$SMALL_LLM_NUM_EXAMPLES")
+      fi
+
+      "$VENV_PY" experiments/pipelines/ollama/prepare_sft_data.py \
+        --input-csv "$TRAIN_CSV" \
+        --output-jsonl "$TRAIN_JSONL" \
+        "${SFT_STRATEGY_ARGS[@]}"
+
+      "$VENV_PY" experiments/pipelines/ollama/prepare_sft_data.py \
+        --input-csv "$DEV_CSV" \
+        --output-jsonl "$DEV_JSONL" \
+        "${SFT_STRATEGY_ARGS[@]}"
+
+      log_phase "PHASE 5: FINE-TUNE SMALL LLM (LORA SFT)"
+
+      FINETUNE_ARGS=(
+        --train-jsonl "$TRAIN_JSONL"
+        --dev-jsonl "$DEV_JSONL"
+        --base-model "$SMALL_LLM_BASE_MODEL"
+        --output-dir "$SMALL_LLM_ADAPTER_DIR"
+        --merged-output-dir "$SMALL_LLM_MERGED_DIR"
+        --epochs "$SMALL_LLM_EPOCHS"
+        --batch-size "$SMALL_LLM_BATCH_SIZE"
+        --grad-accum "$SMALL_LLM_GRAD_ACCUM"
+        --learning-rate "$SMALL_LLM_LR"
+      )
+
+      # PEFT LoRA is incompatible with DataParallel. Force single GPU before the
+      # Python process starts so PyTorch only ever sees one device.
+      CUDA_VISIBLE_DEVICES=0 "$VENV_PY" experiments/pipelines/ollama/finetune_small_llm.py "${FINETUNE_ARGS[@]}"
+
+      log_success "LoRA fine-tuning complete"
+      log_info "Adapter saved:  $SMALL_LLM_ADAPTER_DIR"
+      log_info "Merged model:   $SMALL_LLM_MERGED_DIR"
+    fi
+
     log_info "Optional Ollama registration utility: experiments/pipelines/ollama/register_ollama_model.py"
 
     log_phase "PHASE 6: EVALUATE SMALL LLM ON HELD-OUT COUNTRIES (HF DIRECT)"
     SMALL_RESULTS_DIR="$BASE_RESULTS_DIR/small_llm"
     mkdir -p "$SMALL_RESULTS_DIR"
 
+    EVAL_SAMPLE_ARGS=()
+    if [ "$SMALL_LLM_EVAL_MAX_SAMPLES" -gt 0 ]; then
+      EVAL_SAMPLE_ARGS+=(--max-samples "$SMALL_LLM_EVAL_MAX_SAMPLES")
+      log_info "Small-LLM eval sample cap per held-out split: $SMALL_LLM_EVAL_MAX_SAMPLES"
+    fi
+
     if [ -f "$TEST_CMR" ]; then
       "$VENV_PY" experiments/pipelines/ollama/evaluate_ollama_on_split.py \
         --model-path "$SMALL_LLM_MERGED_DIR" \
         --model-name "small_llm_merged_${SPLIT_VERSION}_seed${SEED}" \
         --input-csv "$TEST_CMR" \
-        --output-csv "$SMALL_RESULTS_DIR/hf_predictions_cmr.csv"
+        --output-csv "$SMALL_RESULTS_DIR/hf_predictions_cmr.csv" \
+        --max-new-tokens "$SMALL_LLM_EVAL_MAX_NEW_TOKENS" \
+        "${EVAL_SAMPLE_ARGS[@]}"
     fi
 
     if [ -f "$TEST_NGA" ]; then
@@ -321,7 +370,9 @@ if [ "$RUN_SMALL_LLM" = "true" ]; then
         --model-path "$SMALL_LLM_MERGED_DIR" \
         --model-name "small_llm_merged_${SPLIT_VERSION}_seed${SEED}" \
         --input-csv "$TEST_NGA" \
-        --output-csv "$SMALL_RESULTS_DIR/hf_predictions_nga.csv"
+        --output-csv "$SMALL_RESULTS_DIR/hf_predictions_nga.csv" \
+        --max-new-tokens "$SMALL_LLM_EVAL_MAX_NEW_TOKENS" \
+        "${EVAL_SAMPLE_ARGS[@]}"
     fi
 
     log_success "Small-LLM baseline complete"
