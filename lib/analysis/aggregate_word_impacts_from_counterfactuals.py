@@ -203,14 +203,13 @@ def main():
 
     Reads COUNTRY, STRATEGY, SAMPLE_SIZE, NUM_EXAMPLES from environment to
     construct the results directory path. Auto-discovers counterfactual JSON
-    files, optionally filtering to specific models via --models argument or
-    INFERENCE_MODELS environment variable.
+    files, optionally filtering to specific models via explicit --models.
     
     Usage:
         python -m lib.analysis.aggregate_word_impacts_from_counterfactuals [--models MODEL1,MODEL2]
     """
     parser = argparse.ArgumentParser(description='Aggregate word impacts across models.')
-    parser.add_argument('--models', default=os.environ.get('INFERENCE_MODELS', None),
+    parser.add_argument('--models', default=None,
                        help='Comma-separated model list to aggregate (default: all discovered files)')
     args = parser.parse_args()
     
@@ -293,7 +292,7 @@ def main():
 
     if not all_word_dfs:
         print("\n✗ No data to aggregate")
-        return
+        sys.exit(1)
 
     print(f"\n✓ Loaded data from {len(all_word_dfs)} models")
     print(f"  Total instances: {sum(len(df) for df in all_word_dfs)}")

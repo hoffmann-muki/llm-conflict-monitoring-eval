@@ -263,7 +263,7 @@ def main():
                        help='List per-model files without aggregating')
     parser.add_argument('--quiet', action='store_true',
                        help='Suppress progress messages')
-    parser.add_argument('--models', default=os.environ.get('INFERENCE_MODELS', None),
+    parser.add_argument('--models', default=None,
                        help='Comma-separated model list to aggregate (default: all discovered files)')
     
     args = parser.parse_args()
