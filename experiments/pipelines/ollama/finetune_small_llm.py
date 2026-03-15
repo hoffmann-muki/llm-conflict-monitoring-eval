@@ -29,6 +29,7 @@ from transformers import (
     TrainingArguments,
     default_data_collator,
 )
+import torch
 
 
 def _import_hf_datasets():
@@ -229,7 +230,43 @@ def main() -> None:
 
     tokenized = raw_ds.map(tokenize, batched=True, remove_columns=raw_ds["train"].column_names)
 
-    collator = default_data_collator
+    class DataCollatorForSFTWithMasking:
+        """Pads sequences to batch max length while preserving loss-masking (-100)."""
+        def __init__(self, tokenizer):
+            self.tokenizer = tokenizer
+
+        def __call__(self, features):
+            # Find max lengths in this batch
+            max_input_ids_len = max(len(f["input_ids"]) for f in features)
+            max_labels_len = max(len(f["labels"]) for f in features)
+            max_len = max(max_input_ids_len, max_labels_len)
+
+            # Pad all sequences to max_len
+            padded_features = []
+            for feature in features:
+                input_ids = feature["input_ids"]
+                attn_mask = feature["attention_mask"]
+                labels = feature["labels"]
+
+                pad_length = max_len - len(input_ids)
+                input_ids = input_ids + [self.tokenizer.pad_token_id] * pad_length
+                attn_mask = attn_mask + [0] * pad_length
+                labels = labels + [-100] * pad_length  # Pad with -100 so loss ignores padding
+
+                padded_features.append({
+                    "input_ids": input_ids,
+                    "attention_mask": attn_mask,
+                    "labels": labels,
+                })
+
+            # Convert to torch tensors
+            return {
+                "input_ids": torch.tensor([f["input_ids"] for f in padded_features]),
+                "attention_mask": torch.tensor([f["attention_mask"] for f in padded_features]),
+                "labels": torch.tensor([f["labels"] for f in padded_features]),
+            }
+
+    collator = DataCollatorForSFTWithMasking(tokenizer)
 
     has_validation = "validation" in tokenized
 
