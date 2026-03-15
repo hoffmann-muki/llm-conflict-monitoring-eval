@@ -125,6 +125,11 @@ def run_ollama_structured(model: str, prompt: str, system_msg: str | None = None
     out = subprocess.check_output(cmd, shell=True, text=True, timeout=timeout)
     env = json.loads(out)
     
+    # Check for Ollama API errors (e.g., model not found)
+    if isinstance(env, dict) and "error" in env:
+        error_msg = env.get("error", "Unknown API error")
+        raise RuntimeError(f"Ollama API error for model '{model}': {error_msg}")
+    
     # Try to find JSON content in the response
     raw_text = None
     if isinstance(env, dict):

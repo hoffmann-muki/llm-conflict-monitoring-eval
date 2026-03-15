@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Fine-tune a small causal LLM for ACLED label classification (LoRA SFT).
 
-This script consumes JSONL files produced by `prepare_sft_data.py` with one
-`text` field per example and performs supervised fine-tuning using PEFT LoRA.
+This script consumes JSONL files produced by `prepare_sft_data.py` with
+`prompt` and `response` fields and performs supervised fine-tuning using PEFT LoRA.
+Loss is computed only on response tokens (prompt tokens are masked).
 
 Outputs
 -------
@@ -26,9 +27,9 @@ from peft import LoraConfig, get_peft_model, PeftModel
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
+    default_data_collator,
 )
 
 
@@ -137,6 +138,13 @@ def main() -> None:
         data_files["validation"] = str(dev_path)
 
     raw_ds = datasets.load_dataset("json", data_files=data_files)
+    train_columns = set(raw_ds["train"].column_names)
+
+    if not {"prompt", "response"}.issubset(train_columns):
+        raise SystemExit(
+            "SFT JSONL must contain 'prompt' and 'response' fields. "
+            "Legacy 'text'-only format is no longer supported."
+        )
 
     local_files_only = os.environ.get('HF_HUB_OFFLINE', '') == '1'
     if local_files_only and not os.path.isdir(args.base_model):
@@ -181,16 +189,52 @@ def main() -> None:
     model = get_peft_model(model, peft_cfg)
 
     def tokenize(examples):
-        return tokenizer(
-            examples["text"],
-            truncation=True,
-            max_length=args.max_length,
-            padding=False,
-        )
+        """Tokenize prompt/response pairs with output-only loss masking."""
+        all_input_ids = []
+        all_attention_masks = []
+        all_labels = []
+
+        prompts = examples["prompt"]
+        responses = examples["response"]
+
+        for prompt, response in zip(prompts, responses):
+            full_text = f"{prompt}{response}"
+
+            full_enc = tokenizer(
+                full_text,
+                truncation=True,
+                max_length=args.max_length,
+                padding=False,
+            )
+            prompt_enc = tokenizer(
+                prompt,
+                truncation=True,
+                max_length=args.max_length,
+                padding=False,
+            )
+
+            input_ids = full_enc["input_ids"]
+            attn_mask = full_enc["attention_mask"]
+            labels = input_ids.copy()
+
+            # Mask prompt tokens so loss is computed only on response
+            prompt_len = min(len(prompt_enc["input_ids"]), len(labels))
+            for i in range(prompt_len):
+                labels[i] = -100
+
+            all_input_ids.append(input_ids)
+            all_attention_masks.append(attn_mask)
+            all_labels.append(labels)
+
+        return {
+            "input_ids": all_input_ids,
+            "attention_mask": all_attention_masks,
+            "labels": all_labels,
+        }
 
     tokenized = raw_ds.map(tokenize, batched=True, remove_columns=raw_ds["train"].column_names)
 
-    collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    collator = default_data_collator
 
     has_validation = "validation" in tokenized
 
@@ -250,6 +294,8 @@ def main() -> None:
         "target_modules": target_modules,
         "train_jsonl": str(train_path),
         "dev_jsonl": str(dev_path) if dev_path else None,
+        "sft_input_format": "prompt_response" if has_prompt_response else "text_only",
+        "output_only_loss_masking": bool(has_prompt_response),
         "epochs": args.epochs,
         "learning_rate": args.learning_rate,
         "batch_size": args.batch_size,

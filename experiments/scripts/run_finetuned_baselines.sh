@@ -39,6 +39,8 @@
 #   SMALL_LLM_BATCH_SIZE        - default: 4
 #   SMALL_LLM_GRAD_ACCUM        - default: 4
 #   SMALL_LLM_LR                - default: 2e-4
+#   SMALL_LLM_STRATEGY          - SFT prompt strategy (zero_shot, few_shot, explainable) [default: zero_shot]
+#   SMALL_LLM_NUM_EXAMPLES      - examples/category for few_shot SFT [default: 3]
 #
 # Examples:
 #   Fine-tune Llama-3.2-3B locally: SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B RUN_SMALL_LLM=true ./run_finetuned_baselines.sh
@@ -76,6 +78,8 @@ SMALL_LLM_EPOCHS="${SMALL_LLM_EPOCHS:-3}"
 SMALL_LLM_BATCH_SIZE="${SMALL_LLM_BATCH_SIZE:-4}"
 SMALL_LLM_GRAD_ACCUM="${SMALL_LLM_GRAD_ACCUM:-4}"
 SMALL_LLM_LR="${SMALL_LLM_LR:-2e-4}"
+SMALL_LLM_STRATEGY="${SMALL_LLM_STRATEGY:-zero_shot}"
+SMALL_LLM_NUM_EXAMPLES="${SMALL_LLM_NUM_EXAMPLES:-3}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -153,6 +157,25 @@ if [ "$RUN_SMALL_LLM" = "true" ] && [ -n "$SMALL_LLM_BASE_MODEL" ]; then
     fi
     log_info "Using local base model: $SMALL_LLM_BASE_MODEL"
 fi
+
+  if [ "$RUN_SMALL_LLM" = "true" ]; then
+    case "$SMALL_LLM_STRATEGY" in
+      zero_shot|few_shot|explainable)
+        ;;
+      *)
+        log_error "Invalid SMALL_LLM_STRATEGY: $SMALL_LLM_STRATEGY"
+        log_info "Valid values: zero_shot, few_shot, explainable"
+        exit 1
+        ;;
+    esac
+
+    if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
+      if ! [[ "$SMALL_LLM_NUM_EXAMPLES" =~ ^[0-9]+$ ]] || [ "$SMALL_LLM_NUM_EXAMPLES" -lt 1 ] || [ "$SMALL_LLM_NUM_EXAMPLES" -gt 5 ]; then
+        log_error "SMALL_LLM_NUM_EXAMPLES must be an integer between 1 and 5 when SMALL_LLM_STRATEGY=few_shot"
+        exit 1
+      fi
+    fi
+  fi
 
 cd "$REPO_ROOT"
 
@@ -232,19 +255,30 @@ fi
 
 if [ "$RUN_SMALL_LLM" = "true" ]; then
     log_phase "PHASE 4: PREPARE SFT DATA FOR SMALL LLM"
+    log_info "SFT strategy: $SMALL_LLM_STRATEGY"
+    if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
+        log_info "Few-shot examples/category: $SMALL_LLM_NUM_EXAMPLES"
+    fi
 
     SFT_DIR="$BASE_RESULTS_DIR/sft_data"
     mkdir -p "$SFT_DIR"
     TRAIN_JSONL="$SFT_DIR/train.jsonl"
     DEV_JSONL="$SFT_DIR/dev.jsonl"
 
+    SFT_STRATEGY_ARGS=(--strategy "$SMALL_LLM_STRATEGY")
+    if [ "$SMALL_LLM_STRATEGY" = "few_shot" ]; then
+        SFT_STRATEGY_ARGS+=(--num-examples "$SMALL_LLM_NUM_EXAMPLES")
+    fi
+
     "$VENV_PY" experiments/pipelines/ollama/prepare_sft_data.py \
       --input-csv "$TRAIN_CSV" \
-      --output-jsonl "$TRAIN_JSONL"
+      --output-jsonl "$TRAIN_JSONL" \
+      "${SFT_STRATEGY_ARGS[@]}"
 
     "$VENV_PY" experiments/pipelines/ollama/prepare_sft_data.py \
       --input-csv "$DEV_CSV" \
-      --output-jsonl "$DEV_JSONL"
+      --output-jsonl "$DEV_JSONL" \
+      "${SFT_STRATEGY_ARGS[@]}"
 
     log_phase "PHASE 5: FINE-TUNE SMALL LLM (LORA SFT)"
 
