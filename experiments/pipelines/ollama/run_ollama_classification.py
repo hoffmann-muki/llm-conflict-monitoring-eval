@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from lib.data_preparation import extract_country_rows, get_actor_norm_series, extract_state_actor, build_stratified_sample, build_balanced_actor_sample
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL, CSV_SRC, WORKING_MODELS, COUNTRY_NAMES as _COUNTRY_NAMES
 from lib.inference.ollama_client import run_ollama_structured
+from lib.inference.conflibert_client import run_conflibert_single
 from lib.inference.hf_causal_client import (
     _extract_json_object,
     _build_generation_prompt,
@@ -80,6 +81,7 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
     hf_runtime = None
     hf_device = None
     hf_max_new_tokens = None
+    use_conflibert = model_name.lower().startswith('conflibert')
     
     if use_hf:
         hf_device = resolve_hf_device()
@@ -93,41 +95,45 @@ def run_model_on_rows_with_strategy(model_name: str, rows, strategy,
         note = None
         try:
             note = getattr(r, note_col)
-            # Generate strategy-specific prompt
-            prompt = strategy.make_prompt(note)
-            system_msg = strategy.get_system_message()
-            if use_hf:
-                tokenizer, model = hf_runtime  # type: ignore[misc]
-                generation_prompt = _build_generation_prompt(prompt, system_msg)
-                inputs = tokenizer(generation_prompt, return_tensors="pt").to(hf_device)
-
-                with torch.no_grad():
-                    generated = model.generate(
-                        **inputs,
-                        max_new_tokens=hf_max_new_tokens,
-                        do_sample=False,
-                        pad_token_id=tokenizer.pad_token_id,
-                        eos_token_id=tokenizer.eos_token_id,
-                    )
-
-                gen_tokens = generated[0][inputs["input_ids"].shape[1]:]
-                raw_output = tokenizer.decode(gen_tokens, skip_special_tokens=True).strip()
-                resp = _extract_json_object(raw_output)
-                if resp is None:
-                    label_match = re.search(r'"label"\s*:\s*"([VBEPRS])"', raw_output)
-                    conf_match = re.search(r'"confidence"\s*:\s*([0-9]*\.?[0-9]+)', raw_output)
-                    resp = {
-                        "label": label_match.group(1) if label_match else "ERROR",
-                        "confidence": float(conf_match.group(1)) if conf_match else 0.0,
-                    }
+            if use_conflibert:
+                resp = run_conflibert_single(model_name, str(note))
             else:
-                # Run with strategy prompt and system message via Ollama API
-                resp = run_ollama_structured(
-                    model_name,
-                    prompt=prompt,
-                    system_msg=system_msg,
-                    schema=strategy.get_schema()
-                )
+                # Generate strategy-specific prompt for generative models
+                prompt = strategy.make_prompt(note)
+                system_msg = strategy.get_system_message()
+
+                if use_hf:
+                    tokenizer, model = hf_runtime  # type: ignore[misc]
+                    generation_prompt = _build_generation_prompt(prompt, system_msg)
+                    inputs = tokenizer(generation_prompt, return_tensors="pt").to(hf_device)
+
+                    with torch.no_grad():
+                        generated = model.generate(
+                            **inputs,
+                            max_new_tokens=hf_max_new_tokens,
+                            do_sample=False,
+                            pad_token_id=tokenizer.pad_token_id,
+                            eos_token_id=tokenizer.eos_token_id,
+                        )
+
+                    gen_tokens = generated[0][inputs["input_ids"].shape[1]:]
+                    raw_output = tokenizer.decode(gen_tokens, skip_special_tokens=True).strip()
+                    resp = _extract_json_object(raw_output)
+                    if resp is None:
+                        label_match = re.search(r'"label"\s*:\s*"([VBEPRS])"', raw_output)
+                        conf_match = re.search(r'"confidence"\s*:\s*([0-9]*\.?[0-9]+)', raw_output)
+                        resp = {
+                            "label": label_match.group(1) if label_match else "ERROR",
+                            "confidence": float(conf_match.group(1)) if conf_match else 0.0,
+                        }
+                else:
+                    # Run with strategy prompt and system message via Ollama API
+                    resp = run_ollama_structured(
+                        model_name,
+                        prompt=prompt,
+                        system_msg=system_msg,
+                        schema=strategy.get_schema()
+                    )
 
             label = _normalize_label(resp.get("label", "ERROR"))
             conf = float(resp.get("confidence", 0))
@@ -319,8 +325,11 @@ def run_classification_experiment(country_code: str,
 
     for m in models:
         print(f"Starting model: {m}")
-        use_hf = is_hf_inference_model(m)
-        if use_hf:
+        is_conflibert = m.lower().startswith('conflibert')
+        use_hf = is_hf_inference_model(m) and not is_conflibert
+        if is_conflibert:
+            print("  Inference backend: ConfliBERT sequence classifier")
+        elif use_hf:
             device = resolve_hf_device()
             print(f"  Inference backend: transformers (HF local checkpoint) on {device}")
         else:

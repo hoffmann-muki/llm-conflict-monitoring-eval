@@ -369,6 +369,20 @@ run_counterfactual_analysis() {
         fi
     else
         log_warn "Counterfactual analysis failed (non-critical)"
+
+        # Fallback: allow standalone ConfliBERT LIG from top_disagreements.csv
+        # even when counterfactual JSON is unavailable.
+        if echo ",${CF_MODELS}," | grep -qi ",conflibert"; then
+            log_step "Attempting standalone ConfliBERT LIG from top_disagreements.csv..."
+            if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
+                HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
+                HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" CF_MODELS="${CF_MODELS}" \
+                "${VENV_PY:-python}" lib/analysis/error_trace.py; then
+                log_success "Standalone ConfliBERT LIG complete"
+            else
+                log_warn "Standalone ConfliBERT LIG failed (non-critical)"
+            fi
+        fi
     fi
     
     log_success "Phase 4 complete: Counterfactual analysis"

@@ -69,6 +69,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 import torch
 from captum.attr import LayerIntegratedGradients
 
@@ -482,6 +483,52 @@ class ErrorTraceAnalyzer:
 
         return event_records
 
+    def analyse_lig_from_disagreements(
+        self,
+        disagreements_csv_path: Path,
+        model_token: str,
+        n_steps: int = 50,
+    ) -> List[Dict]:
+        """Compute LIG for a ConfliBERT model directly from top_disagreements.csv.
+
+        This mode removes dependency on counterfactual JSON/RFC artifacts and
+        attributes ConfliBERT predictions on disagreement events already mined
+        from calibrated inference outputs.
+        """
+        df = pd.read_csv(disagreements_csv_path)
+        if 'notes' not in df.columns:
+            print(f"Skipping LIG from disagreements: missing 'notes' in {disagreements_csv_path}")
+            return []
+
+        event_records: List[Dict] = []
+        for _, row in df.iterrows():
+            event_id = str(row.get('event_id', ''))
+            text = str(row.get('notes', '') or '').strip()
+            amb_tier = str(row.get('ambiguity_tier', 'Unknown'))
+            if not text:
+                continue
+
+            print(f"    LIG attribution from disagreements — event {event_id}")
+            attr = run_conflibert_with_attribution(model_token, text, n_steps=n_steps)
+            if attr is None:
+                continue
+
+            top_original = _aggregate_subword_attributions(
+                attr['tokens'], attr['attributions']
+            )[:TOP_K_TOKENS]
+
+            event_records.append({
+                'model': model_token,
+                'event_id': event_id,
+                'ambiguity_tier': amb_tier,
+                'top_tokens_original': [
+                    {'token': t, 'attribution': s} for t, s in top_original
+                ],
+                'flipped_perturbations': [],
+            })
+
+        return event_records
+
     def _analyse_single_counterfactual(
         self,
         counterfactual_json_path: Path,
@@ -610,6 +657,45 @@ class ErrorTraceAnalyzer:
             lig_n_steps=lig_n_steps,
         )
         self._write_summary_csv(merged_rfc, merged_lig)
+
+    def run_lig_from_disagreements(
+        self,
+        disagreements_csv_path: Path,
+        conflibert_models: List[str],
+        lig_n_steps: int = 50,
+    ) -> None:
+        """Run standalone LIG from top_disagreements.csv without RFC dependency."""
+        print("=" * 80)
+        print("ERROR TRACE ANALYSIS (LIG from disagreements)")
+        print("=" * 80)
+        print(f"Source: {disagreements_csv_path}")
+
+        merged_lig: List[Dict] = []
+        for model_token in conflibert_models:
+            print(f"  LIG analysis — model: {model_token}")
+            merged_lig.extend(
+                self.analyse_lig_from_disagreements(
+                    disagreements_csv_path=disagreements_csv_path,
+                    model_token=model_token,
+                    n_steps=lig_n_steps,
+                )
+            )
+
+        sources_meta = [{
+            'source': str(disagreements_csv_path),
+            'n_events': len(merged_lig),
+            'models': conflibert_models,
+        }]
+
+        self._write_report_multi(
+            analyses=[],
+            merged_rfc={},
+            merged_lig=merged_lig,
+            total_events=len(merged_lig),
+            sources_meta=sources_meta,
+            lig_n_steps=lig_n_steps,
+        )
+        self._write_summary_csv({}, merged_lig)
 
     def _write_report(
         self,
@@ -943,9 +1029,36 @@ def main() -> None:
         unique_jsons.append(Path(p))
 
     if not unique_jsons:
-        print(f"No counterfactual JSON found under {analyser.results_base}")
-        print("Run counterfactual analysis first.")
-        sys.exit(0)
+        disagreements_csv = analyser.results_base / 'top_disagreements.csv'
+        if not disagreements_csv.exists():
+            print(f"No counterfactual JSON found under {analyser.results_base}")
+            print("No top_disagreements.csv found for standalone LIG mode.")
+            print("Run per-class metrics first, or run counterfactual analysis.")
+            sys.exit(0)
+
+        # Determine ConfliBERT tokens to analyse in standalone mode.
+        # Priority: explicit CONFLIBERT_MODELS -> CF_MODELS subset -> default token.
+        conflibert_models_env = os.environ.get('CONFLIBERT_MODELS', '').strip()
+        if conflibert_models_env:
+            conflibert_models = [
+                m.strip() for m in conflibert_models_env.split(',') if m.strip()
+            ]
+        else:
+            cf_models_env = os.environ.get('CF_MODELS', '').strip()
+            conflibert_models = [
+                m.strip() for m in cf_models_env.split(',')
+                if m.strip().lower().startswith('conflibert')
+            ] if cf_models_env else []
+            if not conflibert_models:
+                conflibert_models = ['conflibert']
+
+        print("No counterfactual JSON found; running standalone LIG from top_disagreements.csv")
+        analyser.run_lig_from_disagreements(
+            disagreements_csv_path=disagreements_csv,
+            conflibert_models=conflibert_models,
+            lig_n_steps=lig_n_steps,
+        )
+        return
 
     print(f"Discovered {len(unique_jsons)} counterfactual JSON file(s) for tracing.")
     analyser.run_many(unique_jsons, lig_n_steps=lig_n_steps)
