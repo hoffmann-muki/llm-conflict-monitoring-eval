@@ -306,9 +306,9 @@ def run_classification_experiment(country_code: str,
     print(df_test.head())
     
     # Run classification with strategy
-    # Priority: explicit `models` argument -> OLLAMA_MODELS env var -> WORKING_MODELS constant
+    # Priority: explicit `models` argument -> INFERENCE_MODELS env var -> WORKING_MODELS constant
     if models is None:
-        env_models = os.environ.get('OLLAMA_MODELS')
+        env_models = os.environ.get('INFERENCE_MODELS')
         if env_models:
             models = [m.strip() for m in env_models.split(',') if m.strip()]
         else:

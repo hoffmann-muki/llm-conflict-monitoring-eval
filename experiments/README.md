@@ -45,23 +45,23 @@ COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=few_shot NUM_EXAMPLES=3 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Specific models only
-OLLAMA_MODELS=mistral:7b,llama3.2:3b COUNTRY=nga SAMPLE_SIZE=1000 \
+INFERENCE_MODELS=mistral:7b,llama3.2:3b COUNTRY=nga SAMPLE_SIZE=1000 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Hybrid inference: run fine-tuned model from local HF checkpoint (no Ollama registration)
-OLLAMA_MODELS=acled-small-llm-ft:v1 COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=zero_shot \
+INFERENCE_MODELS=acled-small-llm-ft:v1 COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=zero_shot \
 HF_INFERENCE_MODELS=acled-small-llm-ft:v1 \
 HF_MODEL_PATH=/absolute/path/to/models/small_llm_merged_acled_v1_seed42 \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Hybrid multi-model inference: one HF model + regular Ollama models
-OLLAMA_MODELS=acled-small-llm-ft:v1,mistral:7b,llama3.2:3b COUNTRY=cmr SAMPLE_SIZE=500 \
+INFERENCE_MODELS=acled-small-llm-ft:v1,mistral:7b,llama3.2:3b COUNTRY=cmr SAMPLE_SIZE=500 \
 HF_INFERENCE_MODELS=acled-small-llm-ft:v1 \
 HF_MODEL_PATH_MAP='acled-small-llm-ft:v1=/absolute/path/to/models/small_llm_merged_acled_v1_seed42' \
   ./experiments/scripts/run_ollama_full_analysis.sh
 
 # Note: when CF_MODELS is unset, counterfactual and error-trace now inherit
-# OLLAMA_MODELS, so HF-backed fine-tuned models remain included end-to-end.
+# INFERENCE_MODELS, so HF-backed fine-tuned models remain included end-to-end.
 
 # Skip inference, analyze existing results
 SKIP_INFERENCE=true COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=500 \

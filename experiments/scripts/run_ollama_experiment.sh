@@ -23,7 +23,7 @@
 #   NUM_EXAMPLES         - Number of few-shot examples (1-5), only for few_shot strategy [default: 3]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
-#   OLLAMA_MODELS        - Comma-separated models for inference [default: all WORKING_MODELS]
+#   INFERENCE_MODELS     - Comma-separated models for inference [default: all WORKING_MODELS]
 #   CF_MODELS            - Models for counterfactual analysis [default: all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
@@ -40,7 +40,7 @@ STRATEGY="${STRATEGY:-zero_shot}"
 NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
-OLLAMA_MODELS="${OLLAMA_MODELS:-}"
+INFERENCE_MODELS="${INFERENCE_MODELS:-}"
 CF_MODELS="${CF_MODELS:-}"
 CF_EVENTS="${CF_EVENTS:-20}"
 SKIP_INFERENCE="${SKIP_INFERENCE:-false}"
@@ -154,7 +154,7 @@ if [ "$STRATEGY" = "few_shot" ]; then
 fi
 log_info "Country:            $COUNTRY"
 log_info "Sample Size:        $SAMPLE_SIZE"
-log_info "Ollama Models:      ${OLLAMA_MODELS:-all WORKING_MODELS}"
+log_info "Inference Models:   ${INFERENCE_MODELS:-all WORKING_MODELS}"
 log_info "Skip Inference:     $SKIP_INFERENCE"
 log_info "Skip Counterfactual: $SKIP_COUNTERFACTUAL"
 log_info "CF Models:          ${CF_MODELS:-all WORKING_MODELS}"
@@ -180,10 +180,10 @@ else
     
     log_step "Running classification with $STRATEGY prompting..."
     
-    # Build models argument if OLLAMA_MODELS is set
+    # Build models argument if INFERENCE_MODELS is set
     MODELS_ARG=""
-    if [ -n "$OLLAMA_MODELS" ]; then
-        MODELS_ARG="--models $OLLAMA_MODELS"
+    if [ -n "$INFERENCE_MODELS" ]; then
+        MODELS_ARG="--models $INFERENCE_MODELS"
     fi
     
     STRATEGY="$STRATEGY" NUM_EXAMPLES="$NUM_EXAMPLES" COUNTRY="$COUNTRY" SAMPLE_SIZE="$SAMPLE_SIZE" \
@@ -252,27 +252,15 @@ else
     
     log_step "Running counterfactual perturbation testing on top-N disagreements..."
 
-    # If CF_MODELS not set, prefer using the explicit OLLAMA_MODELS when a
+    # If CF_MODELS not set, prefer using the explicit INFERENCE_MODELS when a
     # single-model inference was just run. This ensures per-model counterfactual
     # outputs are written into the model-specific subdirectory instead of the
-    # parent results directory. If OLLAMA_MODELS is empty, fall back to the
-    # default CF_MODELS setting.
-    if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
-        model_count=$(echo "${OLLAMA_MODELS}" | awk -F',' '{print NF}')
+    # parent results directory.
+    if [ -z "${CF_MODELS}" ] && [ -n "${INFERENCE_MODELS}" ]; then
+        model_count=$(echo "${INFERENCE_MODELS}" | awk -F',' '{print NF}')
         if [ "$model_count" -eq 1 ]; then
-            CF_MODELS="${OLLAMA_MODELS}"
-            log_step "Setting CF_MODELS to OLLAMA_MODELS for per-model counterfactual: ${CF_MODELS}"
-        fi
-    fi
-
-    # If CF_MODELS not set, prefer using the explicit OLLAMA_MODELS when a
-    # single-model inference was just run. This keeps outputs in model-specific
-    # subdirectories and avoids mixing naming conventions.
-    if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
-        model_count=$(echo "${OLLAMA_MODELS}" | awk -F',' '{print NF}')
-        if [ "$model_count" -eq 1 ]; then
-            CF_MODELS="${OLLAMA_MODELS}"
-            log_step "Setting CF_MODELS to OLLAMA_MODELS for per-model counterfactual: ${CF_MODELS}"
+            CF_MODELS="${INFERENCE_MODELS}"
+            log_step "Setting CF_MODELS to INFERENCE_MODELS for per-model counterfactual: ${CF_MODELS}"
         fi
     fi
 

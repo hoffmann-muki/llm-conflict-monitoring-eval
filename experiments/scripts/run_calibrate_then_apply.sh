@@ -53,14 +53,14 @@ fi
 # Config
 SMALL_SAMPLE=${SMALL_SAMPLE:-20}
 LARGE_SAMPLE=${LARGE_SAMPLE:-50}
-OLLAMA_MODELS=${OLLAMA_MODELS:-}
+INFERENCE_MODELS=${INFERENCE_MODELS:-}
 # minimum coverage required when choosing a threshold from the small sample (0..1)
 MIN_COVERAGE=${MIN_COVERAGE:-0.5}
 
 echo "Using python: $VENV_PY"
 echo "Country: $COUNTRY"
 echo "Strategy: $STRATEGY"
-echo "Ollama Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
+echo "Inference Models: ${INFERENCE_MODELS:-all WORKING_MODELS}"
 echo "Small sample=$SMALL_SAMPLE Large sample=$LARGE_SAMPLE MIN_COVERAGE=$MIN_COVERAGE"
 
 # Build results directory paths (consistent with rest of codebase)
@@ -69,10 +69,10 @@ LARGE_RESULTS_DIR="results/${COUNTRY}/${STRATEGY}/${LARGE_SAMPLE}"
 
 cd "$REPO_ROOT"
 
-# Build models argument if OLLAMA_MODELS is set
+# Build models argument if INFERENCE_MODELS is set
 MODELS_ARG=""
-if [ -n "$OLLAMA_MODELS" ]; then
-    MODELS_ARG="--models $OLLAMA_MODELS"
+if [ -n "$INFERENCE_MODELS" ]; then
+    MODELS_ARG="--models $INFERENCE_MODELS"
 fi
 
 echo "--- Running small sample (SAMPLE_SIZE=$SMALL_SAMPLE) ---"

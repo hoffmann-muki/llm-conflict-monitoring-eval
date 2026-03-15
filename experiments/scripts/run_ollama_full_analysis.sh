@@ -16,10 +16,10 @@
 #
 # Usage:
 #   # Run inference with one model
-#   COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot OLLAMA_MODELS="mistral:7b" ./scripts/run_full_analysis.sh
+#   COUNTRY=cmr SAMPLE_SIZE=500 STRATEGY=zero_shot INFERENCE_MODELS="mistral:7b" ./scripts/run_full_analysis.sh
 #
 #   # Run inference with another model (reuses same sample)
-#   COUNTRY=cmr SAMPLE_SIZE=500 OLLAMA_MODELS="llama3.2:3b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
+#   COUNTRY=cmr SAMPLE_SIZE=500 INFERENCE_MODELS="llama3.2:3b" SKIP_SAMPLING=true ./scripts/run_full_analysis.sh
 #
 #   # Skip inference, just run analysis on existing per-model results
 #   COUNTRY=cmr SAMPLE_SIZE=500 SKIP_INFERENCE=true ./scripts/run_full_analysis.sh
@@ -29,13 +29,13 @@
 #   NUM_EXAMPLES         - Number of few-shot examples (1-5), only for few_shot strategy [default: 3]
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
-#   OLLAMA_MODELS        - Models for inference (single or comma-separated) [default: all WORKING_MODELS]
+#   INFERENCE_MODELS     - Models for inference (single or comma-separated); can be Ollama, HF, or ConfliBERT [default: all WORKING_MODELS]
 #   HF_INFERENCE_MODELS  - Subset of model names (comma-separated) to run via local HF checkpoint instead of Ollama API
 #   HF_MODEL_PATH_MAP    - Mapping for HF models: "model_a=/path/a,model_b=/path/b"
 #   HF_MODEL_PATH        - Fallback HF checkpoint path when HF_INFERENCE_MODELS has one model
 #   HF_DEVICE            - HF device override (e.g., cuda, cuda:0, cpu) [default: auto]
 #   HF_MAX_NEW_TOKENS    - Max tokens for HF generation [default: 96]
-#   CF_MODELS            - Models for counterfactual analysis [default: OLLAMA_MODELS when set; else all WORKING_MODELS]
+#   CF_MODELS            - Models for counterfactual analysis [default: INFERENCE_MODELS when set; else all WORKING_MODELS]
 #   CF_EVENTS            - Number of events for counterfactual [default: 20]
 #   SKIP_INFERENCE       - Skip phase 1 if predictions exist [default: false]
 #   SKIP_COUNTERFACTUAL  - Skip counterfactual analysis [default: false]
@@ -87,7 +87,7 @@ STRATEGY="${STRATEGY:-zero_shot}"
 NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
-OLLAMA_MODELS="${OLLAMA_MODELS:-}"
+INFERENCE_MODELS="${INFERENCE_MODELS:-}"
 HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS:-}"
 HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP:-}"
 HF_MODEL_PATH="${HF_MODEL_PATH:-}"
@@ -188,13 +188,13 @@ run_inference() {
         log_step "Existing sample file found - will be reused for fair cross-model comparison"
     fi
     
-    # Set OLLAMA_MODELS if provided, otherwise will use WORKING_MODELS from constants
-    if [ -n "$OLLAMA_MODELS" ]; then
-        log_step "Running inference with model(s): ${OLLAMA_MODELS}"
+    # Set INFERENCE_MODELS if provided, otherwise will use WORKING_MODELS from constants
+    if [ -n "$INFERENCE_MODELS" ]; then
+        log_step "Running inference with model(s): ${INFERENCE_MODELS}"
         STRATEGY="${STRATEGY}" NUM_EXAMPLES="${NUM_EXAMPLES}" COUNTRY="${COUNTRY}" SAMPLE_SIZE="${SAMPLE_SIZE}" \
             HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS}" HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP}" HF_MODEL_PATH="${HF_MODEL_PATH}" \
             HF_DEVICE="${HF_DEVICE}" HF_MAX_NEW_TOKENS="${HF_MAX_NEW_TOKENS}" \
-            OLLAMA_MODELS="${OLLAMA_MODELS}" \
+            INFERENCE_MODELS="${INFERENCE_MODELS}" \
             "${VENV_PY:-python}" experiments/pipelines/ollama/run_ollama_classification.py
     else
         log_step "Running inference with all WORKING_MODELS"
@@ -283,9 +283,9 @@ run_counterfactual_analysis() {
 
     # If CF_MODELS is unset, default to the same models used for inference.
     # This keeps the fine-tuned HF-backed model included end-to-end.
-    if [ -z "${CF_MODELS}" ] && [ -n "${OLLAMA_MODELS}" ]; then
-        CF_MODELS="${OLLAMA_MODELS}"
-        log_step "Setting CF_MODELS to OLLAMA_MODELS: ${CF_MODELS}"
+    if [ -z "${CF_MODELS}" ] && [ -n "${INFERENCE_MODELS}" ]; then
+        CF_MODELS="${INFERENCE_MODELS}"
+        log_step "Setting CF_MODELS to INFERENCE_MODELS: ${CF_MODELS}"
     fi
 
     # If CF_MODELS not set, use all WORKING_MODELS from constants
@@ -518,7 +518,7 @@ main() {
     echo "  Country: ${COUNTRY}"
     echo "  Sample Size: ${SAMPLE_SIZE}"
     echo "  Results Directory: ${RESULTS_DIR}"
-    echo "  Inference Models: ${OLLAMA_MODELS:-all WORKING_MODELS}"
+    echo "  Inference Models: ${INFERENCE_MODELS:-all WORKING_MODELS}"
     if [ -n "${HF_INFERENCE_MODELS}" ]; then
         echo "  HF Inference Models: ${HF_INFERENCE_MODELS}"
         echo "  HF Model Path Map: ${HF_MODEL_PATH_MAP:-<unset>}"
