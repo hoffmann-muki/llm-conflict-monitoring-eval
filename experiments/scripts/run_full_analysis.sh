@@ -30,6 +30,7 @@
 #   COUNTRY              - Country code (cmr, nga) [default: cmr]
 #   SAMPLE_SIZE          - Number of events to sample [default: 500]
 #   INFERENCE_MODELS     - Models for inference (single or comma-separated); can be Ollama, HF, or ConfliBERT [default: all WORKING_MODELS]
+#   ANALYSIS_MODELS      - Models to include in shared analysis aggregation (comma-separated or 'all') [default: all discovered per-model results]
 #   HF_INFERENCE_MODELS  - Subset of model names (comma-separated) to run via local HF checkpoint instead of Ollama API
 #   HF_MODEL_PATH_MAP    - Mapping for HF models: "model_a=/path/a,model_b=/path/b"
 #   HF_MODEL_PATH        - Fallback HF checkpoint path when HF_INFERENCE_MODELS has one model
@@ -88,6 +89,7 @@ NUM_EXAMPLES="${NUM_EXAMPLES:-3}"
 COUNTRY="${COUNTRY:-cmr}"
 SAMPLE_SIZE="${SAMPLE_SIZE:-500}"
 INFERENCE_MODELS="${INFERENCE_MODELS:-}"
+ANALYSIS_MODELS="${ANALYSIS_MODELS:-all}"
 HF_INFERENCE_MODELS="${HF_INFERENCE_MODELS:-}"
 HF_MODEL_PATH_MAP="${HF_MODEL_PATH_MAP:-}"
 HF_MODEL_PATH="${HF_MODEL_PATH:-}"
@@ -220,9 +222,11 @@ run_aggregation() {
     fi
     
     AGGREGATE_MODELS_ARG=""
-    if [ -n "${INFERENCE_MODELS}" ]; then
-        AGGREGATE_MODELS_ARG="--models ${INFERENCE_MODELS}"
-        log_step "Restricting aggregation to current inference model(s): ${INFERENCE_MODELS}"
+    if [ -n "${ANALYSIS_MODELS}" ] && [ "${ANALYSIS_MODELS}" != "all" ]; then
+        AGGREGATE_MODELS_ARG="--models ${ANALYSIS_MODELS}"
+        log_step "Restricting aggregation to ANALYSIS_MODELS: ${ANALYSIS_MODELS}"
+    else
+        log_step "Aggregating all discovered per-model result files (shared analysis mode)"
     fi
 
     log_step "Found $PER_MODEL_COUNT per-model result file(s). Aggregating..."
@@ -347,8 +351,13 @@ run_counterfactual_analysis() {
         # Aggregate word-level impact scores across all perturbation types
         # (including newly added neutral_control baseline).  Non-critical.
         log_step "Aggregating word-level impact scores across perturbation types..."
+        WORD_IMPACT_MODELS_ARG=""
+        if [ -n "${CF_MODELS}" ]; then
+            WORD_IMPACT_MODELS_ARG="--models ${CF_MODELS}"
+            log_step "Restricting word impact aggregation to counterfactual model(s): ${CF_MODELS}"
+        fi
         if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
-            "${VENV_PY:-python}" -m lib.analysis.aggregate_word_impacts_from_counterfactuals; then
+            "${VENV_PY:-python}" -m lib.analysis.aggregate_word_impacts_from_counterfactuals ${WORD_IMPACT_MODELS_ARG}; then
             log_success "Word impact aggregation complete"
             log_step "Visualizing word impacts by perturbation type..."
             if COUNTRY="${COUNTRY}" STRATEGY="${STRATEGY}" SAMPLE_SIZE="${SAMPLE_SIZE}" NUM_EXAMPLES="${NUM_EXAMPLES}" \
@@ -531,6 +540,7 @@ main() {
     echo "  Sample Size: ${SAMPLE_SIZE}"
     echo "  Results Directory: ${RESULTS_DIR}"
     echo "  Inference Models: ${INFERENCE_MODELS:-all WORKING_MODELS}"
+    echo "  Analysis Models: ${ANALYSIS_MODELS}"
     if [ -n "${HF_INFERENCE_MODELS}" ]; then
         echo "  HF Inference Models: ${HF_INFERENCE_MODELS}"
         echo "  HF Model Path Map: ${HF_MODEL_PATH_MAP:-<unset>}"

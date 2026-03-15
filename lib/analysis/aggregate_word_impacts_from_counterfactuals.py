@@ -24,8 +24,10 @@ import numpy as np
 from pathlib import Path
 from scipy import stats
 import json
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import sys
+import argparse
+from lib.core.data_helpers import model_name_to_dir_slug
 
 
 class WordImpactAnalyzer:
@@ -177,13 +179,41 @@ def aggregate_across_models(word_dfs: List[pd.DataFrame]) -> pd.DataFrame:
     return df.sort_values('impact_magnitude', ascending=False)
 
 
+def _parse_models_filter(models_str: Optional[str]) -> Optional[set]:
+    """Parse comma-separated model list into a set of directory slugs.
+    
+    Args:
+        models_str: Comma-separated model names or slugs (e.g., 'mistral:7b,llama3.2:3b')
+                    or None to indicate no filter.
+    
+    Returns:
+        Set of directory slugs for filtering, or None if no filter is specified.
+    """
+    if not models_str:
+        return None
+    model_list = [m.strip() for m in models_str.split(',') if m.strip()]
+    if not model_list:
+        return None
+    # Convert all model names to directory slugs for consistent comparison
+    return {model_name_to_dir_slug(m) for m in model_list}
+
+
 def main():
     """Generate aggregated word impacts from counterfactual data.
 
     Reads COUNTRY, STRATEGY, SAMPLE_SIZE, NUM_EXAMPLES from environment to
-    construct the results directory path, then auto-discovers all model
-    subdirectories that contain a counterfactual JSON file.
+    construct the results directory path. Auto-discovers counterfactual JSON
+    files, optionally filtering to specific models via --models argument or
+    INFERENCE_MODELS environment variable.
+    
+    Usage:
+        python -m lib.analysis.aggregate_word_impacts_from_counterfactuals [--models MODEL1,MODEL2]
     """
+    parser = argparse.ArgumentParser(description='Aggregate word impacts across models.')
+    parser.add_argument('--models', default=os.environ.get('INFERENCE_MODELS', None),
+                       help='Comma-separated model list to aggregate (default: all discovered files)')
+    args = parser.parse_args()
+    
     country     = os.environ.get('COUNTRY',     'cmr')
     strategy    = os.environ.get('STRATEGY',    'zero_shot')
     sample_size = os.environ.get('SAMPLE_SIZE', '1000')
@@ -212,13 +242,21 @@ def main():
         if model_dir not in model_json_map:    # keep first match per directory (lexicographic order)
             model_json_map[model_dir] = Path(jf)
 
+    # Filter models if --models was specified
+    models_filter = _parse_models_filter(args.models)
+    if models_filter:
+        model_json_map = {k: v for k, v in model_json_map.items() if k in models_filter}
+    
     models = list(model_json_map.keys())
 
     print("=" * 80)
     print("AGGREGATING WORD IMPACTS ACROSS MODELS")
     print("=" * 80)
     print(f"\nSource: {results_base}")
-    print(f"Models: {', '.join(models)}\n")
+    print(f"Models: {', '.join(models)}")
+    if args.models:
+        print(f"(Filtered by --models argument)")
+    print()
 
     analyzer = WordImpactAnalyzer()
     all_word_dfs = []
