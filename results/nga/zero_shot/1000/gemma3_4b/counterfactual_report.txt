@@ -1,0 +1,24 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: NGA
+Models: gemma3:4b
+Events analyzed: 20
+Total perturbations: 289
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: gemma3:4b to delegitimation add (flip rate: 0.184)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 14 events
+Legitimation Add: 3 events
+Delegitimation Add: 1 events
+Negation: 1 events
+Provenance Add: 1 events
+
+STATISTICAL TESTS
+-----------------
+

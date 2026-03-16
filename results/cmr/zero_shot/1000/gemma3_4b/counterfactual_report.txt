@@ -1,0 +1,23 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: CMR
+Models: gemma3:4b
+Events analyzed: 20
+Total perturbations: 273
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: gemma3:4b to action substitution (flip rate: 0.143)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 16 events
+Provenance Add: 1 events
+Delegitimation Add: 2 events
+Action Substitution: 1 events
+
+STATISTICAL TESTS
+-----------------
+

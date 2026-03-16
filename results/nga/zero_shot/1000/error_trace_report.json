@@ -14,7 +14,7 @@
       }
     ],
     "n_events_analysed": 20,
-    "n_flip_events": 4,
+    "n_flip_events": 3,
     "methods": {
       "ollama": "rationale_flip_concordance (Turpin et al. NeurIPS 2023)",
       "conflibert": "layer_integrated_gradients (Sundararajan et al. ICML 2017)"
@@ -32,26 +32,26 @@
       "acled-small-llm-ft:v1": {
         "n_flips_analysed": 15,
         "aggregate": {
-          "n_resolvable": 15,
-          "concordant_rate": 0.0667,
-          "discordant_rate": 0.9333,
+          "n_resolvable": 11,
+          "concordant_rate": 0.0,
+          "discordant_rate": 1.0,
           "by_perturbation_type": {
             "action_substitution": {
               "n": 4,
-              "concordant_rate": 0.25,
-              "discordant_rate": 0.75
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
             },
             "delegitimation_add": {
-              "n": 4,
+              "n": 2,
               "concordant_rate": 0.0,
               "discordant_rate": 1.0
             },
             "provenance_add": {
-              "n": 6,
+              "n": 4,
               "concordant_rate": 0.0,
               "discordant_rate": 1.0
             },
-            "actor_substitution": {
+            "neutral_control": {
               "n": 1,
               "concordant_rate": 0.0,
               "discordant_rate": 1.0
@@ -59,9 +59,9 @@
           },
           "by_ambiguity_tier": {
             "Low": {
-              "n": 15,
-              "concordant_rate": 0.0667,
-              "discordant_rate": 0.9333
+              "n": 11,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
             }
           }
         },
@@ -73,51 +73,9 @@
             "original_word": "killed",
             "replacement_word": "shot",
             "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
-            ],
-            "perturbed_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Cult group",
-              "Category rationale: V"
-            ],
-            "concordant": false,
-            "rationale_changed": true,
-            "mentions_change": false,
-            "rfc_score": 0.0
-          },
-          {
-            "event_id": "NIG30329",
-            "ambiguity_tier": "Low",
-            "perturbation_type": "action_substitution",
-            "original_word": "killed",
-            "replacement_word": "executed",
-            "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
-            ],
-            "perturbed_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Cult group",
-              "Category rationale: Cult group"
-            ],
-            "concordant": false,
-            "rationale_changed": true,
-            "mentions_change": false,
-            "rfc_score": 0.0
-          },
-          {
-            "event_id": "NIG30329",
-            "ambiguity_tier": "Low",
-            "perturbation_type": "delegitimation_add",
-            "original_word": null,
-            "replacement_word": "unprovoked",
-            "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
+              "V",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
               "V",
@@ -135,18 +93,77 @@
           {
             "event_id": "NIG30329",
             "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "executed",
+            "original_reasoning": [
+              "V",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG30329",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "V",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG30329",
+            "ambiguity_tier": "Low",
             "perturbation_type": "delegitimation_add",
             "original_word": null,
             "replacement_word": "using excessive force",
             "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
+              "V",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "NIG30329",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival group",
-              "Category rationale: V"
+              "V",
+              "R",
+              "S"
             ],
             "concordant": false,
             "rationale_changed": false,
@@ -160,19 +177,15 @@
             "original_word": null,
             "replacement_word": "",
             "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
+              "V",
+              "R",
+              "S"
             ],
-            "perturbed_reasoning": [
-              "Key actors: unknown",
-              "Key actions: unknown",
-              "Category rationale: unknown"
-            ],
-            "concordant": false,
-            "rationale_changed": true,
-            "mentions_change": false,
-            "rfc_score": 0.0
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
           },
           {
             "event_id": "NIG30329",
@@ -181,38 +194,34 @@
             "original_word": null,
             "replacement_word": "",
             "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
+              "V",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "NIG30329",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "reported",
+            "replacement_word": "noted",
+            "original_reasoning": [
+              "V",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
+              "V",
+              "R",
+              "S"
             ],
             "concordant": false,
             "rationale_changed": false,
-            "mentions_change": false,
-            "rfc_score": 0.0
-          },
-          {
-            "event_id": "NIG30329",
-            "ambiguity_tier": "Low",
-            "perturbation_type": "provenance_add",
-            "original_word": null,
-            "replacement_word": "",
-            "original_reasoning": [
-              "Key actors: Cult group",
-              "Key actions: Killed 4 suspected members of a rival cult group",
-              "Category rationale: V"
-            ],
-            "perturbed_reasoning": [
-              "Key actors: cult group",
-              "Key actions: cult group",
-              "Category rationale: cult group"
-            ],
-            "concordant": false,
-            "rationale_changed": true,
             "mentions_change": false,
             "rfc_score": 0.0
           },
@@ -223,19 +232,22 @@
             "original_word": "killed",
             "replacement_word": "shot",
             "original_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and killed one person",
-              "Category rationale: R"
+              "B",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and shot one person",
-              "Category rationale: B"
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
             ],
-            "concordant": true,
+            "concordant": false,
             "rationale_changed": true,
-            "mentions_change": true,
-            "rfc_score": 1.0
+            "mentions_change": false,
+            "rfc_score": 0.0
           },
           {
             "event_id": "NIG38445",
@@ -244,14 +256,15 @@
             "original_word": null,
             "replacement_word": "unprovoked",
             "original_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and killed one person",
-              "Category rationale: R"
+              "B",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
-              "Key actors: buccaneers and eiye",
-              "Key actions: buccaneers and eiye clashed and killed one person in ake junction, abeokuta (abeokuta south, ogun)",
-              "Category rationale: B"
+              "B",
+              "V",
+              "R",
+              "S"
             ],
             "concordant": false,
             "rationale_changed": true,
@@ -265,14 +278,34 @@
             "original_word": null,
             "replacement_word": "using excessive force",
             "original_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and killed one person",
-              "Category rationale: R"
+              "B",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "NIG38445",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "B",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
-              "Key actors: buccaneers and eiye",
-              "Key actions: buccaneers and eiye clashed and killed one person in ake junction, abeokuta (abeokuta south, ogun)",
-              "Category rationale: B"
+              "B",
+              "V",
+              "E",
+              "P",
+              "R",
+              "S"
             ],
             "concordant": false,
             "rationale_changed": true,
@@ -286,14 +319,15 @@
             "original_word": null,
             "replacement_word": "",
             "original_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and killed one person",
-              "Category rationale: R"
+              "B",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
-              "Key actors: buccaneers and eiye",
-              "Key actions: buccaneers and eiye clashed and killed one person in ake junction, abeokuta (abeokuta south, ogun)",
-              "Category rationale: B"
+              "B",
+              "V",
+              "R",
+              "S"
             ],
             "concordant": false,
             "rationale_changed": true,
@@ -307,34 +341,13 @@
             "original_word": null,
             "replacement_word": "",
             "original_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and killed one person",
-              "Category rationale: R"
+              "B",
+              "R",
+              "S"
             ],
             "perturbed_reasoning": [
               "Key actors: buccaneers and eiye",
-              "Key actions: buccaneers and eiye clashed and killed one person in ake junction, abeokuta (abeokuta south, ogun)",
-              "Category rationale: B"
-            ],
-            "concordant": false,
-            "rationale_changed": true,
-            "mentions_change": false,
-            "rfc_score": 0.0
-          },
-          {
-            "event_id": "NIG38445",
-            "ambiguity_tier": "Low",
-            "perturbation_type": "provenance_add",
-            "original_word": null,
-            "replacement_word": "",
-            "original_reasoning": [
-              "Key actors: Buccaneers and Eiye",
-              "Key actions: Clashed and killed one person",
-              "Category rationale: R"
-            ],
-            "perturbed_reasoning": [
-              "Key actors: buccaneers and eiye",
-              "Key actions: buccaneers and eiye clashed and killed one person in ake junction, abeokuta (abeokuta south, ogun)",
+              "Key actions: B",
               "Category rationale: B"
             ],
             "concordant": false,
@@ -349,11 +362,8 @@
             "original_word": "killed",
             "replacement_word": "executed",
             "original_reasoning": [
-              "V",
               "B",
-              "E",
-              "P",
-              "R",
+              "V",
               "S"
             ],
             "perturbed_reasoning": [
@@ -363,27 +373,6 @@
               "P",
               "R",
               "S"
-            ],
-            "concordant": false,
-            "rationale_changed": false,
-            "mentions_change": false,
-            "rfc_score": 0.0
-          },
-          {
-            "event_id": "NIG34305",
-            "ambiguity_tier": "Low",
-            "perturbation_type": "actor_substitution",
-            "original_word": "police",
-            "replacement_word": "security personnel",
-            "original_reasoning": [
-              "Key actors: 1 judge, 1 driver",
-              "Key actions: 1 attack, 1 abduction",
-              "Category rationale: V"
-            ],
-            "perturbed_reasoning": [
-              "Key actors: 1 judge, 1 driver",
-              "Key actions: 1 judge, 1 driver",
-              "Category rationale: V"
             ],
             "concordant": false,
             "rationale_changed": true,

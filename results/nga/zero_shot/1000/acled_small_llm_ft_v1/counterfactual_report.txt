@@ -13,9 +13,8 @@ Most sensitive combination: acled-small-llm-ft:v1 to action substitution (flip r
 
 SENSITIVITY CLUSTERS
 --------------------
-Mixed: 18 events
+Mixed: 19 events
 Action Substitution: 1 events
-Actor Substitution: 1 events
 
 STATISTICAL TESTS
 -----------------

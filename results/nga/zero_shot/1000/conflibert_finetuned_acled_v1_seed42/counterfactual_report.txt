@@ -1,0 +1,21 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: NGA
+Models: conflibert_finetuned_acled_v1_seed42
+Events analyzed: 20
+Total perturbations: 289
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: seed42 to delegitimation add conflibert finetuned acled v1 (flip rate: 0.079)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 18 events
+Delegitimation Add: 2 events
+
+STATISTICAL TESTS
+-----------------
+

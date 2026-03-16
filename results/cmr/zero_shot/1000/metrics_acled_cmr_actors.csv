@@ -1,2 +1,7 @@
 model,N,accuracy,precision_macro,recall_macro
+acled-small-llm-ft:v1,1000,0.964,0.938,0.96
 llama3.2:3b,1000,0.688,0.641,0.654
+gemma3:4b,1000,0.618,0.68,0.672
+mistral:7b,1000,0.699,0.539,0.752
+conflibert_finetuned_acled_v1_seed42,1000,0.943,0.935,0.942
+olmo2:7b,1000,0.662,0.499,0.671

@@ -15,7 +15,7 @@
   "counterfactual_flip_rate_CFR": {
     "actor_substitution": {
       "acled-small-llm-ft:v1": {
-        "counterfactual_flip_rate_CFR": 0.03333333333333333,
+        "counterfactual_flip_rate_CFR": 0.0,
         "n_perturbations": 30,
         "mean_confidence_delta": 9.999778782798785e-13,
         "std_confidence_delta": 0.0,
@@ -87,7 +87,7 @@
     },
     "neutral_control": {
       "acled-small-llm-ft:v1": {
-        "counterfactual_flip_rate_CFR": 0.0,
+        "counterfactual_flip_rate_CFR": 0.05263157894736842,
         "n_perturbations": 19,
         "mean_confidence_delta": 9.999778782798785e-13,
         "std_confidence_delta": 0.0,
@@ -109,7 +109,7 @@
       "flip_metrics": {
         "actor_substitution": {
           "acled-small-llm-ft:v1": {
-            "counterfactual_flip_rate_CFR": 0.03333333333333333,
+            "counterfactual_flip_rate_CFR": 0.0,
             "n_perturbations": 30,
             "mean_confidence_delta": 9.999778782798785e-13,
             "std_confidence_delta": 0.0,
@@ -181,7 +181,7 @@
         },
         "neutral_control": {
           "acled-small-llm-ft:v1": {
-            "counterfactual_flip_rate_CFR": 0.0,
+            "counterfactual_flip_rate_CFR": 0.05263157894736842,
             "n_perturbations": 19,
             "mean_confidence_delta": 9.999778782798785e-13,
             "std_confidence_delta": 0.0,
@@ -195,7 +195,7 @@
       "flip_metrics": {
         "actor_substitution": {
           "acled-small-llm-ft:v1": {
-            "counterfactual_flip_rate_CFR": 0.03333333333333333,
+            "counterfactual_flip_rate_CFR": 0.0,
             "n_perturbations": 30,
             "mean_confidence_delta": 9.999778782798785e-13,
             "std_confidence_delta": 0.0,
@@ -267,7 +267,7 @@
         },
         "neutral_control": {
           "acled-small-llm-ft:v1": {
-            "counterfactual_flip_rate_CFR": 0.0,
+            "counterfactual_flip_rate_CFR": 0.05263157894736842,
             "n_perturbations": 19,
             "mean_confidence_delta": 9.999778782798785e-13,
             "std_confidence_delta": 0.0,
@@ -498,14 +498,12 @@
       "NIG38569",
       "NIG36868",
       "NIG22187",
+      "NIG34305",
       "NIG34649",
       "NIG21924"
     ],
     "action_substitution": [
       "NIG21210"
-    ],
-    "actor_substitution": [
-      "NIG34305"
     ]
   },
   "detailed_results": [
@@ -2894,12 +2892,12 @@
           },
           "model_results": {
             "acled-small-llm-ft:v1": {
-              "label": "R",
+              "label": "V",
               "confidence": 1.0,
               "success": true,
-              "label_flipped": false,
+              "label_flipped": true,
               "confidence_delta": 9.999778782798785e-13,
-              "flip_direction": null
+              "flip_direction": "R -> V"
             }
           }
         },
@@ -7560,12 +7558,12 @@
           },
           "model_results": {
             "acled-small-llm-ft:v1": {
-              "label": "B",
+              "label": "V",
               "confidence": 1.0,
               "success": true,
-              "label_flipped": true,
+              "label_flipped": false,
               "confidence_delta": 9.999778782798785e-13,
-              "flip_direction": "V -> B"
+              "flip_direction": null
             }
           }
         },
@@ -8627,7 +8625,7 @@
   "flip_metrics": {
     "actor_substitution": {
       "acled-small-llm-ft:v1": {
-        "flip_rate": 0.03333333333333333,
+        "flip_rate": 0.0,
         "n_perturbations": 30,
         "mean_confidence_delta": 9.999778782798785e-13,
         "mean_abs_confidence_delta": 9.999778782798785e-13
@@ -8691,7 +8689,7 @@
     },
     "neutral_control": {
       "acled-small-llm-ft:v1": {
-        "flip_rate": 0.0,
+        "flip_rate": 0.05263157894736842,
         "n_perturbations": 19,
         "mean_confidence_delta": 9.999778782798785e-13,
         "mean_abs_confidence_delta": 9.999778782798785e-13
