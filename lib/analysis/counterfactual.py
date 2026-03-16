@@ -1146,9 +1146,13 @@ def main():
     sample_size = args.sample_size
     num_examples = args.num_examples
     
-    # Use WORKING_MODELS if --models not provided
-    if args.models:
-        models = [m.strip() for m in args.models.split(',')]
+    # Use WORKING_MODELS if --models not provided.
+    # Strip empty tokens so values like "model_a," do not silently create
+    # a bogus second model and route outputs to multi-model locations.
+    if args.models is not None:
+        models = [m.strip() for m in args.models.split(',') if m.strip()]
+        if not models:
+            parser.error('--models was provided but no valid model names were parsed')
     else:
         models = WORKING_MODELS
         print(f"No --models specified, using all WORKING_MODELS: {models}")
