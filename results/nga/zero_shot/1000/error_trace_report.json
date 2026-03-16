@@ -1,0 +1,854 @@
+{
+  "metadata": {
+    "country": "nga",
+    "strategy": "zero_shot",
+    "sample_size": "1000",
+    "num_sources": 1,
+    "sources": [
+      {
+        "source": "results/nga/zero_shot/1000/llama3.2_3b/counterfactual_analysis_llama3_2-3b.json",
+        "n_events": 20,
+        "models": [
+          "llama3.2:3b"
+        ]
+      }
+    ],
+    "n_events_analysed": 20,
+    "n_flip_events": 9,
+    "methods": {
+      "ollama": "rationale_flip_concordance (Turpin et al. NeurIPS 2023)",
+      "conflibert": "layer_integrated_gradients (Sundararajan et al. ICML 2017)"
+    },
+    "references": [
+      "Turpin M, et al. (2023). Language Models Don't Always Say What They Think. NeurIPS.",
+      "Sundararajan M, Taly A, Yan Q (2017). Axiomatic Attribution for Deep Networks. ICML.",
+      "Ye X, Durrett G (2022). Unreliability of Explanations in Few-Shot Prompting. NeurIPS.",
+      "Ferrando J, et al. (2024). A Primer on the Inner Workings of Transformer-based LMs. ACL.",
+      "Feder A, et al. (2021). CausaLM: Causal Model Explanation via Counterfactual LMs. CL 47(2)."
+    ]
+  },
+  "ollama_rationale_analysis": {
+    "by_model": {
+      "llama3.2:3b": {
+        "n_flips_analysed": 36,
+        "aggregate": {
+          "n_resolvable": 36,
+          "concordant_rate": 0.3611,
+          "discordant_rate": 0.6389,
+          "by_perturbation_type": {
+            "action_substitution": {
+              "n": 6,
+              "concordant_rate": 0.8333,
+              "discordant_rate": 0.1667
+            },
+            "actor_substitution": {
+              "n": 6,
+              "concordant_rate": 1.0,
+              "discordant_rate": 0.0
+            },
+            "intensity_high": {
+              "n": 5,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "delegitimation_add": {
+              "n": 9,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "neutral_control": {
+              "n": 2,
+              "concordant_rate": 0.5,
+              "discordant_rate": 0.5
+            },
+            "negation": {
+              "n": 3,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "provenance_add": {
+              "n": 4,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "legitimation_add": {
+              "n": 1,
+              "concordant_rate": 1.0,
+              "discordant_rate": 0.0
+            }
+          },
+          "by_ambiguity_tier": {
+            "Low": {
+              "n": 36,
+              "concordant_rate": 0.3611,
+              "discordant_rate": 0.6389
+            }
+          }
+        },
+        "records": [
+          {
+            "event_id": "NIG21935",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Militias attacked a security forces base, indicating a conflict between groups.",
+              "Security personnel were killed, indicating a violent outcome.",
+              "The event involved violence against security personnel, not civilians."
+            ],
+            "perturbed_reasoning": [
+              "Militias attacked a security forces base, indicating a conflict between groups.",
+              "Security personnel were murdered, indicating a violent attack.",
+              "The event involves violence against security personnel, not civilians."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21935",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "executed",
+            "original_reasoning": [
+              "Militias attacked a security forces base, indicating a conflict between groups.",
+              "Security personnel were killed, indicating a violent outcome.",
+              "The event involved violence against security personnel, not civilians."
+            ],
+            "perturbed_reasoning": [
+              "Militias attacked a security forces base, indicating a conflict between groups.",
+              "Security personnel were executed, showing a violent outcome.",
+              "The event involves violence against security personnel, fitting category V."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG34842",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "soldiers",
+            "replacement_word": "military personnel",
+            "original_reasoning": [
+              "Soldiers attacked policemen, indicating a direct action by a military group.",
+              "The attack occurred at a military camp, suggesting a targeted action.",
+              "The event involves a confrontation between military personnel and police."
+            ],
+            "perturbed_reasoning": [
+              "Military personnel attacked policemen at their camp.",
+              "Policemen were wounded in the attack.",
+              "Attack involved direct confrontation between military and police."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG34842",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Soldiers attacked policemen, indicating a direct action by a military group.",
+              "The attack occurred at a military camp, suggesting a targeted action.",
+              "The event involves a confrontation between military personnel and police."
+            ],
+            "perturbed_reasoning": [
+              "Soldiers attacked policemen, key actors involved.",
+              "Soldiers attacked policemen, key action involved.",
+              "Category rationale: Attack on policemen indicates violence."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG34842",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Soldiers attacked policemen, indicating a direct action by a military group.",
+              "The attack occurred at a military camp, suggesting a targeted action.",
+              "The event involves a confrontation between military personnel and police."
+            ],
+            "perturbed_reasoning": [
+              "Soldiers attacked policemen, key actors involved.",
+              "Violent attack on policemen, key action taken.",
+              "Category rationale: Attack on law enforcement personnel, violent nature."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG34842",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Soldiers attacked policemen, indicating a direct action by a military group.",
+              "The attack occurred at a military camp, suggesting a targeted action.",
+              "The event involves a confrontation between military personnel and police."
+            ],
+            "perturbed_reasoning": [
+              "Soldiers attacked policemen, key actors involved.",
+              "Soldiers attacked policemen, key action involved.",
+              "Category rationale: Soldiers attacking policemen indicates violence."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG16585",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Youths clashed with police, police fired warning shots, and one person was shot.",
+              "Police demanded youths move on, youths refused, and a burial procession was blocked.",
+              "The event involved a confrontation between police and civilians, indicating a violent incident."
+            ],
+            "perturbed_reasoning": [
+              "Youths clashed with police, police fired warning shots, one person was shot.",
+              "Police demanded youths move on, youths refused, blocked a bank during a burial.",
+              "Police actions led to violence against civilians, not a battle or protest."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG16585",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "after",
+            "replacement_word": "following",
+            "original_reasoning": [
+              "Youths clashed with police, police fired warning shots, and one person was shot.",
+              "Police demanded youths move on, youths refused, and a burial procession was blocked.",
+              "The event involved a confrontation between police and civilians, indicating a violent incident."
+            ],
+            "perturbed_reasoning": [
+              "Youths clashed with police, police fired warning shots, and one person was shot.",
+              "Police demanded youths move on, youths refused, and a burial procession was blocked.",
+              "The event involved a confrontation between police and civilians, indicating a violent incident."
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG38445",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Clash between Buccaneers and Eiye groups in Ake Junction, Abeokta.",
+              "One person killed in the altercation.",
+              "Violence against civilians is the primary action."
+            ],
+            "perturbed_reasoning": [
+              "Clash between Buccaneers and Eiye groups in Ake Junction, Abeokuta.",
+              "No reported fatalities, suggesting limited violence.",
+              "Event lacks explosive or destructive elements."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG34375",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "ISWAP raided a PHC center, indicating a militant action.",
+              "No mention of protests, riots, or battles, focusing on looting.",
+              "Looting is a form of property damage, often seen in conflict zones."
+            ],
+            "perturbed_reasoning": [
+              "Iswap raided and looted drugs from a primary health care center",
+              "Key actors: Iswap, primary health care center in Mainok",
+              "Category rationale: Looting involves taking goods without permission"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG34375",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "ISWAP raided a PHC center, indicating a militant action.",
+              "No mention of protests, riots, or battles, focusing on looting.",
+              "Looting is a form of property damage, often seen in conflict zones."
+            ],
+            "perturbed_reasoning": [
+              "Iswap raided and looted drugs from a primary health care center.",
+              "No battles, explosions, protests, or riots reported.",
+              "Looting indicates a violent takeover of property, fitting V category."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG34375",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP raided a PHC center, indicating a militant action.",
+              "No mention of protests, riots, or battles, focusing on looting.",
+              "Looting is a form of property damage, often seen in conflict zones."
+            ],
+            "perturbed_reasoning": [
+              "Primary health care center targeted by looters",
+              "Looting of drugs reported from Iswap raid",
+              "Looting is a form of property damage, not typically classified as violence"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG34705",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Governor of Plateau state imposed curfew following violence in Mangu LGA.",
+              "Violence broke out in different parts of the town.",
+              "Curfew is a security measure to prevent further violence."
+            ],
+            "perturbed_reasoning": [
+              "Governor of Plateau State imposed curfew following violence in Mangu LGA.",
+              "Violence broke out in different parts of the town.",
+              "Curfew is a security measure to control violence."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "security forces",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Security forces and police members of the Task Force acted against kidnappers.",
+              "The event involved the killing of two kidnappers by security forces.",
+              "This event is categorized as violence against civilians."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "armed forces",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Police and armed forces were involved in the operation.",
+              "This event involves a targeted action against specific individuals."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "government troops",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Government troops and police members of the Task Force acted against kidnappers.",
+              "The event involved a confrontation between security forces and kidnappers.",
+              "The event is classified as a battle due to the confrontation between security forces and kidnappers."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members used force against kidnappers.",
+              "Event involves use of force against specific targets."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members involved in the incident.",
+              "Military and police members killed kidnappers in Koton-Karfe.",
+              "Lack of civilian involvement or threat justifies this classification."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members killed kidnappers, indicating a law enforcement action.",
+              "Violence occurred, as the kidnappers were killed by military and police.",
+              "Category rationale: Event involves violence, making V the most fitting label."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "shot",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members, military, and police acted against kidnappers.",
+              "They shot two kidnappers in Koton-Karfe, Kogi LGA.",
+              "This event involves direct action against a specific target."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members, military and police, acted against kidnappers.",
+              "The event involved a confrontation between security forces and kidnappers.",
+              "This is a violent incident involving law enforcement and criminals."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "executed",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members executed kidnappers, indicating a law enforcement action.",
+              "No mention of civilians being targeted or harmed.",
+              "Lack of violent or destructive actions indicates a non-violent event."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members did not kill kidnappers, indicating restraint.",
+              "No military or police actions were reported, suggesting no conflict.",
+              "Lack of violence or conflict suggests a strategic development."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members, military, and police acted against kidnappers in Koton-Karfe.",
+              "The action was taken to restore order in the area.",
+              "This event is about law enforcement action against criminals, not civilians."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task force members killed kidnappers in Koton-Karfe, Kogi LGA.",
+              "No mention of civilians, battles, explosions, protests, or riots.",
+              "Lack of provocation or civilian involvement suggests a targeted operation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task force members killed kidnappers, indicating a law enforcement action.",
+              "No mention of civilian casualties or protests.",
+              "Lack of explosive or violent elements suggests a controlled operation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task force members killed kidnappers in Koton-Karfe, Kogi LGA.",
+              "No mention of civilians, battles, explosions, protests, or riots.",
+              "Lack of violent or destructive actions indicates no violence against civilians."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task force members, military and police, acted against kidnappers.",
+              "No mention of civilians being directly involved or affected.",
+              "Lack of explosive or violent elements, no protests or riots reported."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task force members, military and police, were involved in the incident.",
+              "Two kidnappers were killed by the task force members.",
+              "The event involves a confrontation between security forces and kidnappers."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG21210",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "two",
+            "replacement_word": "three",
+            "original_reasoning": [
+              "Task Force members acted against kidnappers in Koton-Karfe.",
+              "Military and police members were involved in the operation.",
+              "The event involved a confrontation between security forces and kidnappers."
+            ],
+            "perturbed_reasoning": [
+              "Task Force members, military, and police acted against kidnappers.",
+              "They killed three kidnappers in Koton-Karfe, Kogi LGA.",
+              "This event involves a targeted action against specific individuals."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG36383",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "police",
+            "replacement_word": "security personnel",
+            "original_reasoning": [
+              "Nigerian police arrested a Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "The event involves the recovery of military-grade weapons."
+            ],
+            "perturbed_reasoning": [
+              "Nigerian security personnel arrested a Kaduna militia kingpin.",
+              "Recovered 48 AK-47 rifles from the kingpin.",
+              "Recovery of military arms indicates a strategic development."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG36383",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "police",
+            "replacement_word": "officers",
+            "original_reasoning": [
+              "Nigerian police arrested a Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "The event involves the recovery of military-grade weapons."
+            ],
+            "perturbed_reasoning": [
+              "Nigerian officers arrested Kaduna militia kingpin with AK-47 rifles.",
+              "Kingpin was responsible for high-profile attacks and abductions.",
+              "Recovery of AK-47 rifles indicates violent conflict."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "NIG36383",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Nigerian police arrested a Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "The event involves the recovery of military-grade weapons."
+            ],
+            "perturbed_reasoning": [
+              "Nigerian police failed to arrest Kaduna militia kingpin near Abuja-Kaduna Road.",
+              "Police recovered AK-47 rifles from the kingpin, indicating a potential arms seizure.",
+              "No direct harm or violence reported, but a significant arms recovery occurred."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG36383",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Nigerian police arrested a Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "The event involves the recovery of military-grade weapons."
+            ],
+            "perturbed_reasoning": [
+              "Nigerian police arrested Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "Recovery of arms indicates a potential shift in militia's tactics."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG36383",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Nigerian police arrested a Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "The event involves the recovery of military-grade weapons."
+            ],
+            "perturbed_reasoning": [
+              "Nigerian police arrested Kaduna militia kingpin with AK-47 rifles.",
+              "Police recovered 48 AK-47 rifles from the kingpin.",
+              "Recovery of large arms suggests a strategic development."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "NIG38569",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "clashed",
+            "replacement_word": "confronted",
+            "original_reasoning": [
+              "Nigerian troops clashed with Kaduna militia in Hayin Nakwakina village.",
+              "Troops recovered stolen items from the ambush site.",
+              "This event involves direct confrontation between military and militia."
+            ],
+            "perturbed_reasoning": [
+              "Nigerian troops confronted Kaduna militia, indicating military involvement.",
+              "Ambush at Hayin Nakwakina village suggests a premeditated attack.",
+              "Lack of explosives or other destructive elements indicates no E."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          }
+        ]
+      }
+    },
+    "interpretation": "Discordant flips (label changed, rationale unchanged or irrelevant) on Low-ambiguity events (EAS tier = Low) are the primary indicator of model-induced bias per Turpin et al. 2023."
+  },
+  "conflibert_attribution": {
+    "method": "LayerIntegratedGradients against the embedding layer, 50 approximation steps, [PAD]-token baseline.",
+    "per_event": []
+  }
+}
