@@ -1,0 +1,22 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: NGA
+Models: acled-small-llm-ft:v1
+Events analyzed: 20
+Total perturbations: 289
+
+KEY FINDINGS
+--------------------
+
+Most sensitive combination: acled-small-llm-ft:v1 to action substitution (flip rate: 0.111)
+
+SENSITIVITY CLUSTERS
+--------------------
+Mixed: 18 events
+Action Substitution: 1 events
+Actor Substitution: 1 events
+
+STATISTICAL TESTS
+-----------------
+
