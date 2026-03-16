@@ -1,9 +1,0 @@
-model,N,accuracy,precision_macro,recall_macro
-small_llm_merged_acled_v1_seed42,1000,,0.0,0.0
-acled-small-llm-ft:v1,1000,0.97,0.943,0.983
-llama3.2:3b,1000,0.785,0.797,0.678
-conflibert,1000,0.315,0.115,0.169
-gemma3:4b,1000,0.654,0.73,0.591
-mistral:7b,1000,0.793,0.735,0.668
-conflibert_finetuned_acled_v1_seed42,1000,0.972,0.964,0.978
-olmo2:7b,1000,0.76,0.741,0.583
