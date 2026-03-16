@@ -4,18 +4,20 @@ COUNTERFACTUAL ANALYSIS REPORT
 Country: NGA
 Models: llama3.2:3b
 Events analyzed: 20
-Total perturbations: 295
+Total perturbations: 303
 
 KEY FINDINGS
 --------------------
 
-Most sensitive combination: llama3.2:3b to negation (flip rate: 0.312)
+Most sensitive combination: llama3.2:3b to delegitimation add (flip rate: 0.211)
 
 SENSITIVITY CLUSTERS
 --------------------
-Mixed: 15 events
-Negation: 3 events
-Delegitimation Add: 2 events
+Action Substitution: 1 events
+Intensity High: 1 events
+Mixed: 14 events
+Negation: 1 events
+Delegitimation Add: 3 events
 
 STATISTICAL TESTS
 -----------------

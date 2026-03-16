@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "country": "cmr",
+    "models": [
+      "llama3.2:3b"
+    ],
+    "n_events": 0,
+    "n_perturbations_total": 0,
+    "ambiguity_tier_distribution": {
+      "High": 0,
+      "Medium": 0,
+      "Low": 0
+    }
+  },
+  "counterfactual_flip_rate_CFR": {},
+  "counterfactual_flip_rate_by_ambiguity_tier": {
+    "High": {
+      "n_events": 0,
+      "flip_metrics": {}
+    },
+    "Medium": {
+      "n_events": 0,
+      "flip_metrics": {}
+    },
+    "Low": {
+      "n_events": 0,
+      "flip_metrics": {}
+    },
+    "all": {
+      "n_events": 0,
+      "flip_metrics": {}
+    }
+  },
+  "counterfactual_differential_effect_CDE": {},
+  "perturbation_quality": {},
+  "statistical_tests": {},
+  "sensitivity_clusters": {},
+  "detailed_results": [],
+  "flip_metrics": {}
+}

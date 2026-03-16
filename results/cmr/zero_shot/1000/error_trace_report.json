@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "country": "cmr",
+    "strategy": "zero_shot",
+    "sample_size": "1000",
+    "num_sources": 1,
+    "sources": [
+      {
+        "source": "results/cmr/zero_shot/1000/llama3.2_3b/counterfactual_analysis_llama3_2-3b.json",
+        "n_events": 0,
+        "models": [
+          "llama3.2:3b"
+        ]
+      }
+    ],
+    "n_events_analysed": 0,
+    "n_flip_events": 0,
+    "methods": {
+      "ollama": "rationale_flip_concordance (Turpin et al. NeurIPS 2023)",
+      "conflibert": "layer_integrated_gradients (Sundararajan et al. ICML 2017)"
+    },
+    "references": [
+      "Turpin M, et al. (2023). Language Models Don't Always Say What They Think. NeurIPS.",
+      "Sundararajan M, Taly A, Yan Q (2017). Axiomatic Attribution for Deep Networks. ICML.",
+      "Ye X, Durrett G (2022). Unreliability of Explanations in Few-Shot Prompting. NeurIPS.",
+      "Ferrando J, et al. (2024). A Primer on the Inner Workings of Transformer-based LMs. ACL.",
+      "Feder A, et al. (2021). CausaLM: Causal Model Explanation via Counterfactual LMs. CL 47(2)."
+    ]
+  },
+  "ollama_rationale_analysis": {
+    "by_model": {},
+    "interpretation": "Discordant flips (label changed, rationale unchanged or irrelevant) on Low-ambiguity events (EAS tier = Low) are the primary indicator of model-induced bias per Turpin et al. 2023."
+  },
+  "conflibert_attribution": {
+    "method": "LayerIntegratedGradients against the embedding layer, 50 approximation steps, [PAD]-token baseline.",
+    "per_event": []
+  }
+}

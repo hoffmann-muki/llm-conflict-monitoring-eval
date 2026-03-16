@@ -4,20 +4,20 @@ COUNTERFACTUAL ANALYSIS REPORT
 Country: NGA
 Models: olmo2:7b
 Events analyzed: 20
-Total perturbations: 283
+Total perturbations: 303
 
 KEY FINDINGS
 --------------------
 
-Most sensitive combination: olmo2:7b to delegitimation add (flip rate: 0.500)
+Most sensitive combination: olmo2:7b to delegitimation add (flip rate: 0.211)
 
 SENSITIVITY CLUSTERS
 --------------------
-Intensity High: 1 events
-Mixed: 11 events
+Mixed: 14 events
+Delegitimation Add: 2 events
 Negation: 2 events
+Intensity High: 1 events
 Provenance Add: 1 events
-Delegitimation Add: 5 events
 
 STATISTICAL TESTS
 -----------------

@@ -11,6 +11,12 @@ llama3.2:3b,notes_length,medium,443,0.20993227990970656,-0.005067720090293437
 llama3.2:3b,notes_length,long,233,0.17167381974248927,-0.04332618025751073
 llama3.2:3b,notes_length,very_long,17,0.11764705882352941,-0.09735294117647059
 llama3.2:3b,notes_length_continuous,correlation,1000,-0.08016090772953909,0.01121838457784975
+conflibert,notes_length,very_short,4,1.0,0.31499999999999995
+conflibert,notes_length,short,303,0.6237623762376238,-0.06123762376237629
+conflibert,notes_length,medium,443,0.7223476297968398,0.0373476297968397
+conflibert,notes_length,long,233,0.6909871244635193,0.005987124463519233
+conflibert,notes_length,very_long,17,0.6470588235294118,-0.037941176470588256
+conflibert,notes_length_continuous,correlation,1000,0.04670283114365026,0.13998916556968533
 gemma3:4b,notes_length,very_short,4,0.25,-0.09599999999999997
 gemma3:4b,notes_length,short,303,0.3432343234323432,-0.0027656765676567496
 gemma3:4b,notes_length,medium,443,0.3611738148984199,0.015173814898419902
@@ -23,6 +29,12 @@ mistral:7b,notes_length,medium,443,0.23476297968397292,0.027762979683972927
 mistral:7b,notes_length,long,233,0.1888412017167382,-0.01815879828326178
 mistral:7b,notes_length,very_long,17,0.11764705882352941,-0.08935294117647058
 mistral:7b,notes_length_continuous,correlation,1000,-0.001419326638570076,0.9642452550929163
+conflibert_finetuned_acled_v1_seed42,notes_length,very_short,4,0.0,-0.028
+conflibert_finetuned_acled_v1_seed42,notes_length,short,303,0.0297029702970297,0.001702970297029701
+conflibert_finetuned_acled_v1_seed42,notes_length,medium,443,0.01580135440180587,-0.01219864559819413
+conflibert_finetuned_acled_v1_seed42,notes_length,long,233,0.05150214592274678,0.02350214592274678
+conflibert_finetuned_acled_v1_seed42,notes_length,very_long,17,0.0,-0.028
+conflibert_finetuned_acled_v1_seed42,notes_length_continuous,correlation,1000,0.03927729735532728,0.21461217381959555
 olmo2:7b,notes_length,very_short,4,0.0,-0.24
 olmo2:7b,notes_length,short,303,0.20132013201320131,-0.03867986798679868
 olmo2:7b,notes_length,medium,443,0.27539503386004516,0.035395033860045166

@@ -1,0 +1,17 @@
+COUNTERFACTUAL ANALYSIS REPORT
+==================================================
+
+Country: CMR
+Models: llama3.2:3b
+Events analyzed: 0
+Total perturbations: 0
+
+KEY FINDINGS
+--------------------
+
+SENSITIVITY CLUSTERS
+--------------------
+
+STATISTICAL TESTS
+-----------------
+
