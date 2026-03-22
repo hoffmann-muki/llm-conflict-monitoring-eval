@@ -757,6 +757,35 @@ class ErrorTraceAnalyzer:
 
         out_path = self.results_base / 'error_trace_report.json'
         out_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Smart merge: replace model-specific data, append new models
+        if out_path.exists():
+            with open(out_path, 'r') as f:
+                existing_report = json.load(f)
+            
+            # Get list of models being updated
+            new_models = set(report.get('ollama_rationale_analysis', {}).get('by_model', {}).keys())
+            
+            # Remove old data for models being re-run
+            existing_models = existing_report.get('ollama_rationale_analysis', {}).get('by_model', {})
+            for model in new_models:
+                if model in existing_models:
+                    del existing_models[model]
+            
+            # Add new model data
+            for model, data in report.get('ollama_rationale_analysis', {}).get('by_model', {}).items():
+                existing_models[model] = data
+            
+            report['ollama_rationale_analysis']['by_model'] = existing_models
+            
+            # Replace conflibert LIG results if present
+            if report.get('conflibert_attribution', {}).get('per_event'):
+                existing_lig = existing_report.get('conflibert_attribution', {}).get('per_event', [])
+                # Filter out old conflibert results
+                existing_lig = [e for e in existing_lig if e.get('model') != 'conflibert']
+                existing_lig.extend(report.get('conflibert_attribution', {}).get('per_event', []))
+                report['conflibert_attribution']['per_event'] = existing_lig
+        
         with open(out_path, 'w') as f:
             json.dump(report, f, indent=2, default=_json_safe)
         print(f"\n✓ Report saved: {out_path}")
@@ -830,6 +859,35 @@ class ErrorTraceAnalyzer:
 
         out_path = self.results_base / 'error_trace_report.json'
         out_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Smart merge: replace model-specific data, append new models
+        if out_path.exists():
+            with open(out_path, 'r') as f:
+                existing_report = json.load(f)
+            
+            # Get list of models being updated
+            new_models = set(report.get('ollama_rationale_analysis', {}).get('by_model', {}).keys())
+            
+            # Remove old data for models being re-run
+            existing_models = existing_report.get('ollama_rationale_analysis', {}).get('by_model', {})
+            for model in new_models:
+                if model in existing_models:
+                    del existing_models[model]
+            
+            # Add new model data
+            for model, data in report.get('ollama_rationale_analysis', {}).get('by_model', {}).items():
+                existing_models[model] = data
+            
+            report['ollama_rationale_analysis']['by_model'] = existing_models
+            
+            # Replace LIG results for conflibert if present
+            if report.get('conflibert_attribution', {}).get('per_event'):
+                existing_lig = existing_report.get('conflibert_attribution', {}).get('per_event', [])
+                # Filter out old conflibert results
+                existing_lig = [e for e in existing_lig if e.get('model') != 'conflibert']
+                existing_lig.extend(report.get('conflibert_attribution', {}).get('per_event', []))
+                report['conflibert_attribution']['per_event'] = existing_lig
+        
         with open(out_path, 'w') as f:
             json.dump(report, f, indent=2, default=_json_safe)
         print(f"\n✓ Report saved: {out_path}")
@@ -893,10 +951,25 @@ class ErrorTraceAnalyzer:
             'concordant', 'rationale_changed', 'mentions_change', 'rfc_score',
             'top_attributed_token', 'attribution_score',
         ]
+        
+        # Get list of models being updated (from rfc_results)
+        new_models = set(rfc_results.keys())
+        
+        # Smart merge: replace model-specific rows, keep others
+        all_rows = []
+        if out_path.exists():
+            existing_df = pd.read_csv(out_path)
+            # Keep rows for models NOT being re-run
+            all_rows = existing_df[~existing_df['model'].isin(new_models)].to_dict('records')
+        
+        # Add new rows
+        all_rows.extend(rows)
+        
+        # Write all rows
         with open(out_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(rows)
+            writer.writerows(all_rows)
         print(f"✓ Summary CSV saved: {out_path}")
 
 
