@@ -6,15 +6,15 @@
     "num_sources": 1,
     "sources": [
       {
-        "source": "results/cmr/zero_shot/1000/gemma3_4b/counterfactual_analysis_gemma3-4b.json",
+        "source": "results/cmr/zero_shot/1000/conflibert_finetuned_acled_v1_seed42/counterfactual_analysis_conflibert_finetuned_acled_v1_seed42.json",
         "n_events": 20,
         "models": [
-          "gemma3:4b"
+          "conflibert_finetuned_acled_v1_seed42"
         ]
       }
     ],
     "n_events_analysed": 20,
-    "n_flip_events": 5,
+    "n_flip_events": 0,
     "methods": {
       "ollama": "rationale_flip_concordance (Turpin et al. NeurIPS 2023)",
       "conflibert": "layer_integrated_gradients (Sundararajan et al. ICML 2017)"
@@ -29,6 +29,17 @@
   },
   "ollama_rationale_analysis": {
     "by_model": {
+      "olmo2:7b gemma3:4b": {
+        "n_flips_analysed": 0,
+        "aggregate": {
+          "n_resolvable": 0,
+          "concordant_rate": null,
+          "discordant_rate": null,
+          "by_perturbation_type": {},
+          "by_ambiguity_tier": {}
+        },
+        "records": []
+      },
       "gemma3:4b": {
         "n_flips_analysed": 19,
         "aggregate": {
@@ -482,12 +493,4999 @@
             "rfc_score": 0.0
           }
         ]
+      },
+      "olmo2:7b": {
+        "n_flips_analysed": 68,
+        "aggregate": {
+          "n_resolvable": 68,
+          "concordant_rate": 0.1029,
+          "discordant_rate": 0.8971,
+          "by_perturbation_type": {
+            "intensity_high": {
+              "n": 7,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "action_substitution": {
+              "n": 7,
+              "concordant_rate": 0.5714,
+              "discordant_rate": 0.4286
+            },
+            "delegitimation_add": {
+              "n": 15,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "provenance_add": {
+              "n": 22,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "negation": {
+              "n": 4,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "actor_substitution": {
+              "n": 5,
+              "concordant_rate": 0.6,
+              "discordant_rate": 0.4
+            },
+            "decontextualization": {
+              "n": 4,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "neutral_control": {
+              "n": 2,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "legitimation_add": {
+              "n": 2,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            }
+          },
+          "by_ambiguity_tier": {
+            "Low": {
+              "n": 68,
+              "concordant_rate": 0.1029,
+              "discordant_rate": 0.8971
+            }
+          }
+        },
+        "records": [
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military",
+              "killed man",
+              "mistaken for separatist"
+            ],
+            "perturbed_reasoning": [
+              "Military",
+              "killed civilian",
+              "mistaken identity"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Military",
+              "killed man",
+              "mistaken for separatist"
+            ],
+            "perturbed_reasoning": [
+              "Military killed civilian",
+              "Exchange of fire",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "executed",
+            "original_reasoning": [
+              "Military",
+              "killed man",
+              "mistaken for separatist"
+            ],
+            "perturbed_reasoning": [
+              "Military",
+              "executed man",
+              "mistaken for separatist"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO3117",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Military vs Boko Haram",
+              "Attack on village, hospital destroyed",
+              "Repulse of Boko Haram attack"
+            ],
+            "perturbed_reasoning": [
+              "Military vs Boko Haram",
+              "Attack on village, hospital destroyed",
+              "Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "ISWAP or Boko Haram",
+              "looted 2 houses",
+              "violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "ISWAP/Boko Haram",
+              "looted 2 houses",
+              "category rationale: strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "ISWAP or Boko Haram",
+              "looted 2 houses",
+              "violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "ISWAP/Boko Haram looted houses; not targeting civilians",
+              "Key actions: looting; not explosions or battles",
+              "Category rationale: looting; not violence, battles, or explosions"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP or Boko Haram",
+              "looted 2 houses",
+              "violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Militants",
+              "Looting",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP or Boko Haram",
+              "looted 2 houses",
+              "violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Militants",
+              "Looted houses",
+              "Category rationale: Militant action against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP or Boko Haram",
+              "looted 2 houses",
+              "violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Militants",
+              "Looting",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces, key actors; killed separatists, key action; town violence, category rationale",
+              "Ambazonian separatists targeted; military involved; lethal outcome, category rationale",
+              "Violence against separatists; not protests or strategic; lethal force used, category rationale"
+            ],
+            "perturbed_reasoning": [
+              "Military forces, key actors; killed separatists, key actions; town violence, category rationale",
+              "Violence against civilians; severe killing, key action; town in Ambazonia, category rationale",
+              "Violence against civilians; military involved, key actor; fatal outcome, category rationale"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces, key actors; killed separatists, key action; town violence, category rationale",
+              "Ambazonian separatists targeted; military involved; lethal outcome, category rationale",
+              "Violence against separatists; not protests or strategic; lethal force used, category rationale"
+            ],
+            "perturbed_reasoning": [
+              "Military forces, key actors; killed separatists, key actions; brutality indicates violence",
+              "Violence against civilians due to lethal force used",
+              "Category V because the key action involves killing, which is a violent act against civilians."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces, key actors; killed separatists, key action; town violence, category rationale",
+              "Ambazonian separatists targeted; military involved; lethal outcome, category rationale",
+              "Violence against separatists; not protests or strategic; lethal force used, category rationale"
+            ],
+            "perturbed_reasoning": [
+              "Military",
+              "killed",
+              "Balikumbat town"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Military forces, key actors; killed separatists, key action; town violence, category rationale",
+              "Ambazonian separatists targeted; military involved; lethal outcome, category rationale",
+              "Violence against separatists; not protests or strategic; lethal force used, category rationale"
+            ],
+            "perturbed_reasoning": [
+              "Military forces, key actors; murdered former separatists, key actions; category rationale: violence against civilians",
+              "Violence against civilians; key actors murdered; category rationale: V",
+              "Key actions murder; category rationale: Violence against civilians"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "executed",
+            "original_reasoning": [
+              "Military forces, key actors; killed separatists, key action; town violence, category rationale",
+              "Ambazonian separatists targeted; military involved; lethal outcome, category rationale",
+              "Violence against separatists; not protests or strategic; lethal force used, category rationale"
+            ],
+            "perturbed_reasoning": [
+              "Military forces, key actors; executions, key actions; strategic development rationale",
+              "Executions of separatists; category S for strategic developments",
+              "Strategic development event; military execution of separatists"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces, key actors; killed separatists, key action; town violence, category rationale",
+              "Ambazonian separatists targeted; military involved; lethal outcome, category rationale",
+              "Violence against separatists; not protests or strategic; lethal force used, category rationale"
+            ],
+            "perturbed_reasoning": [
+              "Military forces involved, no killing reported, no casualties",
+              "No reported violence, no explosions, no protests or riots",
+              "No strategic developments, no battles, no property damage"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13551",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "security forces",
+            "original_reasoning": [
+              "Military forces",
+              "Militants surrender",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Security forces",
+              "Militants surrender",
+              "Strategic development"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO13551",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Mayo-Moskota, Mayo-Tsanaga, Extreme-Nord)",
+            "replacement_word": "Location Y",
+            "original_reasoning": [
+              "Military forces",
+              "Militants surrender",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Military",
+              "Surrender",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped civilians",
+              "Key actors: separatists, civilians",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped civilians",
+              "Key actors: separatists, kidnapped victims",
+              "Category rationale: violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped civilians",
+              "Key actors: separatists, civilians",
+              "Category rationale: violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped civilians",
+              "Violence against civilians",
+              "Category rationale: harm to non-combatants"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Ngo-Ketunjia, Nord-Ouest)",
+            "replacement_word": "Location Y",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped civilians",
+              "strategic action"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "government troops",
+            "original_reasoning": [
+              "Military",
+              "shot in air",
+              "looted property"
+            ],
+            "perturbed_reasoning": [
+              "Government troops",
+              "shot in air, looted",
+              "Violence against civilians"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military",
+              "shot in air",
+              "looted property"
+            ],
+            "perturbed_reasoning": [
+              "Military",
+              "shot in air",
+              "looting"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military",
+              "shot in air",
+              "looted property"
+            ],
+            "perturbed_reasoning": [
+              "Military forces",
+              "shot in air",
+              "looted property"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military",
+              "shot in air",
+              "looted property"
+            ],
+            "perturbed_reasoning": [
+              "Military forces",
+              "shot in air",
+              "looted property"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4198",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4198",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Suspected separatists kidnapped students; not a battle or explosion, no protests or riots, strategic development",
+              "Key actors: separatists; key actions: kidnapping students; category rationale: strategic development",
+              "No violence against civilians, no battles or explosions, no protests or riots, strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4198",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "perturbed_reasoning": [
+              "suspected separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4198",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "perturbed_reasoning": [
+              "suspected separatists kidnapped students",
+              "State-run media reported event",
+              "strategic development in conflict region"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4198",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped students",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "troops",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Security forces",
+              "killed separatists",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "units",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Security forces",
+              "killed separatists",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Security forces",
+              "shot",
+              "two separatists"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Security forces",
+              "captured",
+              "killed"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "state security forces",
+              "shot and killed",
+              "captured on 28 july"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "State security forces",
+              "shot and killed two separatists",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "State security forces",
+              "killed separatists",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "reported",
+            "replacement_word": "noted",
+            "original_reasoning": [
+              "State security forces",
+              "killed two separatists",
+              "Strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Security forces",
+              "killed separatists",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "without justification",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "armed group",
+              "looted items",
+              "suspected militants"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "violating human rights",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Unidentified armed group",
+              "Looted food, clothing, bicycle",
+              "Suspected to be ISWAP/Boko Haram"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Unidentified armed group",
+              "Looted food, clothing, bicycle",
+              "Rationale: Looting, not violence against civilians or battles"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Unidentified armed group",
+              "Looted food, clothing, bicycle",
+              "Category rationale: looting is a form of violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Unidentified armed group",
+              "Looted food, clothing, bicycle",
+              "Suspected to be ISWAP/Boko Haram"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Kolofata, Mayo-Sava, Extreme-Nord)",
+            "replacement_word": "Location X",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Kolofata, Mayo-Sava, Extreme-Nord)",
+            "replacement_word": "Location Y",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "reported",
+            "replacement_word": "noted",
+            "original_reasoning": [
+              "Armed group",
+              "Looted items",
+              "ISWAP/Boko Haram"
+            ],
+            "perturbed_reasoning": [
+              "Armed group",
+              "Looted items",
+              "Suspected militants"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "beat",
+            "replacement_word": "attacked",
+            "original_reasoning": [
+              "Separatists attacked a civilian, abducted officials, used violence"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian Separatists attacked, abducted officials, looted motorbike",
+              "Violence against civilians",
+              "Key actions involve violence against a civilian"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "beat",
+            "replacement_word": "struck",
+            "original_reasoning": [
+              "Separatists attacked a civilian, abducted officials, used violence"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian Separatists attacked, abducted officials, looted vehicle",
+              "Violence against a civilian",
+              "Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Separatists attacked a civilian, abducted officials, used violence"
+            ],
+            "perturbed_reasoning": [
+              "Separatists",
+              "abducted officials",
+              "looted motorbike"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "clashed",
+            "replacement_word": "fought",
+            "original_reasoning": [
+              "Youth clashed",
+              "Unknown reasons",
+              "Casualties unknown"
+            ],
+            "perturbed_reasoning": [
+              "Youth from Ndoumba Kanda fought with Belabo youths",
+              "Unknown reasons for the fight",
+              "Conflict event with casualties, but not specified as violent"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Youth clashed",
+              "Unknown reasons",
+              "Casualties unknown"
+            ],
+            "perturbed_reasoning": [
+              "youth clashed",
+              "wake reasons unknown",
+              "category rationale: conflict type unclear"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "personnel",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security personnel intervened",
+              "Key actions: abduction, theft, release; no explosions or battles",
+              "Category rationale: strategic development, as it involves military intervention"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "Militants abducted civilians",
+              "Militants stole property",
+              "Category rationale: Violent act against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "Militants abducted civilians, stole property; security forces intervened",
+              "Key actors: iswap/boko haram, actions: abduction, theft",
+              "Category rationale: non-violent resolution with security forces"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "Militants abducted civilians",
+              "Security forces intervened",
+              "Conflict resolution through release"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "Militants abducted civilians, stole property; security forces intervened",
+              "Key actors: iswap or boko haram, security forces; key actions: abduction, theft, release"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "ISWAP/Boko Haram abducted civilians, stole property; security forces intervened",
+              "Key actions: abduction, theft, release; strategic intervention",
+              "Category rationale: non-violent conflict resolution"
+            ],
+            "perturbed_reasoning": [
+              "Militants abducted civilians, stole property; not a protest or riot",
+              "Security forces intervened; not a battle or explosion",
+              "Strategic development in counter-insurgency tactics"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped retired military officer",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Ambazonian separatists kidnapped a retired military officer",
+              "Key actors: separatists, retired military officer",
+              "Category rationale: strategic development"
+            ],
+            "perturbed_reasoning": [
+              "Ambazonian separatists",
+              "kidnapped retired military officer",
+              "strategic development"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          }
+        ]
+      },
+      "mistral:7b": {
+        "n_flips_analysed": 48,
+        "aggregate": {
+          "n_resolvable": 48,
+          "concordant_rate": 0.0833,
+          "discordant_rate": 0.9167,
+          "by_perturbation_type": {
+            "intensity_high": {
+              "n": 6,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "action_substitution": {
+              "n": 5,
+              "concordant_rate": 0.4,
+              "discordant_rate": 0.6
+            },
+            "delegitimation_add": {
+              "n": 13,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "actor_substitution": {
+              "n": 6,
+              "concordant_rate": 0.3333,
+              "discordant_rate": 0.6667
+            },
+            "provenance_add": {
+              "n": 10,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "neutral_control": {
+              "n": 2,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "negation": {
+              "n": 3,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "legitimation_add": {
+              "n": 3,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            }
+          },
+          "by_ambiguity_tier": {
+            "Low": {
+              "n": 48,
+              "concordant_rate": 0.0833,
+              "discordant_rate": 0.9167
+            }
+          }
+        },
+        "records": [
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Mistaken identity",
+              "Category rationale: Violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, killing a civilian mistaken for a separatist fighter",
+              "Category rationale: Violence against civilians (V)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Mistaken identity",
+              "Category rationale: Violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Murder",
+              "Category rationale: Violence against civilians due to mistaken identity"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Mistaken identity",
+              "Category rationale: Violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Mistaken identity",
+              "Category rationale: Violence against civilians due to mistaken identity"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO9055",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Mistaken identity",
+              "Category rationale: Violence against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, Ambazonia Liberation Army",
+              "Key actions: Shooting, Mistaken identity",
+              "Category rationale: Violence against civilians (the man was not a separatist fighter)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Key actors: ISWAP or Boko Haram militants",
+              "Key actions: Looting of 2 houses",
+              "Category rationale: Actions can be classified as Riot (R)"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: ISWAP/Boko Haram militants",
+              "Key actions: Looting of 2 houses",
+              "Category rationale: Actions can be classified as R (Riots)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "troops",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security troops, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security forces, 2. Displaced civilians due to illegal checkpoint, 3. R (Riots) as civilians are displaced due to fear of retaliation"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security forces, 2. Displaced civilians, 3. V (Violence against civilians due to displacement caused by state security forces)",
+              "1. State security forces, 2. Mounted illegal checkpoint, 3. V (Potential for violence due to illegal checkpoint causing fear and disruption)",
+              "1. Ambazonian separatists, 2. Paralyzing vehicle movement, 3. V (Potential for violence due to disruption of vehicle movement)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security forces, 2. Displaced civilians due to illegal checkpoint, 3. Event suggests civilian displacement due to fear of retaliation, categorized as V (Violence against civilians)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security forces, 2. Displaced civilians, 3. Event suggests strategic development (S) as the state is using force to control a region, potentially suppressing separatist activity."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security forces, Ambazonian separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests strategic development by separatists, potential for violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO10079",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "after",
+            "replacement_word": "following",
+            "original_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. Displacement of civilians, illegal checkpoint",
+              "3. Event suggests civilian displacement due to fear of retaliation, resembling a 'P' (Protest) event but with a unique element of coercion"
+            ],
+            "perturbed_reasoning": [
+              "1. State security forces, Ambazonian Separatists",
+              "2. State security forces establish illegal checkpoint, civilians displaced",
+              "3. Event involves displacement of civilians due to conflict between state forces and separatists"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: This event involves targeted violence against non-civilian actors, which aligns with the 'V' category"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, separatists",
+              "Key actions: Killing, violence against civilians",
+              "Category rationale: Violence against civilians by military forces"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: This event involves targeted violence against non-civilian actors, which aligns with the 'V' category"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, separatists",
+              "Key actions: Violent killing",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: This event involves targeted violence against non-civilian actors, which aligns with the 'V' category"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, separatists",
+              "Key actions: Murder of separatists",
+              "Category rationale: Violent act against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: This event involves targeted violence against non-civilian actors, which aligns with the 'V' category"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: No killing of separatists",
+              "Category rationale: No violent action, more likely strategic development or non-violent interaction"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: This event involves targeted violence against non-civilian actors, which aligns with the 'V' category"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: Violent action against separatists by military forces"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Key actors: Military forces, former Ambazonian separatists",
+              "Key actions: Military forces killed separatists",
+              "Category rationale: This event involves targeted violence against non-civilian actors, which aligns with the 'V' category"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Military forces, separatists",
+              "Key actions: Use of lethal force, killing",
+              "Category rationale: Violence against civilians (3 former ambazonian separatists)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4946",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping of civilians",
+              "Category rationale: Violence against civilians (V)"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping of civilians",
+              "Category rationale: Actions against civilians to assert control"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4198",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping of students",
+              "Category rationale: Violent act against civilians"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping of students",
+              "Category rationale: Actions aimed at enforcing control, categorized as R (Riots)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, Murder",
+              "Category rationale: Violent action against civilians by state forces"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: State security forces captured and later killed two Ambazonian Separatists",
+              "Category rationale: This event involves the use of lethal force by state security forces against separatists, which aligns with the 'V' (Violence against civilians) category"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian separatists",
+              "Key actions: Shooting, Killing",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian separatists",
+              "Key actions: Shooting, Killing",
+              "Category rationale: Violence against civilians"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian separatists",
+              "Key actions: Shooting, Killing, Capture",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: State security forces, Ambazonian Separatists",
+              "Key actions: Shooting, killing, capturing",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: State security forces, Ambazonian separatists",
+              "Key actions: Shooting, Killing, Capture",
+              "Category rationale: Violent encounter between state forces and separatists"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "violating human rights",
+            "original_reasoning": [
+              "1. Unidentified armed group suspected of being ISWAP or Boko Haram",
+              "2. Looting of food items, clothing, and 1 bicycle",
+              "3. Classified as R (Riots) due to the unlawful and disorderly taking of property"
+            ],
+            "perturbed_reasoning": [
+              "1. Unidentified armed group suspected of being Iswap or Boko Haram",
+              "2. Looting of food items, clothing, and 1 bicycle",
+              "3. Event classified as R (Riots) due to the unlawful seizure of property"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "1. Unidentified armed group suspected of being ISWAP or Boko Haram",
+              "2. Looting of food items, clothing, and 1 bicycle",
+              "3. Classified as R (Riots) due to the unlawful and disorderly taking of property"
+            ],
+            "perturbed_reasoning": [
+              "1. Unidentified armed group (iswap or boko haram)",
+              "2. Looting of food items, clothing, and 1 bicycle",
+              "3. Event classified as R (Riots) due to unlawful seizure of property"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "security forces",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "armed forces",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: severe beating, abduction, looting, abandonment of motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Brutal beating, abduction, looting, abandonment of motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Abduction, looting, violence against property",
+              "Category rationale: Actions involve violence and abduction of government officials, but not in a battle or protest context"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists, commercial motorbike driver, military forces",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists, commercial motorbike driver, government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO14603",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "later",
+            "replacement_word": "afterwards",
+            "original_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian Separatists, commercial motorbike driver, suspected government officials",
+              "Key actions: Beat, injured, abducted, looted, abandoned motorbike",
+              "Category rationale: Violent actions against civilians and government officials"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "clashed",
+            "replacement_word": "engaged",
+            "original_reasoning": [
+              "Key actors: Youth from Ndoumba Kanda and Belabo",
+              "Key actions: Clash during a wake",
+              "Category rationale: Event appears to be a riot (R)"
+            ],
+            "perturbed_reasoning": [
+              "1. Youth from Ndoumba Kanda and Belabo engaged (who)",
+              "2. Unknown actions during a wake (what)",
+              "3. Lack of reported violence, battles, explosions, or strategic developments suggest a possible protest or riot (why)"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "clashed",
+            "replacement_word": "confronted",
+            "original_reasoning": [
+              "Key actors: Youth from Ndoumba Kanda and Belabo",
+              "Key actions: Clash during a wake",
+              "Category rationale: Event appears to be a riot (R)"
+            ],
+            "perturbed_reasoning": [
+              "1. Youth from Ndoumba Kanda and Belabo confronted (who)",
+              "2. Unknown reasons during a wake (what)",
+              "3. Event suggests potential conflict escalation or tension (why)"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO7298",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Key actors: ISWAP/Boko Haram militants",
+              "Key actions: Abduction of herders, theft of oxen",
+              "Category rationale: Violence against civilians (V)"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: ISWAP/Boko Haram militants, security forces",
+              "Key actions: Abduction of herders, theft of cattle, release of hostages upon encounter with security forces",
+              "Category rationale: The event involves a violent act by militants against civilians, but it also involves a response from security forces, suggesting a potential conflict situation. However, the primary focus seems to be on the abduction and release of civilians, making it more closely related to violence against civilians."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "security forces",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "armed forces",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "government troops",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists, retired government troops officer",
+              "Key actions: Kidnapping of a retired government officer",
+              "Category rationale: Event involves a violent act by separatists against a government official, classifying it as V (Violence against civilians)"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping a retired military officer",
+              "Category rationale: Actions aimed at exerting control and intimidation, which aligns with Riot (R)"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4930",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Kidnapping a retired military officer",
+              "Category rationale: Violent action against a civilian"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          }
+        ]
+      },
+      "llama3.2:3b": {
+        "n_flips_analysed": 44,
+        "aggregate": {
+          "n_resolvable": 44,
+          "concordant_rate": 0.1818,
+          "discordant_rate": 0.8182,
+          "by_perturbation_type": {
+            "legitimation_add": {
+              "n": 4,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "delegitimation_add": {
+              "n": 7,
+              "concordant_rate": 0.1429,
+              "discordant_rate": 0.8571
+            },
+            "negation": {
+              "n": 3,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "actor_substitution": {
+              "n": 5,
+              "concordant_rate": 1.0,
+              "discordant_rate": 0.0
+            },
+            "intensity_high": {
+              "n": 8,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "provenance_add": {
+              "n": 6,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "decontextualization": {
+              "n": 5,
+              "concordant_rate": 0.2,
+              "discordant_rate": 0.8
+            },
+            "neutral_control": {
+              "n": 4,
+              "concordant_rate": 0.25,
+              "discordant_rate": 0.75
+            },
+            "action_substitution": {
+              "n": 2,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            }
+          },
+          "by_ambiguity_tier": {
+            "Low": {
+              "n": 41,
+              "concordant_rate": 0.1707,
+              "discordant_rate": 0.8293
+            },
+            "Medium": {
+              "n": 3,
+              "concordant_rate": 0.3333,
+              "discordant_rate": 0.6667
+            }
+          }
+        },
+        "records": [
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "ISWAP or Boko Haram militants looted houses in Waza, Nigeria.",
+              "No direct violence or military action reported.",
+              "No strategic or protest-related elements mentioned."
+            ],
+            "perturbed_reasoning": [
+              "ISWAP or Boko Haram militants looted houses in Waza, Logone-et-Chari, Extreme-Nord.",
+              "No direct violence against civilians, battles, or explosions reported.",
+              "No protests, riots, or strategic developments mentioned."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8281",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "ISWAP or Boko Haram militants looted houses in Waza, Nigeria.",
+              "No direct violence or military action reported.",
+              "No strategic or protest-related elements mentioned."
+            ],
+            "perturbed_reasoning": [
+              "ISWAP/Boko Haram militants looted houses in Waza, Nigeria.",
+              "No clear provocation or warning given by authorities.",
+              "Lack of response from authorities suggests unprovoked attack."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces acted against former Ambazonian separatists.",
+              "No mention of civilians being targeted or harmed.",
+              "Event does not involve battles, explosions, protests, or riots."
+            ],
+            "perturbed_reasoning": [
+              "Military forces did not kill, instead, they did not act against former Ambazonian separatists.",
+              "No action was taken by the military against the individuals.",
+              "No violence or conflict occurred, making it a strategic development."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "government troops",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Government troops raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They looted property and shot in the air.",
+              "Property damage and intimidation indicate violent confrontation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They brutally shot in the air and looted property.",
+              "Property damage and destruction indicate violent action."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "Violently shot in the air, and then looted property.",
+              "Property damage and theft indicate violent confrontation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They looted property without shooting in the air.",
+              "No indication of violence, battles, or strategic developments."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and looting indicate a violent confrontation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang Village, Batibo Subdivision, with live ammunition.",
+              "They shot in the air and then looted property, indicating a lack of clear objectives.",
+              "The action appears to be a violent, destructive act with no clear strategic or protest-related motivation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang Village, Batibo Subdivision, with live ammunition.",
+              "They shot in the air and then looted property, indicating a mix of violence and property damage.",
+              "The event involves both violence against civilians (V) and property damage (R)."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang Village, indicating key actors are military personnel.",
+              "They shot in the air and looted property, showing key actions are violent and destructive.",
+              "This event involves violence against civilians, making it a suitable category."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang Village, indicating key actors are military personnel.",
+              "They shot in the air and looted property, showing key actions are violent and destructive.",
+              "This event involves violence against civilians, making it a suitable category."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang Village, indicating key actors are military personnel.",
+              "They shot in the air and looted property, showing key actions are violent and destructive.",
+              "This event involves violence against civilians, making it a clear fit for category V."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Momo, Nord-Ouest)",
+            "replacement_word": "Location X",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision Location X.",
+              "They shot in the air, and then looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Momo, Nord-Ouest)",
+            "replacement_word": "Location Y",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, indicating key actors are military personnel.",
+              "They shot in the air and looted property, showing key actions are violent and destructive.",
+              "This event involves violence against civilians, making it a looting event with violent actions."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO4776",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "then",
+            "replacement_word": "subsequently",
+            "original_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage and theft indicate a violent confrontation."
+            ],
+            "perturbed_reasoning": [
+              "Military forces raided Bengang village, Batibo subdivision.",
+              "They shot in the air and looted property.",
+              "Property damage indicates a destructive action."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "security forces",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Security forces ambushed Ambazonian Separatists on a motorcycle.",
+              "Security forces members shot and injured one separatist.",
+              "Event involves direct confrontation between security forces and separatists."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "armed forces",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Armed forces, Ambazonian Separatists, Restoration Forces.",
+              "Key actions: Ambush, shooting, injury, motorcycle attack.",
+              "Category rationale: Ambush and shooting indicate violent confrontation."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs. Ambazonian Separatists",
+              "Ambush and severe shooting",
+              "Involvement of military forces indicates a battle"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists on motorcycle, indicating military action.",
+              "Separatists were shot and injured, indicating harm to civilians.",
+              "Event involves harm to civilians, indicating a 'V' category classification."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists on motorcycle, indicating military action.",
+              "Violent shooting and injury of one separatist occurred, indicating harm to civilians.",
+              "Event involves direct confrontation and harm to individuals, suggesting violent conflict."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "No civilians were shot, but one was injured, suggesting restraint.",
+              "The event involves a military action against separatists, not civilians."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Lack of explosives or destruction, indicating no strategic development."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs. Ambazonian separatists",
+              "Ambush and shooting on a motorcycle",
+              "Limited scope, localized incident"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists on a motorcycle.",
+              "Military forces used force against separatists.",
+              "Event involves direct action against a group."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists on motorcycle in Konye.",
+              "Military forces members shot and injured one separatist.",
+              "Event involves direct action against separatist group."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Konye, Meme, Sud-Ouest)",
+            "replacement_word": "Location Y",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs. Ambazonian Separatists",
+              "Ambush and shooting on a motorcycle",
+              "Involvement of military forces indicates a battle"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO11075",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "one",
+            "replacement_word": "two",
+            "original_reasoning": [
+              "Military forces ambushed separatists, indicating a military action.",
+              "Injured one separatist, indicating harm to a combatant.",
+              "Event involves combatants, making it a battle-related incident."
+            ],
+            "perturbed_reasoning": [
+              "Military forces ambushed separatists on motorcycle in Konye, Cameroon.",
+              "Key actors: Military forces, Ambazonian Separatists from Restoration Forces.",
+              "Category rationale: Ambush indicates a violent confrontation between opposing groups."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO8757",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "violating human rights",
+            "original_reasoning": [
+              "ISWAP or Boko Haram suspected, looting specific items in Ganse, Kolofata.",
+              "Armed group actions led to looting, no direct violence reported.",
+              "Looting is a form of property damage, not typically classified as violence."
+            ],
+            "perturbed_reasoning": [
+              "Unidentified armed group looted food and items in a specific location.",
+              "No reports of violence, battles, or explosions.",
+              "Event does not involve protests, riots, or strategic developments."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "clashed",
+            "replacement_word": "engaged",
+            "original_reasoning": [
+              "Youth from Ndoumba Kanda clashed with Belabo youths",
+              "Casualties were reported but unknown",
+              "No mention of explosives, protests, or strategic developments"
+            ],
+            "perturbed_reasoning": [
+              "Youth engagement with Belabo youths during a wake event.",
+              "Casualties and motivations unknown.",
+              "Lack of information suggests potential for violence."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "clashed",
+            "replacement_word": "confronted",
+            "original_reasoning": [
+              "Youth from Ndoumba Kanda clashed with Belabo youths",
+              "Casualties were reported but unknown",
+              "No mention of explosives, protests, or strategic developments"
+            ],
+            "perturbed_reasoning": [
+              "Youth confrontation between Ndoumba Kanda and Belabo youths during a wake.",
+              "Casualties and motivations unknown.",
+              "Lack of information suggests potential for violence or conflict."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "Youth from Ndoumba Kanda clashed with Belabo youths",
+              "Casualties were reported but unknown",
+              "No mention of explosives, protests, or strategic developments"
+            ],
+            "perturbed_reasoning": [
+              "Youth from Ndoumba Kanda clashed with Belabo youths",
+              "Casualties unknown, restore order",
+              "No mention of explosives, protests, or strategic developments"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO13869",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "reported",
+            "replacement_word": "noted",
+            "original_reasoning": [
+              "Youth from Ndoumba Kanda clashed with Belabo youths",
+              "Casualties were reported but unknown",
+              "No mention of explosives, protests, or strategic developments"
+            ],
+            "perturbed_reasoning": [
+              "Youth from Ndoumba Kanda clashed with Belabo youths",
+              "During a wake, with unknown reasons",
+              "No mention of explosives, protests, or strategic developments"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12794",
+            "ambiguity_tier": "Medium",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "government troops",
+            "original_reasoning": [
+              "Suspected military forces burnt down shops for non-compliance with lockdown.",
+              "Ambazonian Separatist fighters imposed lockdown Mondays.",
+              "Event involves property destruction, indicating a level of violence."
+            ],
+            "perturbed_reasoning": [
+              "Suspected government troops forces vs. Ambazonian Separatist fighters",
+              "Burnt down shops for failing to open on Mondays",
+              "Lockdown imposed by Ambazonian Separatist fighters"
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO12794",
+            "ambiguity_tier": "Medium",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Suspected military forces burnt down shops for non-compliance with lockdown.",
+              "Ambazonian Separatist fighters imposed lockdown Mondays.",
+              "Event involves property destruction, indicating a level of violence."
+            ],
+            "perturbed_reasoning": [
+              "Suspected military forces burnt down shops for non-compliance with separatist fighters' lockdown.",
+              "Ambazonian separatist fighters imposed lockdown Mondays.",
+              "Property destruction indicates a level of coercion or intimidation."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12794",
+            "ambiguity_tier": "Medium",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Suspected military forces burnt down shops for non-compliance with lockdown.",
+              "Ambazonian Separatist fighters imposed lockdown Mondays.",
+              "Event involves property destruction, indicating a level of violence."
+            ],
+            "perturbed_reasoning": [
+              "Suspected military forces vs. Ambazonian separatist fighters",
+              "Burnt down shops vs. Imposed lockdowns",
+              "Property destruction indicates a level of violence"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "military",
+            "replacement_word": "security forces",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Security forces vs Ambazonian separatists in Peng village, Tombel.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves combat between security forces and separatists."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in firefight, reportedly flagged as fighters.",
+              "Event involves military action against separatist fighters."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng Village, Tombel.",
+              "Civilians killed in reported firefight with separatist fighters.",
+              "Excessive force used by military against suspected fighters."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Kupe-Manenguba, Sud-Ouest)",
+            "replacement_word": "Location X",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village, Tombel.",
+              "Civilians killed in reported firefight with separatists.",
+              "Fighter identification and civilian casualties indicate a battle."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "decontextualization",
+            "original_word": "(Kupe-Manenguba, Sud-Ouest)",
+            "replacement_word": "Location Y",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village, Tombel.",
+              "Civilians killed in reported firefight with separatists.",
+              "Fighter identification and civilian casualties indicate a battle."
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO2846",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "two",
+            "replacement_word": "three",
+            "original_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Civilians killed in reported firefight with separatists.",
+              "Event involves military action against separatist fighters."
+            ],
+            "perturbed_reasoning": [
+              "Military forces vs Ambazonian separatists in Peng village.",
+              "Three civilians killed in reported firefight.",
+              "Event involves military action against separatists."
+            ],
+            "concordant": true,
+            "rationale_changed": true,
+            "mentions_change": true,
+            "rfc_score": 1.0
+          }
+        ]
+      },
+      "acled-small-llm-ft:v1": {
+        "n_flips_analysed": 19,
+        "aggregate": {
+          "n_resolvable": 11,
+          "concordant_rate": 0.0,
+          "discordant_rate": 1.0,
+          "by_perturbation_type": {
+            "intensity_high": {
+              "n": 3,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "action_substitution": {
+              "n": 3,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "legitimation_add": {
+              "n": 1,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "delegitimation_add": {
+              "n": 2,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            },
+            "provenance_add": {
+              "n": 2,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            }
+          },
+          "by_ambiguity_tier": {
+            "Low": {
+              "n": 11,
+              "concordant_rate": 0.0,
+              "discordant_rate": 1.0
+            }
+          }
+        },
+        "records": [
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "intensity_high",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "shot",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Violence against civilians",
+              "Category rationale: V"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "murdered",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "action_substitution",
+            "original_word": "killed",
+            "replacement_word": "executed",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "negation",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO3188",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "troops",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "personnel",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "actor_substitution",
+            "original_word": "forces",
+            "replacement_word": "units",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "legitimation_add",
+            "original_word": null,
+            "replacement_word": "to restore order",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "unprovoked",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "concordant": false,
+            "rationale_changed": false,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "delegitimation_add",
+            "original_word": null,
+            "replacement_word": "using excessive force",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Violence against civilians",
+              "Category rationale: V"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Violence against civilians",
+              "Category rationale: V"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": [
+              "Key actors: Ambazonian separatists",
+              "Key actions: Violence against civilians",
+              "Category rationale: V"
+            ],
+            "concordant": false,
+            "rationale_changed": true,
+            "mentions_change": false,
+            "rfc_score": 0.0
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "provenance_add",
+            "original_word": null,
+            "replacement_word": "",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "reported",
+            "replacement_word": "noted",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          },
+          {
+            "event_id": "CAO12441",
+            "ambiguity_tier": "Low",
+            "perturbation_type": "neutral_control",
+            "original_word": "two",
+            "replacement_word": "three",
+            "original_reasoning": [
+              "V",
+              "B",
+              "E",
+              "P",
+              "R",
+              "S"
+            ],
+            "perturbed_reasoning": null,
+            "concordant": null,
+            "rationale_changed": null,
+            "mentions_change": null,
+            "rfc_score": null
+          }
+        ]
       }
     },
     "interpretation": "Discordant flips (label changed, rationale unchanged or irrelevant) on Low-ambiguity events (EAS tier = Low) are the primary indicator of model-induced bias per Turpin et al. 2023."
   },
   "conflibert_attribution": {
     "method": "LayerIntegratedGradients against the embedding layer, 50 approximation steps, [PAD]-token baseline.",
-    "per_event": []
+    "per_event": [
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO9055",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "killed",
+            "attribution": 1.884455
+          },
+          {
+            "token": "shot",
+            "attribution": 1.576003
+          },
+          {
+            "token": "a",
+            "attribution": 1.526596
+          },
+          {
+            "token": "fire",
+            "attribution": -1.260298
+          },
+          {
+            "token": "forces",
+            "attribution": 0.810657
+          },
+          {
+            "token": "man",
+            "attribution": 0.777719
+          },
+          {
+            "token": ".",
+            "attribution": 0.726122
+          },
+          {
+            "token": "in",
+            "attribution": 0.568066
+          },
+          {
+            "token": "ambazonia",
+            "attribution": 0.521693
+          },
+          {
+            "token": "a",
+            "attribution": 0.478515
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO3117",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "attack",
+            "attribution": 1.226601
+          },
+          {
+            "token": "destroyed",
+            "attribution": 0.660016
+          },
+          {
+            "token": "an",
+            "attribution": 0.625989
+          },
+          {
+            "token": "repulsed",
+            "attribution": 0.580849
+          },
+          {
+            "token": "the",
+            "attribution": 0.539791
+          },
+          {
+            "token": "by",
+            "attribution": 0.510285
+          },
+          {
+            "token": ",",
+            "attribution": 0.503683
+          },
+          {
+            "token": "the",
+            "attribution": -0.486969
+          },
+          {
+            "token": "hospital",
+            "attribution": 0.460305
+          },
+          {
+            "token": "on",
+            "attribution": 0.454701
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO8281",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 2.135861
+          },
+          {
+            "token": ")",
+            "attribution": 1.17399
+          },
+          {
+            "token": "waza",
+            "attribution": 0.715097
+          },
+          {
+            "token": "logone",
+            "attribution": 0.663623
+          },
+          {
+            "token": "waza",
+            "attribution": 0.568147
+          },
+          {
+            "token": "-",
+            "attribution": 0.484981
+          },
+          {
+            "token": "haram",
+            "attribution": -0.458412
+          },
+          {
+            "token": "2023",
+            "attribution": -0.430389
+          },
+          {
+            "token": "chari",
+            "attribution": 0.428396
+          },
+          {
+            "token": "december",
+            "attribution": 0.403318
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO10079",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 1.869797
+          },
+          {
+            "token": ":",
+            "attribution": 1.187526
+          },
+          {
+            "token": "displacement",
+            "attribution": 0.755898
+          },
+          {
+            "token": "on",
+            "attribution": 0.407561
+          },
+          {
+            "token": "moungo",
+            "attribution": -0.374631
+          },
+          {
+            "token": "vehicle",
+            "attribution": 0.287002
+          },
+          {
+            "token": "2",
+            "attribution": 0.273818
+          },
+          {
+            "token": "for",
+            "attribution": 0.254957
+          },
+          {
+            "token": "paralyzing",
+            "attribution": -0.242285
+          },
+          {
+            "token": "dibombari",
+            "attribution": -0.235054
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO3188",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "killed",
+            "attribution": 3.578161
+          },
+          {
+            "token": "former",
+            "attribution": 2.726646
+          },
+          {
+            "token": "three",
+            "attribution": 2.2943
+          },
+          {
+            "token": "ambazonian",
+            "attribution": 1.78345
+          },
+          {
+            "token": "military",
+            "attribution": 1.050178
+          },
+          {
+            "token": "separatists",
+            "attribution": 0.965455
+          },
+          {
+            "token": "forces",
+            "attribution": 0.673474
+          },
+          {
+            "token": "ketunjia",
+            "attribution": -0.654679
+          },
+          {
+            "token": ")",
+            "attribution": 0.585511
+          },
+          {
+            "token": ",",
+            "attribution": -0.442599
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO13551",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "surrendered",
+            "attribution": 1.256728
+          },
+          {
+            "token": ")",
+            "attribution": 0.913103
+          },
+          {
+            "token": ".",
+            "attribution": -0.801075
+          },
+          {
+            "token": "haram",
+            "attribution": -0.494209
+          },
+          {
+            "token": ")",
+            "attribution": 0.430698
+          },
+          {
+            "token": "boko",
+            "attribution": -0.405953
+          },
+          {
+            "token": "tsanaga",
+            "attribution": -0.356169
+          },
+          {
+            "token": "on",
+            "attribution": 0.33664
+          },
+          {
+            "token": "to",
+            "attribution": 0.327113
+          },
+          {
+            "token": "madakar",
+            "attribution": 0.295886
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO4946",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 2.807504
+          },
+          {
+            "token": "kidnapped",
+            "attribution": 1.918883
+          },
+          {
+            "token": "on",
+            "attribution": 0.603498
+          },
+          {
+            "token": "2021",
+            "attribution": 0.445663
+          },
+          {
+            "token": ",",
+            "attribution": 0.427483
+          },
+          {
+            "token": "january",
+            "attribution": 0.346969
+          },
+          {
+            "token": "in",
+            "attribution": 0.330264
+          },
+          {
+            "token": "village",
+            "attribution": 0.289092
+          },
+          {
+            "token": "a",
+            "attribution": 0.275924
+          },
+          {
+            "token": "ouest",
+            "attribution": 0.238233
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO4776",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 1.640727
+          },
+          {
+            "token": ":",
+            "attribution": 1.074533
+          },
+          {
+            "token": "then",
+            "attribution": 0.780572
+          },
+          {
+            "token": "and",
+            "attribution": 0.567141
+          },
+          {
+            "token": "shot",
+            "attribution": -0.375963
+          },
+          {
+            "token": "they",
+            "attribution": 0.299554
+          },
+          {
+            "token": "2020",
+            "attribution": 0.287224
+          },
+          {
+            "token": "15",
+            "attribution": 0.24463
+          },
+          {
+            "token": "around",
+            "attribution": 0.237845
+          },
+          {
+            "token": ")",
+            "attribution": 0.23409
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO11075",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "ambushed",
+            "attribution": 2.182575
+          },
+          {
+            "token": "shot",
+            "attribution": 1.343664
+          },
+          {
+            "token": "ambazonian",
+            "attribution": 1.13107
+          },
+          {
+            "token": "injured",
+            "attribution": 0.89109
+          },
+          {
+            "token": "the",
+            "attribution": 0.812019
+          },
+          {
+            "token": "one",
+            "attribution": 0.600615
+          },
+          {
+            "token": "forces",
+            "attribution": 0.496896
+          },
+          {
+            "token": ".",
+            "attribution": -0.469153
+          },
+          {
+            "token": ",",
+            "attribution": 0.455403
+          },
+          {
+            "token": "2023",
+            "attribution": 0.455183
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO10854",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "clash",
+            "attribution": 1.309246
+          },
+          {
+            "token": "attacked",
+            "attribution": 1.090772
+          },
+          {
+            "token": "in",
+            "attribution": 0.925709
+          },
+          {
+            "token": "leading",
+            "attribution": 0.846964
+          },
+          {
+            "token": ".",
+            "attribution": 0.844099
+          },
+          {
+            "token": "killed",
+            "attribution": 0.798102
+          },
+          {
+            "token": "separatists",
+            "attribution": 0.652464
+          },
+          {
+            "token": "ambazonian",
+            "attribution": 0.635792
+          },
+          {
+            "token": "meme",
+            "attribution": 0.624372
+          },
+          {
+            "token": ",",
+            "attribution": 0.611591
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO8295",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 3.037334
+          },
+          {
+            "token": ":",
+            "attribution": 0.91136
+          },
+          {
+            "token": ")",
+            "attribution": 0.642921
+          },
+          {
+            "token": "rapid",
+            "attribution": 0.364864
+          },
+          {
+            "token": "in",
+            "attribution": -0.345541
+          },
+          {
+            "token": "road",
+            "attribution": -0.298143
+          },
+          {
+            "token": "an",
+            "attribution": -0.278854
+          },
+          {
+            "token": "was",
+            "attribution": -0.26526
+          },
+          {
+            "token": "the",
+            "attribution": -0.260116
+          },
+          {
+            "token": "planted",
+            "attribution": -0.231258
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO4198",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "kidnapped",
+            "attribution": 3.326854
+          },
+          {
+            "token": "between",
+            "attribution": 1.30014
+          },
+          {
+            "token": ".",
+            "attribution": 0.93993
+          },
+          {
+            "token": "7",
+            "attribution": 0.7128
+          },
+          {
+            "token": ",",
+            "attribution": 0.682703
+          },
+          {
+            "token": "students",
+            "attribution": -0.623402
+          },
+          {
+            "token": "in",
+            "attribution": 0.578903
+          },
+          {
+            "token": "6",
+            "attribution": 0.455128
+          },
+          {
+            "token": "of",
+            "attribution": 0.445869
+          },
+          {
+            "token": "neighborhood",
+            "attribution": 0.440821
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO12441",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "killed",
+            "attribution": 3.660442
+          },
+          {
+            "token": "two",
+            "attribution": 1.630127
+          },
+          {
+            "token": "shot",
+            "attribution": 1.547665
+          },
+          {
+            "token": "forces",
+            "attribution": 1.191517
+          },
+          {
+            "token": "separatists",
+            "attribution": -0.924494
+          },
+          {
+            "token": "security",
+            "attribution": 0.821815
+          },
+          {
+            "token": "ambazonian",
+            "attribution": 0.614836
+          },
+          {
+            "token": "in",
+            "attribution": -0.559631
+          },
+          {
+            "token": "state",
+            "attribution": 0.356216
+          },
+          {
+            "token": ")",
+            "attribution": 0.310737
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO8757",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ")",
+            "attribution": 0.729856
+          },
+          {
+            "token": ":",
+            "attribution": 0.534839
+          },
+          {
+            "token": ",",
+            "attribution": 0.409586
+          },
+          {
+            "token": "around",
+            "attribution": 0.351603
+          },
+          {
+            "token": "sava",
+            "attribution": 0.339554
+          },
+          {
+            "token": "bicycle",
+            "attribution": -0.339173
+          },
+          {
+            "token": "kolofata",
+            "attribution": 0.315517
+          },
+          {
+            "token": ",",
+            "attribution": 0.308525
+          },
+          {
+            "token": "extreme",
+            "attribution": 0.232184
+          },
+          {
+            "token": "-",
+            "attribution": 0.225591
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO14603",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 2.433666
+          },
+          {
+            "token": "injured",
+            "attribution": 1.187641
+          },
+          {
+            "token": "a",
+            "attribution": 0.929657
+          },
+          {
+            "token": "the",
+            "attribution": 0.691917
+          },
+          {
+            "token": "abducted",
+            "attribution": 0.590762
+          },
+          {
+            "token": "beat",
+            "attribution": 0.546617
+          },
+          {
+            "token": "and",
+            "attribution": 0.470315
+          },
+          {
+            "token": "driver",
+            "attribution": 0.429941
+          },
+          {
+            "token": "the",
+            "attribution": 0.380566
+          },
+          {
+            "token": ".",
+            "attribution": -0.372294
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO13869",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "clashed",
+            "attribution": 4.006241
+          },
+          {
+            "token": ".",
+            "attribution": -1.047041
+          },
+          {
+            "token": "belabo",
+            "attribution": 0.923914
+          },
+          {
+            "token": "wake",
+            "attribution": 0.832866
+          },
+          {
+            "token": "youth",
+            "attribution": 0.739927
+          },
+          {
+            "token": "a",
+            "attribution": 0.474995
+          },
+          {
+            "token": "casualties",
+            "attribution": -0.463148
+          },
+          {
+            "token": "around",
+            "attribution": 0.413772
+          },
+          {
+            "token": "reported",
+            "attribution": 0.398216
+          },
+          {
+            "token": "kanda",
+            "attribution": 0.396466
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO7298",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "abducted",
+            "attribution": 2.904066
+          },
+          {
+            "token": "iswap",
+            "attribution": 0.873602
+          },
+          {
+            "token": "2",
+            "attribution": 0.723503
+          },
+          {
+            "token": "herders",
+            "attribution": 0.720219
+          },
+          {
+            "token": "militants",
+            "attribution": 0.621479
+          },
+          {
+            "token": "in",
+            "attribution": 0.5261
+          },
+          {
+            "token": ".",
+            "attribution": 0.512788
+          },
+          {
+            "token": "boko",
+            "attribution": 0.444601
+          },
+          {
+            "token": "a",
+            "attribution": 0.433786
+          },
+          {
+            "token": ".",
+            "attribution": -0.401716
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO12794",
+        "ambiguity_tier": "Medium",
+        "top_tokens_original": [
+          {
+            "token": ".",
+            "attribution": 1.427644
+          },
+          {
+            "token": ".",
+            "attribution": 1.317302
+          },
+          {
+            "token": "lockdown",
+            "attribution": -0.77242
+          },
+          {
+            "token": ":",
+            "attribution": 0.692178
+          },
+          {
+            "token": "had",
+            "attribution": 0.57379
+          },
+          {
+            "token": "imposed",
+            "attribution": 0.567245
+          },
+          {
+            "token": "fighters",
+            "attribution": -0.525777
+          },
+          {
+            "token": "the",
+            "attribution": 0.519266
+          },
+          {
+            "token": "property",
+            "attribution": 0.507497
+          },
+          {
+            "token": "ketunjia",
+            "attribution": -0.398167
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO2846",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "fight",
+            "attribution": 1.517231
+          },
+          {
+            "token": ".",
+            "attribution": 1.292677
+          },
+          {
+            "token": ".",
+            "attribution": -0.838492
+          },
+          {
+            "token": "fire",
+            "attribution": 0.800788
+          },
+          {
+            "token": "with",
+            "attribution": 0.690259
+          },
+          {
+            "token": "in",
+            "attribution": 0.579272
+          },
+          {
+            "token": "killed",
+            "attribution": 0.552831
+          },
+          {
+            "token": "fighters",
+            "attribution": 0.515653
+          },
+          {
+            "token": "ambazonian",
+            "attribution": 0.417035
+          },
+          {
+            "token": "forces",
+            "attribution": 0.347805
+          }
+        ],
+        "flipped_perturbations": []
+      },
+      {
+        "model": "conflibert_finetuned_acled_v1_seed42",
+        "event_id": "CAO4930",
+        "ambiguity_tier": "Low",
+        "top_tokens_original": [
+          {
+            "token": "kidnapped",
+            "attribution": 3.149126
+          },
+          {
+            "token": "2020",
+            "attribution": 0.548234
+          },
+          {
+            "token": ",",
+            "attribution": 0.468957
+          },
+          {
+            "token": "home",
+            "attribution": 0.435128
+          },
+          {
+            "token": "on",
+            "attribution": 0.432645
+          },
+          {
+            "token": "ambazonian",
+            "attribution": 0.38781
+          },
+          {
+            "token": "(",
+            "attribution": 0.360388
+          },
+          {
+            "token": "mankon",
+            "attribution": 0.339118
+          },
+          {
+            "token": "from",
+            "attribution": 0.304588
+          },
+          {
+            "token": "his",
+            "attribution": 0.296952
+          }
+        ],
+        "flipped_perturbations": []
+      }
+    ]
   }
 }
