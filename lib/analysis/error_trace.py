@@ -941,7 +941,7 @@ class ErrorTraceAnalyzer:
             })
 
         if not rows:
-            print("No rows to write in summary CSV.")
+            print(f"[DEBUG] No rows to write in summary CSV. RFC models: {list(rfc_results.keys())}, LIG count: {len(lig_results)}")
             return
 
         out_path = self.results_base / 'error_trace_summary.csv'
