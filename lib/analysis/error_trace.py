@@ -911,10 +911,10 @@ class ErrorTraceAnalyzer:
                     'perturbation_type': rec.get('perturbation_type') or '',
                     'original_word':     rec.get('original_word') or '',
                     'replacement_word':  rec.get('replacement_word') or '',
-                    'concordant':        rec.get('concordant') or '',
-                    'rationale_changed': rec.get('rationale_changed') or '',
-                    'mentions_change':   rec.get('mentions_change') or '',
-                    'rfc_score':         rec.get('rfc_score') or '',
+                    'concordant':        rec.get('concordant') if rec.get('concordant') is not None else '',
+                    'rationale_changed': rec.get('rationale_changed') if rec.get('rationale_changed') is not None else '',
+                    'mentions_change':   rec.get('mentions_change') if rec.get('mentions_change') is not None else '',
+                    'rfc_score':         rec.get('rfc_score') if rec.get('rfc_score') is not None else '',
                     'top_attributed_token': '',
                     'attribution_score':    '',
                 })
@@ -936,8 +936,8 @@ class ErrorTraceAnalyzer:
                 'rationale_changed': '',
                 'mentions_change':   '',
                 'rfc_score':         '',
-                'top_attributed_token': top_token or '',
-                'attribution_score':    top_score or '',
+                'top_attributed_token': top_token if top_token else '',
+                'attribution_score':    top_score if top_score else '',
             })
 
         if not rows:
@@ -958,7 +958,8 @@ class ErrorTraceAnalyzer:
         # Smart merge: replace model-specific rows, keep others
         all_rows = []
         if out_path.exists():
-            existing_df = pd.read_csv(out_path)
+            # Read with dtype=str to prevent pandas from converting empty strings to nan
+            existing_df = pd.read_csv(out_path, dtype=str)
             # Keep rows for models NOT being re-run
             all_rows = existing_df[~existing_df['model'].isin(new_models)].to_dict('records')
         
