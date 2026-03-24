@@ -17,6 +17,7 @@ from typing import Optional, Tuple, Dict
 
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from captum.attr import LayerIntegratedGradients
 
 from lib.core.constants import LABEL_MAP, EVENT_CLASSES_FULL
 
@@ -246,8 +247,7 @@ def run_conflibert_with_attribution(
             'convergence_delta': float(convergence_delta.mean().item()),
         }
 
-    except Exception as e:
-        print(f"[ERROR] run_conflibert_with_attribution failed: {type(e).__name__}: {e}")
+    except Exception:
         return None
 
 

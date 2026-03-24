@@ -420,7 +420,6 @@ class ErrorTraceAnalyzer:
                 model_token, orig_text, n_steps=n_steps
             )
             if orig_attr is None:
-                print(f"      [SKIP] {event_id}: run_conflibert_with_attribution returned None")
                 continue
 
             top_original = _aggregate_subword_attributions(
@@ -483,7 +482,6 @@ class ErrorTraceAnalyzer:
                 'flipped_perturbations': flip_deltas,
             })
 
-        print(f"[DEBUG] analyse_lig built {len(event_records)} records")
         return event_records
 
     def analyse_lig_from_disagreements(
@@ -579,9 +577,9 @@ class ErrorTraceAnalyzer:
             print("\n[2/2] Layer Integrated Gradients (LIG) — ConfliBERT")
             # Analyse each ConfliBERT model present in this source JSON.
             for model_token in conflibert_models:
-                lig_batch = self.analyse_lig(detailed, model_token, n_steps=lig_n_steps)
-                print(f"[DEBUG] analyse_lig returned {len(lig_batch)} records for {model_token}")
-                lig_results.extend(lig_batch)
+                lig_results.extend(
+                    self.analyse_lig(detailed, model_token, n_steps=lig_n_steps)
+                )
         elif not generative_models:
             print("\n[2/2] LIG skipped — no models found in this source.")
         else:
@@ -626,9 +624,7 @@ class ErrorTraceAnalyzer:
 
         analyses: List[Dict[str, Any]] = []
         for cf_path in counterfactual_json_paths:
-            a = self._analyse_single_counterfactual(cf_path, lig_n_steps)
-            print(f"[DEBUG] _analyse_single_counterfactual returned {len(a.get('lig_results', []))} LIG records")
-            analyses.append(a)
+            analyses.append(self._analyse_single_counterfactual(cf_path, lig_n_steps))
 
         # Merge RFC by model across all sources
         merged_rfc: Dict[str, Dict[str, Any]] = {}
@@ -648,14 +644,11 @@ class ErrorTraceAnalyzer:
                 merged_rfc.setdefault(model, {'records': [], 'aggregate': {}})
                 merged_rfc[model]['records'].extend(data.get('records', []))
 
-            lig_batch = a.get('lig_results', [])
-            print(f"[DEBUG] Merging {len(lig_batch)} LIG records from analysis")
-            merged_lig.extend(lig_batch)
+            merged_lig.extend(a.get('lig_results', []))
 
         for model, data in merged_rfc.items():
             data['aggregate'] = _aggregate_rfc_stats(data['records'])
 
-        print(f"[DEBUG] Before write: merged_rfc={len(merged_rfc)} models, merged_lig={len(merged_lig)} records")
         self._write_report_multi(
             analyses=analyses,
             merged_rfc=merged_rfc,
@@ -948,7 +941,7 @@ class ErrorTraceAnalyzer:
             })
 
         if not rows:
-            print(f"[DEBUG] No rows to write in summary CSV. RFC models: {list(rfc_results.keys())}, LIG count: {len(lig_results)}")
+            print("No rows to write in summary CSV.")
             return
 
         out_path = self.results_base / 'error_trace_summary.csv'
