@@ -420,6 +420,7 @@ class ErrorTraceAnalyzer:
                 model_token, orig_text, n_steps=n_steps
             )
             if orig_attr is None:
+                print(f"      [SKIP] {event_id}: run_conflibert_with_attribution returned None")
                 continue
 
             top_original = _aggregate_subword_attributions(

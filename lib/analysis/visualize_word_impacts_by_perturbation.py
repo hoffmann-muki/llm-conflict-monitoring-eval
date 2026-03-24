@@ -302,7 +302,8 @@ def main():
         return
 
     # Find any counterfactual JSON for the scatter-plot reference colours
-    json_candidates = sorted(glob.glob(str(base_dir / '*' / 'counterfactual_analysis_*.json')))
+    json_candidates = sorted(glob.glob(str(base_dir / '*' / 'counterfactual_analysis_*.json')), 
+                             key=lambda p: Path(p).stat().st_mtime, reverse=True)
     if not json_candidates:
         print(f"No counterfactual JSON found under {base_dir}; skipping visualizations.")
         return

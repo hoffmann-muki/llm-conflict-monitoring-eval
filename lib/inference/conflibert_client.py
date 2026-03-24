@@ -246,7 +246,8 @@ def run_conflibert_with_attribution(
             'convergence_delta': float(convergence_delta.mean().item()),
         }
 
-    except Exception:
+    except Exception as e:
+        print(f"[ERROR] run_conflibert_with_attribution failed: {type(e).__name__}: {e}")
         return None
 
 
