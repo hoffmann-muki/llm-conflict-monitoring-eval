@@ -906,15 +906,15 @@ class ErrorTraceAnalyzer:
                 rows.append({
                     'source':            'rfc',
                     'model':             model,
-                    'event_id':          rec.get('event_id', ''),
-                    'ambiguity_tier':    rec.get('ambiguity_tier', ''),
-                    'perturbation_type': rec.get('perturbation_type', ''),
-                    'original_word':     rec.get('original_word', ''),
-                    'replacement_word':  rec.get('replacement_word', ''),
-                    'concordant':        rec.get('concordant', ''),
-                    'rationale_changed': rec.get('rationale_changed', ''),
-                    'mentions_change':   rec.get('mentions_change', ''),
-                    'rfc_score':         rec.get('rfc_score', ''),
+                    'event_id':          rec.get('event_id') or '',
+                    'ambiguity_tier':    rec.get('ambiguity_tier') or '',
+                    'perturbation_type': rec.get('perturbation_type') or '',
+                    'original_word':     rec.get('original_word') or '',
+                    'replacement_word':  rec.get('replacement_word') or '',
+                    'concordant':        rec.get('concordant') or '',
+                    'rationale_changed': rec.get('rationale_changed') or '',
+                    'mentions_change':   rec.get('mentions_change') or '',
+                    'rfc_score':         rec.get('rfc_score') or '',
                     'top_attributed_token': '',
                     'attribution_score':    '',
                 })
@@ -926,9 +926,9 @@ class ErrorTraceAnalyzer:
             top_score = top[0]['attribution'] if top else ''
             rows.append({
                 'source':            'lig',
-                'model':             rec.get('model', 'conflibert'),
-                'event_id':          rec.get('event_id', ''),
-                'ambiguity_tier':    rec.get('ambiguity_tier', ''),
+                'model':             rec.get('model') or 'conflibert',
+                'event_id':          rec.get('event_id') or '',
+                'ambiguity_tier':    rec.get('ambiguity_tier') or '',
                 'perturbation_type': '',
                 'original_word':     '',
                 'replacement_word':  '',
@@ -936,8 +936,8 @@ class ErrorTraceAnalyzer:
                 'rationale_changed': '',
                 'mentions_change':   '',
                 'rfc_score':         '',
-                'top_attributed_token': top_token,
-                'attribution_score':    top_score,
+                'top_attributed_token': top_token or '',
+                'attribution_score':    top_score or '',
             })
 
         if not rows:
