@@ -1,83 +1,69 @@
 # Tests
 
-Test suite for validating repository components.
+The test suite is a lightweight smoke-test harness for the companion repository to our paper **Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa** ([arXiv:2605.04177](https://arxiv.org/abs/2605.04177)). It verifies that core helpers, strategy imports, and counterfactual scaffolding still load and behave enough for development sanity checks.
+
+These tests are meant to protect the research pipeline from breakage; they are not statistical validation of our findings.
 
 ## Running Tests
 
 ```bash
 source .venv/bin/activate
 
-# Core tests
-python tests/test_generic_pipeline.py
+PYTHONPATH=. python tests/test_generic_pipeline.py
 
-# Counterfactual tests (requires sample data)
-python tests/test_counterfactual.py
-
-# With pytest
+# Optional, if pytest is installed in your environment.
 python -m pytest tests/ -v
 ```
 
-## Test Files
-
-### test_generic_pipeline.py
-
-| Test | Description |
-|------|-------------|
-| Data helpers | Environment setup, path resolution |
-| Pipeline imports | Experiment pipeline modules |
-| Prompting strategies | Strategy creation and prompts |
-| Analysis modules | Metrics, calibration, harm |
-
-### test_counterfactual.py
-
-| Test | Description |
-|------|-------------|
-| Perturbation generation | Actor, intensity, action substitutions |
-| Counterfactual analyzer | Event analysis and flip detection |
-| Visualization | Report generation |
-
-## Writing Tests
-
-```python
-def test_my_feature():
-    """Test description."""
-    try:
-        from lib.my_module import my_function
-        result = my_function(test_input)
-        assert result is not None
-        print("PASS: My feature works")
-        return True
-    except Exception as e:
-        print(f"FAIL: {e}")
-        return False
-
-if __name__ == "__main__":
-    exit(0 if test_my_feature() else 1)
-```
-
-**Conventions:**
-- Files named `test_*.py`
-- Print PASS/FAIL status
-- Return boolean for success
-- Include docstrings
-
-## Test Data
-
-Tests use standard paths from the main codebase:
-- `datasets/{country}/` - ACLED data
-- `datasets/{country}/state_actor_sample_{country}_{sample_size}.csv` - Sample files
-- `results/{country}/{strategy}/{sample_size}/` - Output files
-
-Tests respect environment variables: `COUNTRY`, `STRATEGY`, `SAMPLE_SIZE`, `NUM_EXAMPLES`
-
-## Comparison Validation
-
-When tests generate results for both Ollama and ConfliBERT, expect:
-- `reasoning` column in every per-model CSV so explainable prompts remain auditable.
-- `results/{country}/{strategy}/{sample_size}/comparison/` with `all_models_metrics.csv`, `all_models_fairness.csv`, `all_models_harm.csv`, and PNGs produced by `python -m lib.analysis.compare_all_models`.
-
-## Pre-Commit Validation
+The counterfactual test expects a Nigeria sample file. If no file exists under `datasets/nga/state_actor_sample_nga_*.csv`, run a small pipeline first:
 
 ```bash
-python tests/test_generic_pipeline.py && python -m pytest tests/ -v --tb=short
+COUNTRY=nga SAMPLE_SIZE=5 STRATEGY=zero_shot INFERENCE_MODELS="mistral:7b" \
+  ./experiments/scripts/run_full_analysis.sh
 ```
+
+That command requires Ollama and the requested model; for import-only validation, use `test_generic_pipeline.py`.
+
+## Test Files
+
+| File | What it checks |
+| --- | --- |
+| `test_generic_pipeline.py` | Imports and basic behavior for path setup and `ZeroShotStrategy`. |
+| `test_counterfactual.py` | Counterfactual analyzer construction, perturbation generation, and output-directory setup using an existing sample. |
+
+## Current Caveats
+
+- These tests are not a full regression suite for model quality.
+- They do not mock Ollama, Hugging Face, or ConfliBERT backends.
+- `test_counterfactual.py` still prints older suggested command names in its terminal output; the real current modules are `lib.analysis.counterfactual` and `lib.analysis.visualize_counterfactual`.
+- `python -m pytest tests/ -v` may create `test_counterfactual_output/` when the counterfactual smoke test runs.
+
+## Useful Validation Commands
+
+```bash
+# Import-level smoke test.
+PYTHONPATH=. python tests/test_generic_pipeline.py
+
+# List discovered per-model result files for a run.
+python -m lib.core.result_aggregator \
+  --country cmr --strategy zero_shot --sample-size 1000 --list-only
+
+# Recompute analysis from existing per-model predictions.
+COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=1000 SKIP_INFERENCE=true \
+SKIP_COUNTERFACTUAL=true \
+  ./experiments/scripts/run_full_analysis.sh
+```
+
+## Writing New Tests
+
+Prefer normal `pytest` tests with assertions:
+
+```python
+def test_strategy_schema_has_label_enum():
+    from experiments.prompting_strategies import ZeroShotStrategy
+
+    schema = ZeroShotStrategy().get_schema()
+    assert schema["properties"]["label"]["enum"] == ["V", "B", "E", "P", "R", "S"]
+```
+
+For code that touches model backends, keep tests small and isolate network or local-model dependencies behind explicit fixtures or environment gates.
