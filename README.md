@@ -1,14 +1,4 @@
-# Are LLMs Ready for Conflict Monitoring?
-
-This is the companion repository for our arXiv preprint:
-
-**Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa**
-
-Hoffmann Muki and Olukunle Owolabi, 2026
-
-arXiv: [2605.04177](https://arxiv.org/abs/2605.04177)
-
-DOI: [10.48550/arXiv.2605.04177](https://doi.org/10.48550/arXiv.2605.04177)
+This is the companion repository for our arXiv preprint: **Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa**, by Hoffmann Muki and Olukunle Owolabi, 2026
 
 The repository evaluates whether large language models can be used safely for conflict-event monitoring in West Africa. It measures event-classification accuracy, calibration, actor-based fairness, normative error direction, lexical robustness, and error-trace behavior for open-weight LLMs and domain-adapted baselines on ACLED data from Nigeria and Cameroon.
 
