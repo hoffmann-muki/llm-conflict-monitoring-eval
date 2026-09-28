@@ -6,7 +6,7 @@ Our main finding is cautionary: current open-weight models are not ready for uns
 
 This codebase supports local Ollama models, local Hugging Face causal LMs, ConfliBERT-style sequence classifiers, fine-tuned baselines, calibration, fairness metrics, harm metrics, counterfactual perturbation analysis, and FL/FI reporting.
 
-## Paper-To-Code Map
+### Mappings
 
 | Paper concept | Repository implementation |
 | --- | --- |
@@ -18,7 +18,7 @@ This codebase supports local Ollama models, local Hugging Face causal LMs, Confl
 | Lexical robustness and perturbation sensitivity | `lib.analysis.counterfactual`, `word_impacts.csv`, and counterfactual figures. |
 | Rationale and attribution tracing | `lib.analysis.error_trace` and `error_trace_report.json`. |
 
-## Headline Findings From The Paper
+### Headline Findings From The Paper
 
 We designed this repository to reproduce and extend the following findings from our paper:
 
@@ -41,11 +41,11 @@ The active task is ACLED event-type classification for Cameroon (`cmr`) and Nige
 | `R` | Riots |
 | `S` | Strategic developments |
 
-## Repository Scope
+### Repository Scope
 
 This repository is intended for research replication, auditing, and extension. It is not a production conflict-monitoring system. We argue for human-in-the-loop oversight, adversarial robustness evaluation, and fairness-aware adaptation before models are used in high-stakes humanitarian or security workflows.
 
-## What Is Here
+### What Is Here
 
 | Path | Purpose |
 | --- | --- |
@@ -57,7 +57,7 @@ This repository is intended for research replication, auditing, and extension. I
 | `scripts/` | Standalone utility scripts for normalizing ConfliBERT outputs and aggregating SPD. |
 | `tests/` | Lightweight smoke tests for helpers and counterfactual components. |
 
-## Setup
+### Setup
 
 ```bash
 python -m venv .venv
@@ -136,7 +136,7 @@ The shared sample is created once per country and sample size, then reused acros
 datasets/{country}/state_actor_sample_{country}_{sample_size}.csv
 ```
 
-## Inference Backends
+### Inference Backends
 
 The current pipeline can run three backend types:
 
@@ -156,80 +156,7 @@ HF_MODEL_PATH_MAP="acled-small-llm-ft:v1=models/small_llm_merged_acled_v1_seed42
   ./experiments/scripts/run_full_analysis.sh
 ```
 
-## Fine-Tuned Baselines
-
-Supervised baselines use leak-safe split bundles under `data/processed/splits/{split_version}/` and write comparison-ready results under `results/baselines/{split_version}/`.
-
-```bash
-SPLIT_VERSION=acled_v1 ./experiments/scripts/run_finetuned_baselines.sh
-```
-
-By default, this builds splits and fine-tunes/evaluates ConfliBERT. Small-LLM LoRA SFT is optional:
-
-```bash
-SPLIT_VERSION=acled_v1 RUN_SMALL_LLM=true \
-SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B \
-  ./experiments/scripts/run_finetuned_baselines.sh
-```
-
-Important outputs:
-
-| Path | Description |
-| --- | --- |
-| `data/processed/splits/{split_version}/manifest.json` | Split metadata, counts, and paths. |
-| `results/baselines/{split_version}/conflibert/` | ConfliBERT held-out prediction CSVs. |
-| `results/baselines/{split_version}/small_llm/` | Small-LLM held-out prediction CSVs. |
-| `results/baselines/{split_version}/baseline_core_metrics.csv` | Accuracy, macro F1, and per-class F1 by model/country. |
-| `results/baselines/{split_version}/baseline_fairness_metrics.csv` | Fairness metrics where computable. |
-| `results/baselines/{split_version}/baseline_harm_metrics.csv` | FL/FI harm rates. |
-| `results/baselines/{split_version}/baseline_publication_table.csv` | Merged reviewer-facing table. |
-
-## Analysis Outputs
-
-The full prompt pipeline can produce:
-
-| File | Description |
-| --- | --- |
-| `ollama_results_acled_{country}_actors.csv` | Aggregated raw predictions. |
-| `ollama_results_calibrated.csv` | Calibrated predictions. |
-| `calibration_brier_scores.csv` and `reliability_diagrams.png` | Calibration diagnostics. |
-| `metrics_acled_{country}_actors.csv` | Classification metrics. |
-| `fairness_metrics_acled_{country}_actors.csv` | SPD and equalized-odds style metrics. |
-| `selected_thresholds.json` and `selected_thresholds_per_class.csv` | Per-class decision thresholds. |
-| `harm_metrics_detailed.csv` and `fl_fi_by_model.csv` | False legitimization and false illegitimization metrics. |
-| `per_class_report.csv` and `per_class_metrics.png` | Per-class performance summaries. |
-| `top_disagreements.csv` and `top_disagreements_table.png` | High-confidence disagreements and ambiguity annotations. |
-| `error_cases_false_legitimization.csv` | Sampled `V -> B` cases. |
-| `error_cases_false_illegitimization.csv` | Sampled `B -> V` cases. |
-| `counterfactual_analysis_*.json` | Counterfactual perturbation results. |
-| `counterfactual_analysis_summary.csv` | Counterfactual summary table. |
-| `word_impacts.csv` and word-impact figures | Word-level perturbation impact summaries. |
-| `error_trace_report.json` and `error_trace_summary.csv` | Rationale-flip concordance and attribution traces. |
-
-Cross-model comparison can be run after prediction files exist:
-
-```bash
-COUNTRY=cmr STRATEGY=zero_shot SAMPLE_SIZE=1000 \
-  python -m lib.analysis.compare_all_models
-```
-
-It writes `results/{country}/{strategy}/{sample_size}/comparison/` with combined metrics, fairness, harm tables, and comparison figures.
-
-## FL/FI Summary Tables
-
-Standalone FL/FI tables live under `results/analysis/fl_fi/`:
-
-```bash
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country cmr --strategy zero_shot --sample-size 1000
-
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country cmr --strategy few_shot --sample-size 1000 --shots 1 3 5
-```
-
-See `results/analysis/fl_fi/README.md` for metric definitions and output format.
-
-## Utility Scripts
+### Utility Scripts
 
 ```bash
 # Aggregate SPD across result folders and create country/strategy plots.
@@ -238,25 +165,6 @@ python scripts/aggregate_spd_and_plot.py --countries cmr nga --strategy zero_sho
 # Normalize legacy ConfliBERT labels in result CSVs. Creates .bak files first.
 python scripts/normalize_conflibert_results.py --root results
 ```
-
-## Testing
-
-```bash
-PYTHONPATH=. python tests/test_generic_pipeline.py
-
-# Optional, if pytest is installed in your environment.
-python -m pytest tests/ -v
-```
-
-`tests/test_counterfactual.py` expects a sample file under `datasets/nga/`; run a pipeline first if no sample exists.
-
-## More Documentation
-
-- `experiments/README.md` describes runnable pipelines and environment variables.
-- `experiments/prompting_strategies/README.md` describes prompt strategy classes and registration.
-- `lib/README.md` describes reusable modules and output conventions.
-- `tests/README.md` describes the current smoke-test suite.
-- `results/analysis/fl_fi/README.md` documents FL/FI reporting.
 
 ## Citation
 
