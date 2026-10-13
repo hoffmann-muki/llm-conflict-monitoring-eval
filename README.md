@@ -1,12 +1,6 @@
-This is the companion repository for our arXiv preprint: **Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa**, by Hoffmann Muki and Olukunle Owolabi, 2026
+This is the companion repository for the paper: **Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa** accepted at FAccT 2026.
 
-The repository evaluates whether large language models can be used safely for conflict-event monitoring in West Africa. It measures event-classification accuracy, calibration, actor-based fairness, normative error direction, lexical robustness, and error-trace behavior for open-weight LLMs and domain-adapted baselines on ACLED data from Nigeria and Cameroon.
-
-Our main finding is cautionary: current open-weight models are not ready for unsupervised conflict-monitoring deployment. We find statistically significant false-illegitimation bias in vanilla open-weight models, near-directional neutrality after domain adaptation, persistent actor-based selection bias even in adapted models, and strong sensitivity to geography-specific lexical framing.
-
-This codebase supports local Ollama models, local Hugging Face causal LMs, ConfliBERT-style sequence classifiers, fine-tuned baselines, calibration, fairness metrics, harm metrics, counterfactual perturbation analysis, and FL/FI reporting.
-
-### Headline Findings From The Paper
+### Headline Findings
 
 We designed this repository to reproduce and extend the following findings from our paper:
 
@@ -31,7 +25,7 @@ The active task is ACLED event-type classification for Cameroon (`cmr`) and Nige
 
 ### Repository Scope
 
-This repository is intended for research replication, auditing, and extension. It is not a production conflict-monitoring system. We argue for human-in-the-loop oversight, adversarial robustness evaluation, and fairness-aware adaptation before models are used in high-stakes humanitarian or security workflows.
+This repository is intended for research replication, auditing, and extension. It is not a production conflict-monitoring system.
 
 ### What Is Here
 
