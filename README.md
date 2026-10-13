@@ -6,18 +6,6 @@ Our main finding is cautionary: current open-weight models are not ready for uns
 
 This codebase supports local Ollama models, local Hugging Face causal LMs, ConfliBERT-style sequence classifiers, fine-tuned baselines, calibration, fairness metrics, harm metrics, counterfactual perturbation analysis, and FL/FI reporting.
 
-### Mappings
-
-| Paper concept | Repository implementation |
-| --- | --- |
-| Vanilla open-weight LLMs | Ollama/HF inference over `llama3.2:3b`, `mistral:7b`, `gemma3:4b`, and `olmo2:7b`. |
-| AfroConfliBERT | Fine-tuned ConfliBERT baseline under `experiments/pipelines/conflibert/` and `models/conflibert_finetuned_*`. |
-| AfroConfliLLAMA | Fine-tuned local causal LM / small-LLM baseline under `experiments/pipelines/ollama/` and `models/small_llm_merged_*`. |
-| False Legitimization and False Illegitimization | `lib.analysis.harm`, `results/analysis/fl_fi/`, and `fl_fi_by_model.csv`. |
-| Actor-based selection bias | `lib.analysis.metrics.compute_fairness_metrics` and `fairness_metrics_acled_{country}_actors.csv`. |
-| Lexical robustness and perturbation sensitivity | `lib.analysis.counterfactual`, `word_impacts.csv`, and counterfactual figures. |
-| Rationale and attribution tracing | `lib.analysis.error_trace` and `error_trace_report.json`. |
-
 ### Headline Findings From The Paper
 
 We designed this repository to reproduce and extend the following findings from our paper:
