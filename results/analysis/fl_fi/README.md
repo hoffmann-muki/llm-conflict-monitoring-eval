@@ -1,141 +1,46 @@
-# FL/FI Analysis
+# Reporting directional classification errors
 
-This directory contains standalone report generators for False Legitimization and False Illegitimization tables from prompt-experiment prediction files. These metrics are central to our paper **Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa** ([arXiv:2605.04177](https://arxiv.org/abs/2605.04177)), where we report a bifurcation between vanilla open-weight models with false-illegitimation bias and domain-adapted models with near-directional neutrality.
+These tables isolate two ways a classifier can confuse battles (`B`) with violence against civilians (`V`). **False Legitimation (FL)** is a gold `V` event assigned `B`; **False Illegitimation (FI)** is a gold `B` event assigned `V`. The terminology encodes the study's operational distinction between error directions, not a legal determination about an event.
 
-FL/FI metrics should be interpreted as directional harm diagnostics, not as a complete measure of deployment readiness. In the paper, we also evaluate actor-based selection bias, lexical robustness, calibration, and error-trace behavior.
+## Build a report from predictions
 
-## Metrics
+With the repository environment active, run from the project root:
 
-| Metric | Definition | Interpretation |
+```bash
+python -m pip install statsmodels
+python results/analysis/fl_fi/generate_fl_fi_analysis.py \
+  --country cmr --strategy zero_shot --sample-size 1000
+```
+
+`statsmodels` is an additional dependency of this generator and is absent from the root requirements. Inputs are per-model `ollama_results_*_acled_*_actors.csv` files beneath the selected condition in `results/`. Calculations read `true_label`, `pred_label`, and `actor_norm`; short label codes are required. Keep one matching CSV per model directory, since the generator selects the first match.
+
+For few-shot reports, specify each demonstration count:
+
+```bash
+python results/analysis/fl_fi/generate_fl_fi_analysis.py \
+  --country nga --strategy few_shot --sample-size 1000 --shots 1 3 5
+```
+
+Use `--actors Police Military` to choose actor-name filters and `--models mistral_7b gemma3_4b` to select model directories. Actor filters are case-insensitive regular-expression matches and may overlap. Each model's `Total` row always covers all input rows.
+
+Reports are written beneath this directory's `cmr/` or `nga/` folder as `fl_fi_analysis_{strategy}.csv`, with a shot-count suffix for few-shot conditions. Supply `--output-dir` to retain separate reports for different sample sizes; the default filenames do not encode sample size.
+
+## Interpret the columns
+
+| Quantity | Calculation | Meaning |
 | --- | --- | --- |
-| `FL` | `V -> B` | False Legitimization: a violence-against-civilians event is predicted as a battle. |
-| `FI` | `B -> V` | False Illegitimization: a battle event is predicted as violence against civilians. |
-| `FL %` | `FL Count / True V` | Share of true `V` events excused as `B`. |
-| `FI %` | `FI Count / True B` | Share of true `B` events condemned as `V`. |
-| `NBS` | `(FI% - FL%) / (FI% + FL%)` | Net Bias Score from `-1` pure legitimization to `+1` pure illegitimization. |
-| `RR` | `FI% / FL%` | Risk ratio used in total rows when available. |
-| `Delta LB` | `FI% - FL%` | Difference between illegitimization and legitimization rates. |
+| `FL %` | `100 × FL Count / True V` | Fraction of civilian-violence events assigned battle. |
+| `FI %` | `100 × FI Count / True B` | Fraction of battles assigned civilian violence. |
+| `ΔLB` | `FI % − FL %` | Difference in percentage points. |
+| `NBS` | `(FI % − FL %) / (FI % + FL %)` | Direction score from −1 (FL) to +1 (FI). |
+| `RR` | `FI % / FL %` | Ratio of the two class-conditioned error rates. |
 
-The generator also adds Wilson 95% confidence intervals and a binomial test for total rows.
+Total rows add Wilson 95% intervals and a two-sided binomial test of equal **error-direction counts**. This test does not establish equality of the class-conditioned rates when `True V` and `True B` differ. Read scores with their denominators: missing gold classes produce zero rates; no directional errors produce NBS zero and RR one; FI-only errors produce infinite RR.
 
-## Input Assumptions
+Two implementation limitations affect this generator: a total with zero directional errors raises a type error in the significance calculation, and p-values at least `0.999` are rendered incorrectly as `<0.001`. Consult [generate_fl_fi_analysis.py](generate_fl_fi_analysis.py) when inspecting these cases.
 
-The script scans model subdirectories under prompt-experiment results:
+## Relate these tables to other outputs
 
-```text
-results/{country}/{strategy}/{sample_size}/{model_slug}/ollama_results_*_acled_*_actors.csv
-results/{country}/few_shot/{sample_size}/{shots}/{model_slug}/ollama_results_*_acled_*_actors.csv
-```
+The pipeline's `fl_fi_by_model.csv` and `harm_metrics_detailed.csv` count `V → {B,S}` and `{B,S} → V`, including strategic developments (`S`). They also read the calibrated evaluation subset. This standalone generator uses only `V ↔ B` and reads the per-model prediction files, so its counts and denominators need not match the pipeline reports.
 
-Prediction CSVs must contain at least:
-
-| Column | Purpose |
-| --- | --- |
-| `model` | Model identifier. |
-| `true_label` | Gold short label, especially `V` and `B`. |
-| `pred_label` | Predicted short label. |
-| `actor_norm` | Actor string used for per-actor filtering. |
-
-## Usage
-
-Run from the repository root.
-
-```bash
-# Cameroon zero-shot, sample size 1000.
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country cmr \
-  --strategy zero_shot \
-  --sample-size 1000
-
-# Nigeria zero-shot with specific actors.
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country nga \
-  --strategy zero_shot \
-  --sample-size 1000 \
-  --actors Police Military Civilian
-
-# Few-shot tables for 1, 3, and 5 examples per category.
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country cmr \
-  --strategy few_shot \
-  --sample-size 1000 \
-  --shots 1 3 5
-
-# Explainable strategy.
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country cmr \
-  --strategy explainable \
-  --sample-size 1000
-
-# Restrict to specific model directory names.
-python results/analysis/fl_fi/generate_fl_fi_analysis.py \
-  --country cmr \
-  --strategy zero_shot \
-  --sample-size 1000 \
-  --models mistral_7b llama3.2_3b
-```
-
-## Outputs
-
-Default output directories:
-
-```text
-results/analysis/fl_fi/cmr/
-results/analysis/fl_fi/nga/
-```
-
-Output filenames:
-
-| Strategy | File |
-| --- | --- |
-| `zero_shot` | `fl_fi_analysis_zero_shot.csv` |
-| `explainable` | `fl_fi_analysis_explainable.csv` |
-| `few_shot --shots 3` | `fl_fi_analysis_few_shot_3.csv` |
-
-Observed summary artifacts in this repository also include:
-
-```text
-fl_fi_per_actor_zero_shot.csv
-fl_fi_summary_all_conditions.csv
-```
-
-Those are generated by the library summary helpers under `lib/analysis/`.
-
-```bash
-python -m lib.analysis.generate_fl_fi_summary --country cmr
-python -m lib.analysis.generate_per_actor_fl_fi --country cmr --condition zero_shot
-```
-
-Those helper scripts currently assume sample size `1000` and the model directory names `llama3.2_3b`, `mistral_7b`, `olmo2_7b`, and `gemma3_4b`.
-
-## Output Columns
-
-| Column | Description |
-| --- | --- |
-| `Model` | Model directory name. |
-| `Actor` | Actor filter, or `Total` for all rows. |
-| `True V` | Number of gold `V` cases. |
-| `True B` | Number of gold `B` cases. |
-| `FL Count` | Count of `V -> B` errors. |
-| `FL %` | FL rate among true `V` cases. |
-| `FL 95% CI` | Wilson interval for total rows. |
-| `FI Count` | Count of `B -> V` errors. |
-| `FI %` | FI rate among true `B` cases. |
-| `FI 95% CI` | Wilson interval for total rows. |
-| `Delta LB` | `FI% - FL%` in total rows. |
-| `p-value` | Binomial test comparing FL and FI counts. |
-| `RR` | Risk ratio. |
-| `Interpretation` | Coarse direction label such as `Strong Deleg.` or `Strong Legit.` |
-| `NBS` | Net Bias Score. |
-
-## Reading NBS
-
-| NBS | Meaning |
-| --- | --- |
-| `+1` | Only FI errors among FL/FI cases: pure illegitimization direction. |
-| `> 0` | FI rate exceeds FL rate. |
-| `0` | FL and FI percentages are balanced, or neither error type occurs. |
-| `< 0` | FL rate exceeds FI rate. |
-| `-1` | Only FL errors among FL/FI cases: pure legitimization direction. |
-
-`NBS` is directional and should be read alongside the denominators (`True V`, `True B`) and confidence intervals.
+The library offers [cross-condition](../../../lib/analysis/generate_fl_fi_summary.py) and [per-actor](../../../lib/analysis/generate_per_actor_fl_fi.py) summary helpers. These assume 1,000-event conditions and the four vanilla model directories, and use coarse binomial p-value approximations. See the [analysis guide](../../../lib/README.md) for the broader evaluation workflow.

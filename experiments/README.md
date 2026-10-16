@@ -1,271 +1,99 @@
-# Experiments
+# Reproducing the experiments
 
-`experiments/` contains the runnable workflows for our paper **Are LLMs Ready for Conflict Monitoring? Empirical Evidence from West Africa** ([arXiv:2605.04177](https://arxiv.org/abs/2605.04177)). These scripts reproduce and extend our prompt-based inference, supervised domain adaptation, split creation, SFT data preparation, held-out evaluation, and prompt-strategy experiments.
+This guide covers three operations: generating model predictions, training domain-adapted baselines, and rebuilding reports. Complete the [installation](../README.md#quick-start) first, activate the environment, and issue all commands from the repository root.
 
-Our experimental design compares vanilla open-weight LLMs against domain-adapted baselines. In the paper, we refer to the fine-tuned ConfliBERT baseline as **AfroConfliBERT** and to the fine-tuned local causal LM baseline as **AfroConfliLLAMA**. The repository keeps some earlier engineering names, such as `conflibert_finetuned_*`, `small_llm_merged_*`, and `acled-small-llm-ft:v1`.
+## Evaluation protocols
 
-## Layout
+**Prompt comparison.** Each country has a cached event sample shared across models and prompting conditions. New samples target equal state/non-state representation, stratify by event type, and use seed 42. A sample is identified by country and requested size at `datasets/{country}/state_actor_sample_{country}_{size}.csv`. Once that file exists, the runner reuses it, including when sampling options change.
 
-```text
-experiments/
-|-- data/few_shot/              # Few-shot CSV bundles used by older ConfliBERT fine-tuning flows
-|-- pipelines/
-|   |-- conflibert/             # Download, classify, fine-tune, evaluate, and few-shot selection scripts
-|   |-- data/                   # Leak-safe ACLED train/dev/test split builder
-|   `-- ollama/                 # Ollama/HF classification, SFT prep, LoRA fine-tuning, registration, eval
-|-- prompting_strategies/       # zero_shot, few_shot, explainable strategy classes
-`-- scripts/                    # End-to-end shell orchestrators
-```
+**Supervised evaluation.** The split builder deduplicates event IDs, reserves Cameroon and Nigeria for testing by default, and partitions the remaining training pool into train/dev sets. It checks that event IDs do not overlap across these sets. The supplied [acled_v1 manifest](../data/processed/splits/acled_v1/manifest.json) records the seed, balancing choices, sizes, and label distributions. These test sets are distinct from the cached prompt samples.
 
-## Prompt-Experiment Workflow
+## Generate predictions and diagnostics
 
-The main prompt workflow supports our analysis of false illegitimation, actor-based selection bias, lexical fragility, and error-trace behavior. It is per-model-then-aggregate:
-
-1. Create or reuse `datasets/{country}/state_actor_sample_{country}_{sample_size}.csv`.
-2. Run one or more models against identical event rows.
-3. Save each model under `results/{country}/{strategy}/{sample_size}/{model_slug}/`.
-4. Aggregate per-model files into `ollama_results_acled_{country}_actors.csv`.
-5. Run calibration, metrics, fairness, harm, thresholds, per-class reports, counterfactuals, word impacts, and error traces.
-
-Few-shot results add an extra shot-count directory:
-
-```text
-results/{country}/few_shot/{sample_size}/{num_examples}/
-```
-
-## `run_full_analysis.sh`
-
-Canonical prompt-experiment command:
+Start an Ollama service and obtain the model before launching a prompt experiment:
 
 ```bash
+ollama pull mistral:7b
+
 COUNTRY=cmr SAMPLE_SIZE=1000 STRATEGY=zero_shot \
-  ./experiments/scripts/run_full_analysis.sh
+INFERENCE_MODELS="mistral:7b" ANALYSIS_MODELS="mistral:7b" \
+  bash experiments/scripts/run_full_analysis.sh
 ```
 
-Useful environment variables:
+The runner writes predictions for each model, combines them, calibrates confidence, and computes performance, actor fairness, and directional harm. It then perturbs high-disagreement events and produces robustness and error-trace analyses. Some post-processing stages are non-fatal; their completion status appears in the terminal output.
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `COUNTRY` | `cmr` | Country code: `cmr` or `nga`. |
-| `SAMPLE_SIZE` | `500` | Number of sampled events. |
-| `STRATEGY` | `zero_shot` | `zero_shot`, `few_shot`, or `explainable`. |
-| `NUM_EXAMPLES` | `3` | Few-shot examples per category when `STRATEGY=few_shot`. |
-| `INFERENCE_MODELS` | all `WORKING_MODELS` | Comma-separated model names to run. |
-| `ANALYSIS_MODELS` | `all` | Optional comma-separated subset for aggregation/analysis. |
-| `HF_INFERENCE_MODELS` | empty | Comma-separated model names that should run from local HF checkpoints. |
-| `HF_MODEL_PATH` | empty | Single HF checkpoint path fallback. |
-| `HF_MODEL_PATH_MAP` | empty | Comma-separated `model=/path` map for multiple HF-backed names. |
-| `HF_DEVICE` | auto | HF device override, for example `cpu`, `cuda`, or `cuda:0`. |
-| `HF_MAX_NEW_TOKENS` | `96` | Generation budget for HF-backed inference. |
-| `CF_MODELS` | `INFERENCE_MODELS` when set, else all working models | Models for counterfactual analysis. |
-| `CF_EVENTS` | `20` | Number of high-disagreement events used for counterfactuals. |
-| `SKIP_INFERENCE` | `false` | Reuse existing per-model files. |
-| `SKIP_COUNTERFACTUAL` | `false` | Skip counterfactual, word-impact, and trace phases. |
+Choose a condition through the following controls:
 
-Examples:
+| Control | Values and behavior |
+| --- | --- |
+| `COUNTRY` | `cmr` for Cameroon; `nga` for Nigeria. Default: `cmr`. |
+| `SAMPLE_SIZE` | Requested event count. Default: `500`; supplied prompt samples use `1000`. |
+| `STRATEGY` | `zero_shot`, `few_shot`, or `explainable`. Default: `zero_shot`. |
+| `NUM_EXAMPLES` | Few-shot demonstrations **per class**, from 1 to 5. Shell default: `3`. |
+| `INFERENCE_MODELS` | Comma-separated model IDs for prediction. Set explicitly; the default model list includes a separately provisioned adapted model. |
+| `ANALYSIS_MODELS` | Comma-separated model IDs to aggregate. Default: all model files already in the condition directory. |
+| `CF_MODELS` / `CF_EVENTS` | Models and event budget for perturbations. Defaults: the inference selection, or the working model list if unset; 20 events. |
+
+For example, append `STRATEGY=few_shot NUM_EXAMPLES=3` to the environment assignments above to evaluate three demonstrations per class. The [prompt definitions](prompting_strategies/README.md) specify exactly what changes between conditions.
+
+For a merged Hugging Face checkpoint, use the same runner with an explicit backend mapping:
 
 ```bash
-# Few-shot prompting.
-COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=few_shot NUM_EXAMPLES=3 \
-  ./experiments/scripts/run_full_analysis.sh
-
-# Specific Ollama models.
-COUNTRY=cmr SAMPLE_SIZE=1000 INFERENCE_MODELS="mistral:7b,llama3.2:3b" \
-  ./experiments/scripts/run_full_analysis.sh
-
-# HF-backed fine-tuned model plus an Ollama model.
 COUNTRY=nga SAMPLE_SIZE=1000 STRATEGY=zero_shot \
-INFERENCE_MODELS="acled-small-llm-ft:v1,mistral:7b" \
+INFERENCE_MODELS="acled-small-llm-ft:v1" \
+ANALYSIS_MODELS="acled-small-llm-ft:v1" \
 HF_INFERENCE_MODELS="acled-small-llm-ft:v1" \
-HF_MODEL_PATH_MAP="acled-small-llm-ft:v1=models/small_llm_merged_acled_v1_seed42" \
-  ./experiments/scripts/run_full_analysis.sh
-
-# Analyze existing per-model outputs only.
-COUNTRY=cmr SAMPLE_SIZE=1000 SKIP_INFERENCE=true \
-  ./experiments/scripts/run_full_analysis.sh
+HF_MODEL_PATH="models/small_llm_merged_acled_v1_seed42" \
+  bash experiments/scripts/run_full_analysis.sh
 ```
 
-`run_ollama_full_analysis.sh` is only a compatibility wrapper around `run_full_analysis.sh`.
+For several HF models, replace the fallback path with `HF_MODEL_PATH_MAP="model_a=path_a,model_b=path_b"`. `HF_DEVICE` selects a device and `HF_MAX_NEW_TOKENS` sets the generation budget (default: 96). The orchestrators enable offline HF loading, so checkpoints must already be local.
 
-## `run_calibrate_then_apply.sh`
+## Train the adapted baselines
 
-This helper performs a two-stage threshold workflow:
-
-1. Run a small sample, aggregate results, calibrate, and select thresholds.
-2. Run a larger sample, calibrate, apply the selected thresholds, and generate reports.
+AfroConfliBERT uses the sequence-classification workflow under [pipelines/conflibert/](pipelines/conflibert/). Obtain its base checkpoint, then launch training and country-level evaluation:
 
 ```bash
-COUNTRY=cmr STRATEGY=zero_shot SMALL_SAMPLE=20 LARGE_SAMPLE=50 MIN_COVERAGE=0.5 \
-  ./experiments/scripts/run_calibrate_then_apply.sh
+python experiments/pipelines/conflibert/download_conflibert_model.py \
+  --out-dir models/conflibert
+
+SPLIT_VERSION=acled_v1 \
+  bash experiments/scripts/run_finetuned_baselines.sh
 ```
 
-It writes the large-sample report to:
-
-```text
-results/{country}/{strategy}/{large_sample}/final_threshold_performance.csv
-```
-
-## Direct Prompt Inference
-
-Ollama/HF pipeline:
-
-```bash
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 1000 \
-  --strategy zero_shot \
-  --models "mistral:7b,llama3.2:3b"
-```
-
-Few-shot:
-
-```bash
-python experiments/pipelines/ollama/run_ollama_classification.py nga \
-  --sample-size 1000 \
-  --strategy few_shot \
-  --num-examples 3 \
-  --models "gemma3:4b"
-```
-
-Targeted sampling can prioritize one event type while preserving actor balance:
-
-```bash
-python experiments/pipelines/ollama/run_ollama_classification.py cmr \
-  --sample-size 1000 \
-  --primary-group "Violence against civilians" \
-  --primary-share 0.6
-```
-
-Standalone ConfliBERT classification:
-
-```bash
-python experiments/pipelines/conflibert/run_conflibert_classification.py cmr \
-  --sample-size 1000 \
-  --model-path models/conflibert \
-  --model-name conflibert
-```
-
-The ConfliBERT classification script currently forces `strategy=zero_shot` because ConfliBERT is treated as a supervised classifier rather than a prompt-conditioned chat model.
-
-## Fine-Tuned Baselines
-
-The supervised baseline runner builds our leak-safe train/dev/test split bundles, fine-tunes/evaluates ConfliBERT, optionally fine-tunes/evaluates a small causal LLM with LoRA SFT, then builds comparison tables. These workflows correspond to the domain-adapted models we report as AfroConfliBERT and AfroConfliLLAMA.
-
-```bash
-SPLIT_VERSION=acled_v1 ./experiments/scripts/run_finetuned_baselines.sh
-```
-
-Small-LLM example:
+AfroConfliLLAMA uses the SFT preparation, LoRA training, checkpoint merging, and evaluation tools under [pipelines/ollama/](pipelines/ollama/). To include it in the baseline run, provide the base model locally:
 
 ```bash
 SPLIT_VERSION=acled_v1 RUN_SMALL_LLM=true \
 SMALL_LLM_BASE_MODEL=models/Llama-3.2-3B \
-SMALL_LLM_STRATEGY=zero_shot \
-  ./experiments/scripts/run_finetuned_baselines.sh
+  bash experiments/scripts/run_finetuned_baselines.sh
 ```
 
-Key baseline variables:
+The baseline runner rebuilds the selected split bundle. Give `SPLIT_VERSION` a new name when retaining a previous experiment. Default settings use seed 42, a 10% dev split, balanced training classes, and unbalanced dev/test classes. ConfliBERT trains for four epochs; causal-LM SFT trains for three. All training controls are listed in [run_finetuned_baselines.sh](scripts/run_finetuned_baselines.sh).
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `SPLIT_VERSION` | required | Split identifier under `data/processed/splits/`. |
-| `EVAL_COUNTRIES` | `cmr,nga` | Held-out country splits to create/evaluate. |
-| `RUN_CONFLIBERT` | `true` | Fine-tune and evaluate ConfliBERT. |
-| `RUN_SMALL_LLM` | `false` | Enable LoRA SFT for a local causal LM. |
-| `BALANCE_TRAIN` | `true` | Class-balance train split. |
-| `BALANCE_DEV` | `false` | Class-balance dev split. |
-| `BALANCE_TEST` | `false` | Class-balance held-out test splits. |
-| `TRAIN_MAX_PER_CLASS` | `0` | Optional train cap per class. |
-| `TEST_MAX_PER_COUNTRY` | `0` | Optional held-out cap per country. |
-| `CONFLIBERT_BASE_MODEL` | `models/conflibert` | Local base ConfliBERT directory. |
-| `CONFLIBERT_EPOCHS` | `4` | ConfliBERT fine-tuning epochs. |
-| `SMALL_LLM_BASE_MODEL` | required when small LLM is enabled | Local HF causal LM directory. |
-| `SMALL_LLM_SKIP_FINETUNE` | `false` | Reuse an existing merged model. |
-| `SMALL_LLM_MERGED_MODEL_DIR` | empty | Existing merged model path when skipping. |
-| `SMALL_LLM_EVAL_MAX_SAMPLES` | `0` | Optional eval cap per held-out split. |
+To evaluate an existing causal-LM checkpoint without retraining, set `RUN_SMALL_LLM=true SMALL_LLM_SKIP_FINETUNE=true` and supply `SMALL_LLM_MERGED_MODEL_DIR`. To run stages separately against existing splits, use the scripts below with `--help`:
 
-Baseline outputs:
+| Operation | Entry point |
+| --- | --- |
+| Construct supervised splits | [build_train_dev_test_splits.py](pipelines/data/build_train_dev_test_splits.py) |
+| Fit ConfliBERT / evaluate a split | [finetune_conflibert.py](pipelines/conflibert/finetune_conflibert.py) / [evaluate_conflibert_on_split.py](pipelines/conflibert/evaluate_conflibert_on_split.py) |
+| Prepare SFT data / fit LoRA | [prepare_sft_data.py](pipelines/ollama/prepare_sft_data.py) / [finetune_small_llm.py](pipelines/ollama/finetune_small_llm.py) |
+| Evaluate a merged causal LM | [evaluate_ollama_on_split.py](pipelines/ollama/evaluate_ollama_on_split.py) |
+
+## Locate and rebuild outputs
+
+A prompt condition is stored under `results/{country}/{strategy}/{size}/`; few-shot conditions add `/{num_examples}/`. Within it, each model has a subdirectory, followed by shared analysis files. For example:
 
 ```text
-data/processed/splits/{split_version}/
-results/baselines/{split_version}/
-models/conflibert_finetuned_{split_version}_seed{seed}/
-models/small_llm_adapter_{split_version}_seed{seed}/
-models/small_llm_merged_{split_version}_seed{seed}/
+results/cmr/zero_shot/1000/
+├── mistral_7b/ollama_results_mistral-7b_acled_cmr_actors.csv
+├── ollama_results_acled_cmr_actors.csv
+├── ollama_results_calibrated.csv
+└── ... tables, figures, and counterfactual reports
 ```
 
-## Split Builder
+Reuse the saved per-model CSVs by setting `SKIP_INFERENCE=true`. Also set `SKIP_COUNTERFACTUAL=true` to rebuild reports without invoking models. These options leave the existing prediction files as inputs and update derived artifacts; `ANALYSIS_MODELS` still determines which models enter aggregation.
 
-Build leak-safe train/dev/test splits directly:
+Supervised predictions and comparison tables are written to `results/baselines/{split_version}/`. Checkpoints use `models/conflibert_finetuned_{split_version}_seed{seed}/` and `models/small_llm_{adapter,merged}_{split_version}_seed{seed}/`.
 
-```bash
-python experiments/pipelines/data/build_train_dev_test_splits.py \
-  --split-version acled_v1 \
-  --eval-countries cmr,nga \
-  --dev-ratio 0.1 \
-  --balance-train \
-  --train-max-per-class 8000 \
-  --test-max-per-country 3000
-```
-
-Outputs:
-
-```text
-data/processed/splits/{split_version}/train.csv
-data/processed/splits/{split_version}/dev.csv
-data/processed/splits/{split_version}/test_cmr.csv
-data/processed/splits/{split_version}/test_nga.csv
-data/processed/splits/{split_version}/manifest.json
-```
-
-## Small-LLM SFT Pieces
-
-Prepare JSONL from split CSVs:
-
-```bash
-python experiments/pipelines/ollama/prepare_sft_data.py \
-  --input-csv data/processed/splits/acled_v1/train.csv \
-  --output-jsonl results/baselines/acled_v1/sft_data/train.jsonl \
-  --strategy zero_shot
-```
-
-Fine-tune with LoRA:
-
-```bash
-python experiments/pipelines/ollama/finetune_small_llm.py \
-  --train-jsonl results/baselines/acled_v1/sft_data/train.jsonl \
-  --dev-jsonl results/baselines/acled_v1/sft_data/dev.jsonl \
-  --base-model models/Llama-3.2-3B \
-  --output-dir models/small_llm_adapter_acled_v1_seed42 \
-  --merged-output-dir models/small_llm_merged_acled_v1_seed42
-```
-
-Evaluate a merged HF model on a fixed split:
-
-```bash
-python experiments/pipelines/ollama/evaluate_ollama_on_split.py \
-  --model-path models/small_llm_merged_acled_v1_seed42 \
-  --model-name small_llm_merged_acled_v1_seed42 \
-  --input-csv data/processed/splits/acled_v1/test_nga.csv \
-  --output-csv results/baselines/acled_v1/small_llm/hf_predictions_nga.csv
-```
-
-Optional Ollama registration helper:
-
-```bash
-python experiments/pipelines/ollama/register_ollama_model.py \
-  --merged-model-dir models/small_llm_merged_acled_v1_seed42 \
-  --ollama-model-name acled-small-llm-ft:v1 \
-  --dry-run
-```
-
-## Prompting Strategies
-
-Available strategies:
-
-| Strategy | Description | Extra config |
-| --- | --- | --- |
-| `zero_shot` | Direct classification with label descriptions and JSON schema. | none |
-| `few_shot` | Demonstrations for each label before classification. | `NUM_EXAMPLES` / `--num-examples`, 1 to 5 |
-| `explainable` | Requires three short reasoning items plus label/confidence/logits. | none |
-
-See `experiments/prompting_strategies/README.md` for the class interface and registration steps.
+See the [analysis reference](../lib/README.md) for report dependencies and evaluation subsets. The separate [threshold-transfer helper](scripts/run_calibrate_then_apply.sh) fits thresholds on a smaller sample and applies them to a larger one; those independently sampled event sets may overlap.
